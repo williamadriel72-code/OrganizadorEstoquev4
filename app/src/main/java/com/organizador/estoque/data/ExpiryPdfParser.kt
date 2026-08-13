@@ -4,7 +4,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 object ExpiryPdfParser {
-    private val productStart = Regex("(\\d{1,6})\\s+(\\d{8,14})\\s+")
+    private val productStart = Regex("(\\d{1,6})\\s+(\\d{8,14})\\s*")
     private val datePattern = Regex("\\d{2}/\\d{2}/\\d{4}|\\d{4}-\\d{2}-\\d{2}")
     private val quantityPattern = Regex("-?\\d+[.,]\\d{2,3}")
 
