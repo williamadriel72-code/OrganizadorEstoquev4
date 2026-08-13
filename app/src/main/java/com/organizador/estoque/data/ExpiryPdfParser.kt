@@ -4,20 +4,39 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 object ExpiryPdfParser {
+    private val productStart = Regex("(\\d{1,6})\\s+(\\d{8,14})\\s+")
+    private val datePattern = Regex("\\d{2}/\\d{2}/\\d{4}|\\d{4}-\\d{2}-\\d{2}")
+    private val quantityPattern = Regex("-?\\d+[.,]\\d{2,3}")
+
     fun parse(text: String): List<ExpiryImportRow> {
         val rows = mutableListOf<ExpiryImportRow>()
+        var currentProduct: String? = null
+
         for (raw in text.lines()) {
-            val tokens = raw.trim().split(' ', ';', '|', '\t').filter { it.isNotBlank() }
-            if (tokens.size < 3) continue
-            val dateIndex = tokens.indexOfFirst { it.count { c -> c == '/' } == 2 || it.count { c -> c == '-' } == 2 }
-            if (dateIndex <= 0 || dateIndex >= tokens.lastIndex) continue
-            val productRef = tokens.take(dateIndex).firstOrNull { token -> token.all { it.isDigit() } } ?: continue
-            val quantity = tokens.drop(dateIndex + 1).firstNotNullOfOrNull { it.replace(',', '.').toDoubleOrNull() } ?: continue
-            val date = normalizeDate(tokens[dateIndex]) ?: continue
-            if (quantity >= 0) rows += ExpiryImportRow(productRef, date, quantity)
+            val line = raw.trim()
+            if (line.isBlank()) continue
+            val lower = line.lowercase()
+            if (("código" in lower || "codigo" in lower) && "validade" in lower) continue
+            if (lower.startsWith("grupo :") || lower.startsWith("quantidade de itens agrupados")) continue
+            if (lower.startsWith("d.a.m ")) continue
+
+            val product = productStart.find(line)
+            if (product != null) currentProduct = product.groupValues[1]
+
+            val date = datePattern.find(line) ?: continue
+            if (lower.startsWith("data validade") && currentProduct == null) continue
+
+            val beforeDate = line.substring(0, date.range.first)
+            val quantity = quantityPattern.findAll(beforeDate).lastOrNull()?.value?.let(::number) ?: continue
+            val ref = product?.groupValues?.get(1) ?: currentProduct ?: continue
+            val normalized = normalizeDate(date.value) ?: continue
+            rows += ExpiryImportRow(ref, normalized, quantity.coerceAtLeast(0.0))
+            currentProduct = null
         }
         return rows
     }
+
+    private fun number(value: String): Double? = value.trim().replace(',', '.').toDoubleOrNull()
 
     private fun normalizeDate(value: String): String? = runCatching {
         if ('/' in value) LocalDate.parse(value, DateTimeFormatter.ofPattern("dd/MM/yyyy")).toString()
