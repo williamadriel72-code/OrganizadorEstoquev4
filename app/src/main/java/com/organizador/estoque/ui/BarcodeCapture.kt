@@ -1,13 +1,17 @@
 package com.organizador.estoque.ui
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import com.google.android.gms.mlkit.vision.codescanner.GmsBarcodeScanning
-import com.google.android.gms.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import androidx.compose.ui.unit.dp
 import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 
 @Composable
 fun BarcodeCaptureButton(
@@ -16,7 +20,7 @@ fun BarcodeCaptureButton(
 ) {
     val context = LocalContext.current
     var reading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var failed by remember { mutableStateOf(false) }
 
     val options = remember {
         GmsBarcodeScannerOptions.Builder()
@@ -37,19 +41,25 @@ fun BarcodeCaptureButton(
         onClick = {
             if (reading) return@Button
             reading = true
-            error = null
+            failed = false
             scanner.startScan()
                 .addOnSuccessListener { barcode ->
                     barcode.rawValue?.takeIf { it.isNotBlank() }?.let(onBarcode)
                 }
-                .addOnFailureListener { e ->
-                    error = e.message ?: "Não foi possível abrir o leitor."
-                }
+                .addOnFailureListener { failed = true }
                 .addOnCompleteListener { reading = false }
         },
         enabled = !reading,
-        modifier = modifier
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D63E6))
     ) {
-        Text(if (reading) "ABRINDO LEITOR..." else if (error != null) "TENTAR BIPAR NOVAMENTE" else "BIPAR CÓDIGO")
+        Text(
+            when {
+                reading -> "ABRINDO LEITOR..."
+                failed -> "TENTAR BIPAR NOVAMENTE"
+                else -> "▣  BIPAR CÓDIGO"
+            }
+        )
     }
 }
