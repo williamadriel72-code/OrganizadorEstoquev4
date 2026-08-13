@@ -11,8 +11,8 @@ android {
         applicationId = "com.organizador.estoque"
         minSdk = 26
         targetSdk = 36
-        versionCode = 40001
-        versionName = "4.0.1-alpha02"
+        versionCode = 40002
+        versionName = "4.0.2"
     }
 
     buildFeatures {
@@ -44,4 +44,10 @@ dependencies {
     implementation("androidx.paging:paging-compose:3.5.0")
     implementation("androidx.work:work-runtime:2.11.2")
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("androidx.camera:camera-core:1.5.0")
+    implementation("androidx.camera:camera-camera2:1.5.0")
+    implementation("androidx.camera:camera-lifecycle:1.5.0")
+    implementation("androidx.camera:camera-view:1.5.0")
 }
