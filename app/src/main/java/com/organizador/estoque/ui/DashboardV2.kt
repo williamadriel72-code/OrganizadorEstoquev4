@@ -17,7 +17,6 @@ import com.organizador.estoque.data.InventoryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private val Bg = Color(0xFF071421)
 private val CardDark = Color(0xFF102238)
 private val CardBlue = Color(0xFF0D63E6)
 private val Green = Color(0xFF20C983)
@@ -29,9 +28,7 @@ private val Muted = Color(0xFF9FB0C4)
 @Composable
 fun DashboardV2(repository: InventoryRepository, refreshKey: Int, openProducts: () -> Unit) {
     var stats by remember { mutableStateOf(DashboardStats()) }
-    LaunchedEffect(refreshKey) {
-        stats = withContext(Dispatchers.IO) { repository.dashboardStats() }
-    }
+    LaunchedEffect(refreshKey) { stats = withContext(Dispatchers.IO) { repository.dashboardStats() } }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -39,22 +36,13 @@ fun DashboardV2(repository: InventoryRepository, refreshKey: Int, openProducts: 
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Olá! 👋", color = Muted, fontSize = 15.sp)
                     Text("Organizador de Estoque", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
                 }
-                Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = CircleShape,
-                    color = CardDark
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("🔔", fontSize = 19.sp)
-                    }
+                Surface(Modifier.size(48.dp), shape = CircleShape, color = CardDark) {
+                    Box(contentAlignment = Alignment.Center) { Text("🔔", fontSize = 19.sp) }
                 }
             }
         }
@@ -65,56 +53,24 @@ fun DashboardV2(repository: InventoryRepository, refreshKey: Int, openProducts: 
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = CardBlue)
-            ) {
-                Text("⌕  PESQUISAR PRODUTO", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            ) { Text("⌕  PESQUISAR PRODUTO", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                MetricCard("▣", "Produtos", formatIntegerBr(stats.products), Color(0xFF40A0FF), Modifier.weight(1f), openProducts)
+                MetricCard("⚠", "Estoque Baixo", formatIntegerBr(stats.lowStock), Yellow, Modifier.weight(1f), openProducts)
             }
         }
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MetricCard(
-                    icon = "▣",
-                    title = "Produtos",
-                    value = stats.products.toString(),
-                    accent = Color(0xFF40A0FF),
-                    modifier = Modifier.weight(1f),
-                    onClick = openProducts
-                )
-                MetricCard(
-                    icon = "⚠",
-                    title = "Estoque Baixo",
-                    value = stats.lowStock.toString(),
-                    accent = Yellow,
-                    modifier = Modifier.weight(1f),
-                    onClick = openProducts
-                )
+                MetricCard("●", "Zerados", formatIntegerBr(stats.zeroStock), Red, Modifier.weight(1f), openProducts)
+                MetricCard("⌂", "Sem Endereço", formatIntegerBr(stats.withoutAddress), Purple, Modifier.weight(1f), openProducts)
             }
         }
 
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MetricCard(
-                    icon = "●",
-                    title = "Zerados",
-                    value = stats.zeroStock.toString(),
-                    accent = Red,
-                    modifier = Modifier.weight(1f),
-                    onClick = openProducts
-                )
-                MetricCard(
-                    icon = "⌂",
-                    title = "Sem Endereço",
-                    value = stats.withoutAddress.toString(),
-                    accent = Purple,
-                    modifier = Modifier.weight(1f),
-                    onClick = openProducts
-                )
-            }
-        }
-
-        item {
-            Text("Validades", fontSize = 19.sp, fontWeight = FontWeight.Bold)
-        }
+        item { Text("Validades", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
 
         item {
             Card(
@@ -124,81 +80,53 @@ fun DashboardV2(repository: InventoryRepository, refreshKey: Int, openProducts: 
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            modifier = Modifier.size(42.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF17314D)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text("◷", color = Color(0xFF58A9FF), fontSize = 22.sp)
-                            }
+                        Surface(Modifier.size(42.dp), shape = RoundedCornerShape(12.dp), color = Color(0xFF17314D)) {
+                            Box(contentAlignment = Alignment.Center) { Text("◷", color = Color(0xFF58A9FF), fontSize = 22.sp) }
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text("Acompanhar validades", color = Muted, fontSize = 13.sp)
                             Text(
-                                (stats.expiring7 + stats.expiring30 + stats.expiring60 + stats.expired).toString(),
+                                formatIntegerBr(stats.expiring7 + stats.expiring30 + stats.expiring60 + stats.expired),
                                 fontSize = 27.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
                         Spacer(Modifier.weight(1f))
                         Surface(shape = RoundedCornerShape(20.dp), color = Color(0xFF17314D)) {
-                            Text("Ver tudo  ›", modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp), color = Color(0xFF62AEFF), fontWeight = FontWeight.SemiBold)
+                            Text("Ver tudo  ›", Modifier.padding(horizontal = 13.dp, vertical = 8.dp), color = Color(0xFF62AEFF), fontWeight = FontWeight.SemiBold)
                         }
                     }
 
                     HorizontalDivider(color = Color(0xFF1B3550))
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        ExpiryMini("Vencidos", stats.expired.toString(), Red)
-                        ExpiryMini("7 dias", stats.expiring7.toString(), Yellow)
-                        ExpiryMini("30 dias", stats.expiring30.toString(), Green)
-                        ExpiryMini("60 dias", stats.expiring60.toString(), Color(0xFF59A8FF))
+                        ExpiryMini("Vencidos", formatIntegerBr(stats.expired), Red)
+                        ExpiryMini("7 dias", formatIntegerBr(stats.expiring7), Yellow)
+                        ExpiryMini("30 dias", formatIntegerBr(stats.expiring30), Green)
+                        ExpiryMini("60 dias", formatIntegerBr(stats.expiring60), Color(0xFF59A8FF))
                     }
                 }
             }
         }
 
-        item {
-            Text("Importar dados", fontSize = 19.sp, fontWeight = FontWeight.Bold)
-        }
-
-        item {
-            PdfImportBar(repository)
-        }
-
+        item { Text("Importar dados", fontSize = 19.sp, fontWeight = FontWeight.Bold) }
+        item { PdfImportBar(repository) }
         item { Spacer(Modifier.height(8.dp)) }
     }
 }
 
 @Composable
-private fun MetricCard(
-    icon: String,
-    title: String,
-    value: String,
-    accent: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
+private fun MetricCard(icon: String, title: String, value: String, accent: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = modifier.height(140.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = CardDark)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Surface(
-                modifier = Modifier.size(42.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = accent.copy(alpha = 0.16f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(icon, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                }
+        Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Surface(Modifier.size(42.dp), shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = 0.16f)) {
+                Box(contentAlignment = Alignment.Center) { Text(icon, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
             }
             Column {
                 Text(title, color = Muted, fontSize = 13.sp)
