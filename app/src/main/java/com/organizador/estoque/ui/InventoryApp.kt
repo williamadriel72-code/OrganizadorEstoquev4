@@ -15,20 +15,23 @@ import com.organizador.estoque.data.DashboardStats
 import com.organizador.estoque.data.InventoryRepository
 import com.organizador.estoque.data.Product
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val Navy = Color(0xFF071421)
 private val Panel = Color(0xFF102238)
 private val Blue = Color(0xFF3184EE)
+private val Warning = Color(0xFFFFC857)
 
 @Composable
 fun InventoryApp(repository: InventoryRepository) {
     MaterialTheme(colorScheme = darkColorScheme(primary = Blue, background = Navy, surface = Panel)) {
         var screen by remember { mutableStateOf("dashboard") }
+        var refreshKey by remember { mutableIntStateOf(0) }
         Scaffold(
             bottomBar = {
                 NavigationBar {
-                    NavigationBarItem(selected = screen=="dashboard", onClick={screen="dashboard"}, icon={}, label={Text("Dashboard")})
+                    NavigationBarItem(selected = screen=="dashboard", onClick={screen="dashboard"}, icon={}, label={Text("Painel")})
                     NavigationBarItem(selected = screen=="products", onClick={screen="products"}, icon={}, label={Text("Produtos")})
                     NavigationBarItem(selected = screen=="entry", onClick={screen="entry"}, icon={}, label={Text("Entrada")})
                     NavigationBarItem(selected = screen=="exit", onClick={screen="exit"}, icon={}, label={Text("Saída")})
@@ -37,10 +40,10 @@ fun InventoryApp(repository: InventoryRepository) {
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {
                 when(screen) {
-                    "products" -> ProductsScreen(repository)
-                    "entry" -> PlaceholderScreen("Entrada de estoque", "Bip + quantidade + validade quando houver")
-                    "exit" -> PlaceholderScreen("Saída de estoque", "Baixa direta ou FEFO automático")
-                    else -> DashboardScreen(repository, onOpenProducts={screen="products"})
+                    "products" -> ProductsScreen(repository, refreshKey) { refreshKey++ }
+                    "entry" -> MovementScreen(repository, true) { refreshKey++ }
+                    "exit" -> MovementScreen(repository, false) { refreshKey++ }
+                    else -> DashboardScreen(repository, refreshKey) { filter -> screen="products" }
                 }
             }
         }
@@ -48,21 +51,21 @@ fun InventoryApp(repository: InventoryRepository) {
 }
 
 @Composable
-private fun DashboardScreen(repository: InventoryRepository, onOpenProducts: () -> Unit) {
+private fun DashboardScreen(repository: InventoryRepository, refreshKey: Int, onOpenProducts: (String) -> Unit) {
     var stats by remember { mutableStateOf(DashboardStats()) }
-    LaunchedEffect(Unit) { stats = withContext(Dispatchers.IO) { repository.dashboardStats() } }
+    LaunchedEffect(refreshKey) { stats = withContext(Dispatchers.IO) { repository.dashboardStats() } }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Text("Organizador Geral de Estoque", fontSize=24.sp, fontWeight=FontWeight.Bold) }
-        item { Text("V4 nativa • banco SQLite • preparada para grandes volumes", color=Color.LightGray) }
-        item { StatCard("Produtos", stats.products.toString(), onOpenProducts) }
-        item { StatCard("Estoque total", "%.2f".format(stats.totalStock), onOpenProducts) }
-        item { StatCard("Estoque baixo", stats.lowStock.toString(), onOpenProducts) }
-        item { StatCard("Estoque zerado", stats.zeroStock.toString(), onOpenProducts) }
-        item { StatCard("Sem endereço", stats.withoutAddress.toString(), onOpenProducts) }
-        item { StatCard("Vencidos", stats.expired.toString(), onOpenProducts) }
-        item { StatCard("Vencem em 7 dias", stats.expiring7.toString(), onOpenProducts) }
-        item { StatCard("Vencem em 30 dias", stats.expiring30.toString(), onOpenProducts) }
-        item { StatCard("Vencem em 60 dias", stats.expiring60.toString(), onOpenProducts) }
+        item { Text("Organizador Geral de Estoque", fontSize=25.sp, fontWeight=FontWeight.Bold) }
+        item { Text("V4 operacional • estoque local SQLite", color=Color.LightGray) }
+        item { StatCard("Produtos", stats.products.toString()) { onOpenProducts("all") } }
+        item { StatCard("Estoque total", "%.2f".format(stats.totalStock)) { onOpenProducts("all") } }
+        item { StatCard("Estoque baixo", stats.lowStock.toString()) { onOpenProducts("low") } }
+        item { StatCard("Estoque zerado", stats.zeroStock.toString()) { onOpenProducts("zero") } }
+        item { StatCard("Sem endereço", stats.withoutAddress.toString()) { onOpenProducts("no_address") } }
+        item { StatCard("Vencidos", stats.expired.toString()) { onOpenProducts("all") } }
+        item { StatCard("Vencem em 7 dias", stats.expiring7.toString()) { onOpenProducts("all") } }
+        item { StatCard("Vencem em 30 dias", stats.expiring30.toString()) { onOpenProducts("all") } }
+        item { StatCard("Vencem em 60 dias", stats.expiring60.toString()) { onOpenProducts("all") } }
     }
 }
 
@@ -70,45 +73,163 @@ private fun DashboardScreen(repository: InventoryRepository, onOpenProducts: () 
 private fun StatCard(title:String, value:String, onClick:()->Unit) {
     Card(onClick=onClick, modifier=Modifier.fillMaxWidth()) {
         Row(Modifier.padding(18.dp), verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.SpaceBetween) {
-            Text(title, fontWeight=FontWeight.SemiBold)
+            Text(title, fontWeight=FontWeight.SemiBold, fontSize=17.sp)
             Text(value, fontSize=24.sp, fontWeight=FontWeight.Bold, color=Blue)
         }
     }
 }
 
 @Composable
-private fun ProductsScreen(repository: InventoryRepository) {
+private fun ProductsScreen(repository: InventoryRepository, refreshKey: Int, onChanged: () -> Unit) {
+    val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
+    var filter by remember { mutableStateOf("all") }
     var products by remember { mutableStateOf<List<Product>>(emptyList()) }
-    LaunchedEffect(query) { products = withContext(Dispatchers.IO) { repository.searchProducts(query, 50, 0) } }
+    var editing by remember { mutableStateOf<Product?>(null) }
+    var creating by remember { mutableStateOf(false) }
+
+    fun reload() {
+        scope.launch { products = withContext(Dispatchers.IO) { repository.searchProducts(query, 100, 0, filter) } }
+    }
+    LaunchedEffect(query, filter, refreshKey) { products = withContext(Dispatchers.IO) { repository.searchProducts(query, 100, 0, filter) } }
+
     Column(Modifier.fillMaxSize().padding(12.dp)) {
-        Text("Produtos", fontSize=24.sp, fontWeight=FontWeight.Bold)
+        Row(verticalAlignment=Alignment.CenterVertically) {
+            Text("Produtos", fontSize=25.sp, fontWeight=FontWeight.Bold, modifier=Modifier.weight(1f))
+            Button(onClick={ creating=true }) { Text("+ NOVO") }
+        }
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(query, {query=it}, modifier=Modifier.fillMaxWidth(), label={Text("Código, EAN ou descrição")}, singleLine=true)
         Spacer(Modifier.height(8.dp))
-        Text("Carregando no máximo 50 por consulta para manter o app leve.", fontSize=12.sp, color=Color.LightGray)
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            FilterChip(selected=filter=="all", onClick={filter="all"}, label={Text("Todos")})
+            FilterChip(selected=filter=="low", onClick={filter="low"}, label={Text("Baixos")})
+            FilterChip(selected=filter=="zero", onClick={filter="zero"}, label={Text("Zerados")})
+            FilterChip(selected=filter=="no_address", onClick={filter="no_address"}, label={Text("Sem end.")})
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("${products.size} produto(s) visível(is)", fontSize=12.sp, color=Color.LightGray)
         Spacer(Modifier.height(8.dp))
         LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)) {
             items(products, key={it.code}) { p ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(p.description, fontWeight=FontWeight.Bold)
-                        Text("Código ${p.code} • EAN ${p.ean ?: "-"}", fontSize=12.sp)
-                        Text("Estoque: ${p.stock} • Grupo: ${p.groupCode ?: "-"}", fontSize=12.sp)
-                        if (p.controlsExpiry) Text("Controle de validade ativo", color=Color(0xFFFFC857), fontSize=12.sp)
+                Card(onClick={ editing=p }, modifier=Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(14.dp)) {
+                        Text(p.description, fontWeight=FontWeight.Bold, fontSize=17.sp)
+                        Text("Código ${p.code} • EAN ${p.ean ?: "-"}", fontSize=13.sp)
+                        Text("Estoque: ${formatQty(p.stock)} • Grupo: ${p.groupCode ?: "-"}", fontSize=13.sp)
+                        if (p.stock == 0.0) Text("ZERADO", color=Color.Red, fontWeight=FontWeight.Bold)
+                        else if (p.stock <= 5) Text("ESTOQUE BAIXO", color=Warning, fontWeight=FontWeight.Bold)
                     }
                 }
             }
         }
     }
+
+    if (creating) ProductEditor(repository, null, onDismiss={creating=false}, onSaved={ creating=false; reload(); onChanged() })
+    editing?.let { p -> ProductEditor(repository, p, onDismiss={editing=null}, onSaved={ editing=null; reload(); onChanged() }) }
 }
 
 @Composable
-private fun PlaceholderScreen(title:String, subtitle:String) {
-    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment=Alignment.Center) {
-        Column(horizontalAlignment=Alignment.CenterHorizontally) {
-            Text(title, fontSize=24.sp, fontWeight=FontWeight.Bold)
-            Spacer(Modifier.height(8.dp)); Text(subtitle, color=Color.LightGray)
+private fun ProductEditor(repository: InventoryRepository, original: Product?, onDismiss:()->Unit, onSaved:()->Unit) {
+    val scope = rememberCoroutineScope()
+    var code by remember { mutableStateOf(original?.code ?: "") }
+    var ean by remember { mutableStateOf(original?.ean ?: "") }
+    var description by remember { mutableStateOf(original?.description ?: "") }
+    var group by remember { mutableStateOf(original?.groupCode ?: "") }
+    var category by remember { mutableStateOf(original?.category ?: "") }
+    var stock by remember { mutableStateOf(original?.stock?.toString() ?: "0") }
+    var address by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(original?.code) {
+        if (original != null) address = withContext(Dispatchers.IO) { repository.productAddresses(original.code).firstOrNull().orEmpty() }
+    }
+
+    AlertDialog(
+        onDismissRequest=onDismiss,
+        title={Text(if (original == null) "Novo produto" else "Editar produto")},
+        text={
+            Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                OutlinedTextField(code,{code=it},label={Text("Código")},enabled=original==null,singleLine=true)
+                OutlinedTextField(ean,{ean=it},label={Text("EAN / código de barras")},singleLine=true)
+                OutlinedTextField(description,{description=it},label={Text("Descrição")})
+                OutlinedTextField(group,{group=it},label={Text("Grupo")},singleLine=true)
+                OutlinedTextField(category,{category=it},label={Text("Categoria")},singleLine=true)
+                OutlinedTextField(stock,{stock=it},label={Text("Estoque atual")},singleLine=true)
+                OutlinedTextField(address,{address=it},label={Text("Endereço")},singleLine=true)
+                error?.let { Text(it, color=MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton={
+            Button(onClick={
+                val qty = stock.replace(",", ".").toDoubleOrNull()
+                if (code.isBlank() || description.isBlank() || qty == null || qty < 0) {
+                    error = "Informe código, descrição e estoque válido."
+                } else scope.launch {
+                    runCatching {
+                        withContext(Dispatchers.IO) {
+                            repository.upsertProduct(Product(code.trim(), ean.trim().ifBlank{null}, description.trim(), group.trim().ifBlank{null}, category.trim().ifBlank{null}, qty, false, true))
+                            repository.setAddress(code.trim(), address)
+                        }
+                    }.onSuccess { onSaved() }.onFailure { error=it.message ?: "Erro ao salvar" }
+                }
+            }) { Text("SALVAR") }
+        },
+        dismissButton={TextButton(onClick=onDismiss){Text("CANCELAR")}}
+    )
+}
+
+@Composable
+private fun MovementScreen(repository: InventoryRepository, isEntry: Boolean, onChanged:()->Unit) {
+    val scope = rememberCoroutineScope()
+    var code by remember { mutableStateOf("") }
+    var quantity by remember { mutableStateOf("1") }
+    var expiry by remember { mutableStateOf("") }
+    var found by remember { mutableStateOf<Product?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf(false) }
+
+    fun lookup() {
+        scope.launch {
+            found = withContext(Dispatchers.IO) { repository.findExact(code) }
+            if (found == null && code.isNotBlank()) { error=true; message="Produto não encontrado" }
+            else { error=false; message=null }
         }
     }
+
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        Text(if (isEntry) "Entrada de estoque" else "Saída de estoque", fontSize=25.sp, fontWeight=FontWeight.Bold)
+        Text(if (isEntry) "Aumenta o estoque e registra validade quando informada." else "Baixa o estoque e consome primeiro as validades mais próximas (FEFO).", color=Color.LightGray)
+        OutlinedTextField(code,{code=it; found=null; message=null},modifier=Modifier.fillMaxWidth(),label={Text("Código ou EAN")},singleLine=true)
+        Button(onClick={lookup()}, modifier=Modifier.fillMaxWidth()) { Text("LOCALIZAR PRODUTO") }
+        found?.let { p ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp)) {
+                    Text(p.description, fontWeight=FontWeight.Bold, fontSize=18.sp)
+                    Text("Estoque atual: ${formatQty(p.stock)}")
+                    repository.productAddresses(p.code).firstOrNull()?.let { Text("Endereço: $it") }
+                }
+            }
+        }
+        OutlinedTextField(quantity,{quantity=it},modifier=Modifier.fillMaxWidth(),label={Text("Quantidade")},singleLine=true)
+        if (isEntry) OutlinedTextField(expiry,{expiry=it},modifier=Modifier.fillMaxWidth(),label={Text("Validade opcional: AAAA-MM-DD")},singleLine=true)
+        Button(
+            onClick={
+                val qty = quantity.replace(",", ".").toDoubleOrNull()
+                if (code.isBlank() || qty == null || qty <= 0) { error=true; message="Informe produto e quantidade válida." }
+                else scope.launch {
+                    runCatching {
+                        withContext(Dispatchers.IO) {
+                            if (isEntry) repository.stockIn(code, qty, expiry.ifBlank{null}) else repository.stockOut(code, qty)
+                        }
+                    }.onSuccess { updated ->
+                        found=updated; error=false; message=if (isEntry) "Entrada registrada com sucesso." else "Saída registrada com sucesso."; onChanged()
+                    }.onFailure { error=true; message=it.message ?: "Não foi possível concluir." }
+                }
+            }, modifier=Modifier.fillMaxWidth(), enabled=found != null
+        ) { Text(if (isEntry) "CONFIRMAR ENTRADA" else "CONFIRMAR SAÍDA") }
+        message?.let { Text(it, color=if(error) MaterialTheme.colorScheme.error else Color(0xFF7BD389), fontWeight=FontWeight.Bold) }
+    }
 }
+
+private fun formatQty(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else "%.2f".format(value)
