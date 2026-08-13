@@ -11,8 +11,8 @@ android {
         applicationId = "com.organizador.estoque"
         minSdk = 26
         targetSdk = 36
-        versionCode = 40000
-        versionName = "4.0.0-alpha01"
+        versionCode = 40001
+        versionName = "4.0.1-alpha02"
     }
 
     buildFeatures {
@@ -43,4 +43,5 @@ dependencies {
     implementation("androidx.paging:paging-runtime:3.5.0")
     implementation("androidx.paging:paging-compose:3.5.0")
     implementation("androidx.work:work-runtime:2.11.2")
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 }
