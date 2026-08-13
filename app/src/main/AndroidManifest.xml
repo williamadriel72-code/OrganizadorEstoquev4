@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:allowBackup="true"
         android:label="Organizador Geral de Estoque"
         android:icon="@drawable/ic_inventory"
         android:theme="@style/Theme.OrganizadorEstoque">
+
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
+
         <activity
             android:name=".LauncherActivity"
             android:exported="true">
