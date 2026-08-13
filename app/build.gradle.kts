@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.organizador.estoque"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.organizador.estoque"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 40000
         versionName = "4.0.0-alpha01"
     }
