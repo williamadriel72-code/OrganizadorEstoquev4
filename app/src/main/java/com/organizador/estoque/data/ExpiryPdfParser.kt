@@ -27,7 +27,9 @@ object ExpiryPdfParser {
             if (lower.startsWith("data validade") && currentProduct == null) continue
 
             val beforeDate = line.substring(0, date.range.first)
-            val quantity = quantityPattern.findAll(beforeDate).lastOrNull()?.value?.let(::number) ?: continue
+            // A validade deve ser preservada mesmo quando a quantidade não for reconhecida.
+            // Nesse caso usamos 0 apenas como quantidade desconhecida, sem descartar a data.
+            val quantity = quantityPattern.findAll(beforeDate).lastOrNull()?.value?.let(::number) ?: 0.0
             val ref = product?.groupValues?.get(1) ?: currentProduct ?: continue
             val normalized = normalizeDate(date.value) ?: continue
             rows += ExpiryImportRow(ref, normalized, quantity.coerceAtLeast(0.0))
