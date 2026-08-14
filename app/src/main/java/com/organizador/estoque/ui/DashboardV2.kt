@@ -7,7 +7,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -17,13 +16,9 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun DashboardV2(repository: InventoryRepository, refreshKey: Int, openProducts: (String)->Unit, openExpiries: ()->Unit) {
-    val context = LocalContext.current
-    val insights = remember(context) { InventoryInsights(context) }
     var s by remember { mutableStateOf(DashboardStats()) }
-    var neg by remember { mutableLongStateOf(0L) }
     LaunchedEffect(refreshKey) {
         s = withContext(Dispatchers.IO) { repository.dashboardStats() }
-        neg = withContext(Dispatchers.IO) { insights.negativeCount() }
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding=PaddingValues(16.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item { Text("Organizador de Estoque", fontSize=27.sp, fontWeight=FontWeight.ExtraBold) }
@@ -34,7 +29,7 @@ fun DashboardV2(repository: InventoryRepository, refreshKey: Int, openProducts: 
         }}
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             DCard("Zerados",s.zeroStock,Color(0xFFFF5368),Modifier.weight(1f)){openProducts("zero")}
-            DCard("Negativos",neg,Color(0xFFFF7A59),Modifier.weight(1f)){openProducts("negative")}
+            DCard("Negativos",s.negativeStock,Color(0xFFFF7A59),Modifier.weight(1f)){openProducts("negative")}
         }}
         item { DCard("Sem Endereço",s.withoutAddress,Color(0xFF8D63F6),Modifier.fillMaxWidth()){openProducts("no_address")} }
         item { Text("Validades",fontSize=20.sp,fontWeight=FontWeight.Bold) }
