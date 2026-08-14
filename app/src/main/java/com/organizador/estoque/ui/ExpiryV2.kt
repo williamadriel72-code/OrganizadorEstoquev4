@@ -19,10 +19,13 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun ExpiryV2() {
-    val insights = remember { InventoryInsights(LocalContext.current) }
+    val context = LocalContext.current
+    val insights = remember(context) { InventoryInsights(context) }
     var filter by remember { mutableStateOf("all") }
     var rows by remember { mutableStateOf<List<ExpiryDetail>>(emptyList()) }
-    LaunchedEffect(filter) { rows = withContext(Dispatchers.IO) { insights.expiryDetails(filter) } }
+    LaunchedEffect(filter) {
+        rows = withContext(Dispatchers.IO) { insights.expiryDetails(filter) }
+    }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Validades", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
