@@ -47,8 +47,14 @@ class PdfImportService(context: Context, private val repository: InventoryReposi
         val rows = ExpiryPdfParser.parse(text)
         if (rows.isEmpty()) throw IllegalArgumentException("PDF de validades sem linhas reconhecidas")
 
-        onProgress(PdfImportProgress(80, "Atualizando validades"))
+        onProgress(PdfImportProgress(80, "Vinculando validades aos produtos"))
         val result = expiryStore.replace(rows)
+        if (result.first == 0) {
+            throw IllegalArgumentException(
+                "Nenhuma validade foi vinculada aos produtos. Confira se o PDF contém o código ou EAN dos produtos cadastrados."
+            )
+        }
+
         onProgress(PdfImportProgress(100, "Concluído"))
         return PdfImportResult(result.first, result.second, "Importação de validades concluída")
     }
