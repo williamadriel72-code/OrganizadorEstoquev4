@@ -28,7 +28,7 @@ jobs:
       - name: Build EXE
         shell: powershell
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name OrganizadorEstoquePC desktop/app.py
+          pyinstaller --noconfirm --clean --onefile --windowed --name OrganizadorEstoquePC desktop/app_windows.py
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
