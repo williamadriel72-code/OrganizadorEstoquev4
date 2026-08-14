@@ -25,14 +25,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r desktop/requirements.txt
 
-      - name: Build EXE
+      - name: Download Android Platform Tools
         shell: powershell
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name OrganizadorEstoquePC desktop/app_windows.py
+          Invoke-WebRequest -Uri "https://dl.google.com/android/repository/platform-tools-latest-windows.zip" -OutFile "platform-tools.zip"
+          Expand-Archive -Path "platform-tools.zip" -DestinationPath "." -Force
+          if (!(Test-Path "platform-tools/adb.exe")) { throw "adb.exe não encontrado" }
+
+      - name: Build EXE with USB scanner bridge
+        shell: powershell
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed --name OrganizadorEstoquePC `
+            --add-binary "platform-tools/adb.exe;." `
+            --add-binary "platform-tools/AdbWinApi.dll;." `
+            --add-binary "platform-tools/AdbWinUsbApi.dll;." `
+            desktop/pc_usb.py
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
-          name: OrganizadorEstoquePC-Windows
+          name: OrganizadorEstoquePC-Windows-USB
           path: dist/OrganizadorEstoquePC.exe
           if-no-files-found: error
