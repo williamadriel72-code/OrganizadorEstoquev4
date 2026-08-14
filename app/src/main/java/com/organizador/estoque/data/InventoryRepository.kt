@@ -7,20 +7,40 @@ import java.time.LocalDate
 class InventoryRepository(private val dbHelper: InventoryDb) {
     fun dashboardStats(): DashboardStats {
         val db = dbHelper.readableDatabase
-        val today = LocalDate.now()
-        fun scalarLong(sql: String, args: Array<String> = emptyArray()): Long = DatabaseUtils.longForQuery(db, sql, args)
-        fun scalarDouble(sql: String): Double = db.rawQuery(sql, null).use { c -> if (c.moveToFirst()) c.getDouble(0) else 0.0 }
-        return DashboardStats(
-            products = scalarLong("SELECT COUNT(*) FROM products WHERE active=1"),
-            totalStock = scalarDouble("SELECT COALESCE(SUM(stock),0) FROM products WHERE active=1"),
-            lowStock = scalarLong("SELECT COUNT(*) FROM products WHERE active=1 AND stock > 0 AND stock <= 5"),
-            zeroStock = scalarLong("SELECT COUNT(*) FROM products WHERE active=1 AND stock = 0"),
-            withoutAddress = scalarLong("SELECT COUNT(*) FROM products p WHERE p.active=1 AND NOT EXISTS (SELECT 1 FROM product_addresses pa WHERE pa.product_code=p.code)"),
-            expired = scalarLong("SELECT COUNT(DISTINCT product_code) FROM expiry_batches WHERE quantity > 0 AND expiry_date < ?", arrayOf(today.toString())),
-            expiring7 = scalarLong("SELECT COUNT(DISTINCT product_code) FROM expiry_batches WHERE quantity > 0 AND expiry_date BETWEEN ? AND ?", arrayOf(today.toString(), today.plusDays(7).toString())),
-            expiring30 = scalarLong("SELECT COUNT(DISTINCT product_code) FROM expiry_batches WHERE quantity > 0 AND expiry_date BETWEEN ? AND ?", arrayOf(today.toString(), today.plusDays(30).toString())),
-            expiring60 = scalarLong("SELECT COUNT(DISTINCT product_code) FROM expiry_batches WHERE quantity > 0 AND expiry_date BETWEEN ? AND ?", arrayOf(today.toString(), today.plusDays(60).toString()))
-        )
+        val today = LocalDate.now().toString()
+        val plus7 = LocalDate.now().plusDays(7).toString()
+        val plus30 = LocalDate.now().plusDays(30).toString()
+        val plus60 = LocalDate.now().plusDays(60).toString()
+        val sql = """
+            SELECT
+                COUNT(*),
+                COALESCE(SUM(stock), 0),
+                SUM(CASE WHEN stock > 0 AND stock <= 5 THEN 1 ELSE 0 END),
+                SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END),
+                SUM(CASE WHEN stock < 0 THEN 1 ELSE 0 END),
+                SUM(CASE WHEN NOT EXISTS (SELECT 1 FROM product_addresses pa WHERE pa.product_code = p.code) THEN 1 ELSE 0 END),
+                (SELECT COUNT(DISTINCT product_code) FROM expiry_batches WHERE quantity > 0 AND expiry_date < ?),
+                (SELECT COUNT(DISTINCT product_code) FROM expiry_batches WHERE quantity > 0 AND expiry_date BETWEEN ? AND ?),
+                (SELECT COUNT(DISTINCT product_code) FROM expiry_batches WHERE quantity > 0 AND expiry_date BETWEEN ? AND ?),
+                (SELECT COUNT(DISTINCT product_code) FROM expiry_batches WHERE quantity > 0 AND expiry_date BETWEEN ? AND ?)
+            FROM products p
+            WHERE active = 1
+        """.trimIndent()
+        return db.rawQuery(sql, arrayOf(today, today, plus7, today, plus30, today, plus60)).use { c ->
+            if (!c.moveToFirst()) return@use DashboardStats()
+            DashboardStats(
+                products = c.getLong(0),
+                totalStock = c.getDouble(1),
+                lowStock = c.getLong(2),
+                zeroStock = c.getLong(3),
+                negativeStock = c.getLong(4),
+                withoutAddress = c.getLong(5),
+                expired = c.getLong(6),
+                expiring7 = c.getLong(7),
+                expiring30 = c.getLong(8),
+                expiring60 = c.getLong(9)
+            )
+        }
     }
 
     fun searchProducts(query: String, limit: Int = 100, offset: Int = 0, filter: String = "all"): List<Product> {
@@ -28,6 +48,7 @@ class InventoryRepository(private val dbHelper: InventoryDb) {
         val whereFilter = when (filter) {
             "zero" -> " AND p.stock = 0"
             "low" -> " AND p.stock > 0 AND p.stock <= 5"
+            "negative" -> " AND p.stock < 0"
             "no_address" -> " AND NOT EXISTS (SELECT 1 FROM product_addresses pa WHERE pa.product_code=p.code)"
             else -> ""
         }
