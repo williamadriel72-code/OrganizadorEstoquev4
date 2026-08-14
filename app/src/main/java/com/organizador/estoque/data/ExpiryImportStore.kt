@@ -14,14 +14,16 @@ class ExpiryImportStore(context: Context) {
             db.rawQuery("SELECT code, ean FROM products WHERE active=1", null).use { c ->
                 while (c.moveToNext()) {
                     val code = c.getString(0)
-                    byRef[code] = code
-                    c.getString(1)?.takeIf { it.isNotBlank() }?.let { byRef[it] = code }
+                    addReferenceVariants(byRef, code, code)
+                    c.getString(1)?.takeIf { it.isNotBlank() }?.let { ean ->
+                        addReferenceVariants(byRef, ean, code)
+                    }
                 }
             }
 
             val consolidated = LinkedHashMap<Pair<String, String>, Double>()
             for (row in rows) {
-                val code = byRef[row.productRef.trim()]
+                val code = resolveProductCode(byRef, row.productRef)
                 if (code == null) {
                     skipped++
                     continue
@@ -56,5 +58,30 @@ class ExpiryImportStore(context: Context) {
         } finally {
             db.endTransaction()
         }
+    }
+
+    private fun addReferenceVariants(map: MutableMap<String, String>, ref: String, productCode: String) {
+        val raw = ref.trim()
+        if (raw.isBlank()) return
+        map[raw] = productCode
+
+        val digits = raw.filter(Char::isDigit)
+        if (digits.isNotBlank()) {
+            map[digits] = productCode
+            val noLeadingZeros = digits.trimStart('0').ifBlank { "0" }
+            map[noLeadingZeros] = productCode
+        }
+    }
+
+    private fun resolveProductCode(map: Map<String, String>, ref: String): String? {
+        val raw = ref.trim()
+        map[raw]?.let { return it }
+
+        val digits = raw.filter(Char::isDigit)
+        if (digits.isBlank()) return null
+        map[digits]?.let { return it }
+
+        val noLeadingZeros = digits.trimStart('0').ifBlank { "0" }
+        return map[noLeadingZeros]
     }
 }
