@@ -9,6 +9,8 @@ import tkinter as tk
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+# Carrega primeiro o parser flexível de PDF usado pela versão Windows atual.
+import app_windows  # noqa: F401
 from app import App, PANEL2, MUTED, GREEN, YELLOW, RED
 
 USB_PORT = 8765
@@ -111,7 +113,7 @@ class USBScannerApp(App):
             self.usb_server.daemon_threads = True
             thread = threading.Thread(target=self.usb_server.serve_forever, daemon=True)
             thread.start()
-        except Exception as exc:
+        except Exception:
             self.usb_server = None
             self.usb_status.config(text=f"Scanner USB: porta {USB_PORT} ocupada", fg=RED)
 
@@ -164,8 +166,8 @@ class USBScannerApp(App):
             self._adb_checking = False
 
     def poll_scanner_queue(self):
+        latest = None
         try:
-            latest = None
             while True:
                 latest = self.scan_queue.get_nowait()
         except queue.Empty:
