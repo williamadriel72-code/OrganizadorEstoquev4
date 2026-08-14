@@ -15,6 +15,7 @@ import com.organizador.estoque.data.DashboardStats
 import com.organizador.estoque.data.InventoryRepository
 import com.organizador.estoque.data.Product
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -22,10 +23,11 @@ private val Navy = Color(0xFF071421)
 private val Panel = Color(0xFF102238)
 private val Blue = Color(0xFF3184EE)
 private val Warning = Color(0xFFFFC857)
+private val AppColors = darkColorScheme(primary = Blue, background = Navy, surface = Panel)
 
 @Composable
 fun InventoryApp(repository: InventoryRepository) {
-    MaterialTheme(colorScheme = darkColorScheme(primary = Blue, background = Navy, surface = Panel)) {
+    MaterialTheme(colorScheme = AppColors) {
         var screen by remember { mutableStateOf("dashboard") }
         var refreshKey by remember { mutableIntStateOf(0) }
         Scaffold(
@@ -43,7 +45,7 @@ fun InventoryApp(repository: InventoryRepository) {
                     "products" -> ProductsScreen(repository, refreshKey) { refreshKey++ }
                     "entry" -> MovementScreen(repository, true) { refreshKey++ }
                     "exit" -> MovementScreen(repository, false) { refreshKey++ }
-                    else -> DashboardScreen(repository, refreshKey) { filter -> screen="products" }
+                    else -> DashboardScreen(repository, refreshKey) { screen="products" }
                 }
             }
         }
@@ -53,7 +55,9 @@ fun InventoryApp(repository: InventoryRepository) {
 @Composable
 private fun DashboardScreen(repository: InventoryRepository, refreshKey: Int, onOpenProducts: (String) -> Unit) {
     var stats by remember { mutableStateOf(DashboardStats()) }
-    LaunchedEffect(refreshKey) { stats = withContext(Dispatchers.IO) { repository.dashboardStats() } }
+    LaunchedEffect(refreshKey) {
+        stats = withContext(Dispatchers.IO) { repository.dashboardStats() }
+    }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { Text("Organizador Geral de Estoque", fontSize=25.sp, fontWeight=FontWeight.Bold) }
         item { Text("V4 operacional • estoque local SQLite", color=Color.LightGray) }
@@ -88,10 +92,20 @@ private fun ProductsScreen(repository: InventoryRepository, refreshKey: Int, onC
     var editing by remember { mutableStateOf<Product?>(null) }
     var creating by remember { mutableStateOf(false) }
 
-    fun reload() {
-        scope.launch { products = withContext(Dispatchers.IO) { repository.searchProducts(query, 100, 0, filter) } }
+    suspend fun loadProducts(): List<Product> {
+        val normalized = query.trim()
+        if (normalized.isNotEmpty()) delay(250)
+        val limit = if (normalized.isBlank()) 100 else 200
+        return withContext(Dispatchers.IO) { repository.searchProducts(normalized, limit, 0, filter) }
     }
-    LaunchedEffect(query, filter, refreshKey) { products = withContext(Dispatchers.IO) { repository.searchProducts(query, 100, 0, filter) } }
+
+    fun reload() {
+        scope.launch { products = loadProducts() }
+    }
+
+    LaunchedEffect(query, filter, refreshKey) {
+        products = loadProducts()
+    }
 
     Column(Modifier.fillMaxSize().padding(12.dp)) {
         Row(verticalAlignment=Alignment.CenterVertically) {
@@ -111,7 +125,7 @@ private fun ProductsScreen(repository: InventoryRepository, refreshKey: Int, onC
         Text("${products.size} produto(s) visível(is)", fontSize=12.sp, color=Color.LightGray)
         Spacer(Modifier.height(8.dp))
         LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(products, key={it.code}) { p ->
+            items(products, key={it.code}, contentType={"product"}) { p ->
                 Card(onClick={ editing=p }, modifier=Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
                         Text(p.description, fontWeight=FontWeight.Bold, fontSize=17.sp)
@@ -186,12 +200,19 @@ private fun MovementScreen(repository: InventoryRepository, isEntry: Boolean, on
     var quantity by remember { mutableStateOf("1") }
     var expiry by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<Product?>(null) }
+    var foundAddress by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf(false) }
 
     fun lookup() {
         scope.launch {
-            found = withContext(Dispatchers.IO) { repository.findExact(code) }
+            val result = withContext(Dispatchers.IO) {
+                val product = repository.findExact(code)
+                val address = product?.let { repository.productAddresses(it.code).firstOrNull() }
+                product to address
+            }
+            found = result.first
+            foundAddress = result.second
             if (found == null && code.isNotBlank()) { error=true; message="Produto não encontrado" }
             else { error=false; message=null }
         }
@@ -200,14 +221,14 @@ private fun MovementScreen(repository: InventoryRepository, isEntry: Boolean, on
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(if (isEntry) "Entrada de estoque" else "Saída de estoque", fontSize=25.sp, fontWeight=FontWeight.Bold)
         Text(if (isEntry) "Aumenta o estoque e registra validade quando informada." else "Baixa o estoque e consome primeiro as validades mais próximas (FEFO).", color=Color.LightGray)
-        OutlinedTextField(code,{code=it; found=null; message=null},modifier=Modifier.fillMaxWidth(),label={Text("Código ou EAN")},singleLine=true)
+        OutlinedTextField(code,{code=it; found=null; foundAddress=null; message=null},modifier=Modifier.fillMaxWidth(),label={Text("Código ou EAN")},singleLine=true)
         Button(onClick={lookup()}, modifier=Modifier.fillMaxWidth()) { Text("LOCALIZAR PRODUTO") }
         found?.let { p ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp)) {
                     Text(p.description, fontWeight=FontWeight.Bold, fontSize=18.sp)
                     Text("Estoque atual: ${formatQty(p.stock)}")
-                    repository.productAddresses(p.code).firstOrNull()?.let { Text("Endereço: $it") }
+                    foundAddress?.let { Text("Endereço: $it") }
                 }
             }
         }
