@@ -10,11 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.organizador.estoque.data.InventoryInsights
 import com.organizador.estoque.data.InventoryRepository
 import com.organizador.estoque.data.Product
 import kotlinx.coroutines.Dispatchers
@@ -24,8 +22,6 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: String = "all") {
     val listState = rememberLazyListState()
-    val context = LocalContext.current
-    val insights = remember(context) { InventoryInsights(context) }
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(initialFilter) }
     var products by remember { mutableStateOf<List<Product>>(emptyList()) }
@@ -35,12 +31,8 @@ fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: 
         val normalizedQuery = query.trim()
         if (normalizedQuery.isNotEmpty()) delay(250)
         products = withContext(Dispatchers.IO) {
-            if (filter == "negative") {
-                insights.negativeProducts(normalizedQuery)
-            } else {
-                val limit = if (normalizedQuery.isBlank()) 150 else 250
-                repository.searchProducts(normalizedQuery, limit, 0, filter)
-            }
+            val limit = if (normalizedQuery.isBlank()) 150 else 250
+            repository.searchProducts(normalizedQuery, limit, 0, filter)
         }
     }
 
