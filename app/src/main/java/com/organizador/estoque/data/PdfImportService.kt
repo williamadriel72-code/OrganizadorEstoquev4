@@ -19,14 +19,10 @@ class PdfImportService(context: Context, private val repository: InventoryReposi
         val parsed = StockPdfParser.parse(text)
         if (parsed.isEmpty()) throw IllegalArgumentException("PDF de estoque sem produtos reconhecidos")
 
-        val total = parsed.size
-        val step = (total / 20).coerceAtLeast(1)
-        val products = parsed.mapIndexed { index, incoming ->
-            if (index % step == 0 || index == total - 1) {
-                val percent = 45 + ((index + 1) * 30 / total)
-                onProgress(PdfImportProgress(percent.coerceAtMost(75), "Conferindo produtos"))
-            }
-            val existing = repository.findExact(incoming.code)
+        onProgress(PdfImportProgress(50, "Conferindo produtos"))
+        val existingByCode = repository.findExistingByCodes(parsed.map { it.code })
+        val products = parsed.map { incoming ->
+            val existing = existingByCode[incoming.code]
             if (existing == null) incoming else incoming.copy(
                 groupCode = existing.groupCode,
                 category = existing.category,

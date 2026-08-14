@@ -18,12 +18,11 @@ import com.organizador.estoque.data.InventoryInsights
 import com.organizador.estoque.data.InventoryRepository
 import com.organizador.estoque.data.Product
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 @Composable
 fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: String = "all") {
-    val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val insights = remember(context) { InventoryInsights(context) }
@@ -31,16 +30,19 @@ fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: 
     var filter by rememberSaveable { mutableStateOf(initialFilter) }
     var products by remember { mutableStateOf<List<Product>>(emptyList()) }
 
-    fun reload() {
-        scope.launch {
-            products = withContext(Dispatchers.IO) {
-                if (filter == "negative") insights.negativeProducts(query)
-                else repository.searchProducts(query, 500, 0, filter)
+    LaunchedEffect(initialFilter) { filter = initialFilter }
+    LaunchedEffect(query, filter, refreshKey) {
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isNotEmpty()) delay(250)
+        products = withContext(Dispatchers.IO) {
+            if (filter == "negative") {
+                insights.negativeProducts(normalizedQuery)
+            } else {
+                val limit = if (normalizedQuery.isBlank()) 150 else 250
+                repository.searchProducts(normalizedQuery, limit, 0, filter)
             }
         }
     }
-    LaunchedEffect(initialFilter) { filter = initialFilter }
-    LaunchedEffect(query, filter, refreshKey) { reload() }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp)) {
         Text("Produtos", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
@@ -60,7 +62,7 @@ fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: 
         Text("${products.size} produto(s)", color = Color(0xFF9FB0C4), fontSize = 12.sp)
         Spacer(Modifier.height(8.dp))
         LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 14.dp)) {
-            items(products, key = { it.code }) { p ->
+            items(products, key = { it.code }, contentType = { "product" }) { p ->
                 val accent = when {
                     p.stock < 0.0 -> Color(0xFFFF7A59)
                     p.stock == 0.0 -> Color(0xFFFF5368)

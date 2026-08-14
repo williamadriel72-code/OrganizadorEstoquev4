@@ -52,6 +52,23 @@ class InventoryRepository(private val dbHelper: InventoryDb) {
         ).use { c -> if (!c.moveToFirst()) null else Product(c.getString(0), c.getString(1), c.getString(2), c.getString(3), c.getString(4), c.getDouble(5), c.getInt(6)==1, c.getInt(7)==1) }
     }
 
+    fun findExistingByCodes(codes: Collection<String>): Map<String, Product> {
+        if (codes.isEmpty()) return emptyMap()
+        val db = dbHelper.readableDatabase
+        val result = LinkedHashMap<String, Product>()
+        codes.asSequence().map { it.trim() }.filter { it.isNotEmpty() }.distinct().chunked(400).forEach { chunk ->
+            val placeholders = chunk.joinToString(",") { "?" }
+            val sql = "SELECT code,ean,description,group_code,category,stock,controls_expiry,active FROM products WHERE active=1 AND code IN ($placeholders)"
+            db.rawQuery(sql, chunk.toTypedArray()).use { c ->
+                while (c.moveToNext()) {
+                    val product = Product(c.getString(0), c.getString(1), c.getString(2), c.getString(3), c.getString(4), c.getDouble(5), c.getInt(6)==1, c.getInt(7)==1)
+                    result[product.code] = product
+                }
+            }
+        }
+        return result
+    }
+
     fun upsertProduct(product: Product) {
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
@@ -65,7 +82,18 @@ class InventoryRepository(private val dbHelper: InventoryDb) {
     fun replaceInventory(products: List<Product>) {
         val db = dbHelper.writableDatabase
         db.beginTransaction()
-        try { products.forEach { upsertProduct(it) }; db.setTransactionSuccessful() } finally { db.endTransaction() }
+        try {
+            val now = System.currentTimeMillis()
+            products.forEach { product ->
+                val values = ContentValues().apply {
+                    put("ean", product.ean); put("description", product.description); put("group_code", product.groupCode); put("category", product.category); put("stock", product.stock)
+                    put("controls_expiry", if (product.controlsExpiry) 1 else 0); put("active", if (product.active) 1 else 0); put("updated_at", now)
+                }
+                val updated = db.update("products", values, "code=?", arrayOf(product.code))
+                if (updated == 0) { values.put("code", product.code); db.insertOrThrow("products", null, values) }
+            }
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
     }
 
     fun stockIn(codeOrEan: String, quantity: Double, expiryDate: String? = null): Product {
