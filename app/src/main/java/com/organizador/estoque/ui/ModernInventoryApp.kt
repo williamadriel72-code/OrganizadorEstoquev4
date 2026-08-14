@@ -15,6 +15,7 @@ import com.organizador.estoque.data.InventoryRepository
 @Composable
 fun ModernInventoryApp(repository: InventoryRepository) {
     var screen by rememberSaveable { mutableStateOf("home") }
+    var productFilter by rememberSaveable { mutableStateOf("all") }
     var refresh by rememberSaveable { mutableIntStateOf(0) }
     val holder = rememberSaveableStateHolder()
     BackHandler(enabled = screen != "home") { screen = "home" }
@@ -23,7 +24,7 @@ fun ModernInventoryApp(repository: InventoryRepository) {
         Scaffold(bottomBar = {
             NavigationBar {
                 NavigationBarItem(selected = screen == "home", onClick = { screen = "home" }, icon = {}, label = { Text("Início") })
-                NavigationBarItem(selected = screen == "products", onClick = { screen = "products" }, icon = {}, label = { Text("Produtos") })
+                NavigationBarItem(selected = screen == "products", onClick = { productFilter = "all"; screen = "products" }, icon = {}, label = { Text("Produtos") })
                 NavigationBarItem(selected = screen == "entry", onClick = { screen = "entry" }, icon = {}, label = { Text("Entrada") })
                 NavigationBarItem(selected = screen == "exit", onClick = { screen = "exit" }, icon = {}, label = { Text("Saída") })
             }
@@ -31,10 +32,16 @@ fun ModernInventoryApp(repository: InventoryRepository) {
             Box(Modifier.padding(padding).fillMaxSize()) {
                 holder.SaveableStateProvider(screen) {
                     when (screen) {
-                        "products" -> ProductsV2(repository, refresh)
+                        "products" -> ProductsV2(repository, refresh, productFilter)
+                        "expiries" -> ExpiryV2()
                         "entry" -> MovementV2(repository, true) { refresh++ }
                         "exit" -> MovementV2(repository, false) { refresh++ }
-                        else -> DashboardV2(repository, refresh) { screen = "products" }
+                        else -> DashboardV2(
+                            repository,
+                            refresh,
+                            openProducts = { filter -> productFilter = filter; screen = "products" },
+                            openExpiries = { screen = "expiries" }
+                        )
                     }
                 }
             }
