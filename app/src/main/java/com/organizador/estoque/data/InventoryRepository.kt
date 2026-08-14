@@ -162,6 +162,22 @@ class InventoryRepository(private val dbHelper: InventoryDb) {
         } finally { db.endTransaction() }
     }
 
+    fun expiryBatchesForProduct(productCode: String): List<ExpiryBatch> = dbHelper.readableDatabase.rawQuery(
+        "SELECT id, product_code, expiry_date, quantity FROM expiry_batches WHERE product_code=? AND quantity>0 ORDER BY expiry_date ASC",
+        arrayOf(productCode)
+    ).use { c ->
+        buildList {
+            while (c.moveToNext()) add(
+                ExpiryBatch(
+                    id = c.getLong(0),
+                    productCode = c.getString(1),
+                    expiryDate = c.getString(2),
+                    quantity = c.getDouble(3)
+                )
+            )
+        }
+    }
+
     fun productAddresses(productCode: String): List<String> = dbHelper.readableDatabase.rawQuery(
         "SELECT a.name FROM addresses a JOIN product_addresses pa ON pa.address_id=a.id WHERE pa.product_code=? ORDER BY pa.is_primary DESC,a.sort_order,a.name",
         arrayOf(productCode)
