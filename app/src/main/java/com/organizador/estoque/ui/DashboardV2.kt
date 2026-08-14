@@ -17,7 +17,8 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun DashboardV2(repository: InventoryRepository, refreshKey: Int, openProducts: (String)->Unit, openExpiries: ()->Unit) {
-    val insights = remember { InventoryInsights(LocalContext.current) }
+    val context = LocalContext.current
+    val insights = remember(context) { InventoryInsights(context) }
     var s by remember { mutableStateOf(DashboardStats()) }
     var neg by remember { mutableLongStateOf(0L) }
     LaunchedEffect(refreshKey) {
