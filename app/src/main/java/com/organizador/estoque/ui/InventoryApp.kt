@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.organizador.estoque.data.DashboardStats
+import com.organizador.estoque.data.ExpiryBatch
 import com.organizador.estoque.data.InventoryRepository
 import com.organizador.estoque.data.Product
 import kotlinx.coroutines.Dispatchers
@@ -91,6 +92,8 @@ private fun ProductsScreen(repository: InventoryRepository, refreshKey: Int, onC
     var products by remember { mutableStateOf<List<Product>>(emptyList()) }
     var editing by remember { mutableStateOf<Product?>(null) }
     var creating by remember { mutableStateOf(false) }
+    var scannedProduct by remember { mutableStateOf<Product?>(null) }
+    var scannedExpiries by remember { mutableStateOf<List<ExpiryBatch>>(emptyList()) }
 
     suspend fun loadProducts(): List<Product> {
         val normalized = query.trim()
@@ -103,6 +106,19 @@ private fun ProductsScreen(repository: InventoryRepository, refreshKey: Int, onC
         scope.launch { products = loadProducts() }
     }
 
+    fun handleScan(barcode: String) {
+        query = barcode
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                val product = repository.findExact(barcode)
+                val expiries = product?.let { repository.expiryBatchesForProduct(it.code) }.orEmpty()
+                product to expiries
+            }
+            scannedProduct = result.first
+            scannedExpiries = result.second
+        }
+    }
+
     LaunchedEffect(query, filter, refreshKey) {
         products = loadProducts()
     }
@@ -113,7 +129,17 @@ private fun ProductsScreen(repository: InventoryRepository, refreshKey: Int, onC
             Button(onClick={ creating=true }) { Text("+ NOVO") }
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(query, {query=it}, modifier=Modifier.fillMaxWidth(), label={Text("Código, EAN ou descrição")}, singleLine=true)
+        OutlinedTextField(query, {
+            query=it
+            scannedProduct=null
+            scannedExpiries=emptyList()
+        }, modifier=Modifier.fillMaxWidth(), label={Text("Código, EAN ou descrição")}, singleLine=true)
+        Spacer(Modifier.height(8.dp))
+        BarcodeCaptureButton(Modifier.fillMaxWidth(), onBarcode = ::handleScan)
+        scannedProduct?.let { p ->
+            Spacer(Modifier.height(8.dp))
+            ExpiryScanCard(p, scannedExpiries)
+        }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             FilterChip(selected=filter=="all", onClick={filter="all"}, label={Text("Todos")})
@@ -141,6 +167,23 @@ private fun ProductsScreen(repository: InventoryRepository, refreshKey: Int, onC
 
     if (creating) ProductEditor(repository, null, onDismiss={creating=false}, onSaved={ creating=false; reload(); onChanged() })
     editing?.let { p -> ProductEditor(repository, p, onDismiss={editing=null}, onSaved={ editing=null; reload(); onChanged() }) }
+}
+
+@Composable
+private fun ExpiryScanCard(product: Product, expiries: List<ExpiryBatch>) {
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF10243A))) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(product.description, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text("Validades", color = Color(0xFF9FB0C4), fontWeight = FontWeight.SemiBold)
+            if (expiries.isEmpty()) {
+                Text("Nenhuma validade cadastrada para este produto.", color = Color.LightGray, fontSize = 13.sp)
+            } else {
+                expiries.forEach { batch ->
+                    Text("${batch.expiryDate}  •  Qtd. ${formatQty(batch.quantity)}", fontSize = 14.sp)
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -201,19 +244,25 @@ private fun MovementScreen(repository: InventoryRepository, isEntry: Boolean, on
     var expiry by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<Product?>(null) }
     var foundAddress by remember { mutableStateOf<String?>(null) }
+    var foundExpiries by remember { mutableStateOf<List<ExpiryBatch>>(emptyList()) }
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf(false) }
 
-    fun lookup() {
+    fun lookup(value: String = code) {
+        val normalized = value.trim()
+        if (normalized.isBlank()) return
+        code = normalized
         scope.launch {
             val result = withContext(Dispatchers.IO) {
-                val product = repository.findExact(code)
+                val product = repository.findExact(normalized)
                 val address = product?.let { repository.productAddresses(it.code).firstOrNull() }
-                product to address
+                val expiries = product?.let { repository.expiryBatchesForProduct(it.code) }.orEmpty()
+                Triple(product, address, expiries)
             }
             found = result.first
             foundAddress = result.second
-            if (found == null && code.isNotBlank()) { error=true; message="Produto não encontrado" }
+            foundExpiries = result.third
+            if (found == null) { error=true; message="Produto não encontrado" }
             else { error=false; message=null }
         }
     }
@@ -221,14 +270,23 @@ private fun MovementScreen(repository: InventoryRepository, isEntry: Boolean, on
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(if (isEntry) "Entrada de estoque" else "Saída de estoque", fontSize=25.sp, fontWeight=FontWeight.Bold)
         Text(if (isEntry) "Aumenta o estoque e registra validade quando informada." else "Baixa o estoque e consome primeiro as validades mais próximas (FEFO).", color=Color.LightGray)
-        OutlinedTextField(code,{code=it; found=null; foundAddress=null; message=null},modifier=Modifier.fillMaxWidth(),label={Text("Código ou EAN")},singleLine=true)
+        OutlinedTextField(code,{code=it; found=null; foundAddress=null; foundExpiries=emptyList(); message=null},modifier=Modifier.fillMaxWidth(),label={Text("Código ou EAN")},singleLine=true)
+        BarcodeCaptureButton(Modifier.fillMaxWidth()) { scanned -> lookup(scanned) }
         Button(onClick={lookup()}, modifier=Modifier.fillMaxWidth()) { Text("LOCALIZAR PRODUTO") }
         found?.let { p ->
             Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(p.description, fontWeight=FontWeight.Bold, fontSize=18.sp)
                     Text("Estoque atual: ${formatQty(p.stock)}")
                     foundAddress?.let { Text("Endereço: $it") }
+                    Text("Validades", color = Color(0xFF9FB0C4), fontWeight = FontWeight.SemiBold)
+                    if (foundExpiries.isEmpty()) {
+                        Text("Nenhuma validade cadastrada.", color = Color.LightGray, fontSize = 13.sp)
+                    } else {
+                        foundExpiries.forEach { batch ->
+                            Text("${batch.expiryDate}  •  Qtd. ${formatQty(batch.quantity)}", fontSize = 14.sp)
+                        }
+                    }
                 }
             }
         }
@@ -244,7 +302,13 @@ private fun MovementScreen(repository: InventoryRepository, isEntry: Boolean, on
                             if (isEntry) repository.stockIn(code, qty, expiry.ifBlank{null}) else repository.stockOut(code, qty)
                         }
                     }.onSuccess { updated ->
-                        found=updated; error=false; message=if (isEntry) "Entrada registrada com sucesso." else "Saída registrada com sucesso."; onChanged()
+                        found=updated
+                        scope.launch {
+                            foundExpiries = withContext(Dispatchers.IO) { repository.expiryBatchesForProduct(updated.code) }
+                        }
+                        error=false
+                        message=if (isEntry) "Entrada registrada com sucesso." else "Saída registrada com sucesso."
+                        onChanged()
                     }.onFailure { error=true; message=it.message ?: "Não foi possível concluir." }
                 }
             }, modifier=Modifier.fillMaxWidth(), enabled=found != null
