@@ -163,7 +163,7 @@ class InventoryRepository(private val dbHelper: InventoryDb) {
     }
 
     fun expiryBatchesForProduct(productCode: String): List<ExpiryBatch> = dbHelper.readableDatabase.rawQuery(
-        "SELECT id, product_code, expiry_date, quantity FROM expiry_batches WHERE product_code=? AND quantity>0 ORDER BY expiry_date ASC",
+        "SELECT id, product_code, expiry_date, quantity FROM expiry_batches WHERE product_code=? ORDER BY expiry_date ASC",
         arrayOf(productCode)
     ).use { c ->
         buildList {
