@@ -1,5 +1,9 @@
 package com.organizador.estoque.ui
 
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -21,6 +25,23 @@ fun BarcodeCaptureButton(
     val context = LocalContext.current
     var reading by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
+
+    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_MUSIC, 72) }
+    val soundHandler = remember { Handler(Looper.getMainLooper()) }
+    DisposableEffect(Unit) {
+        onDispose {
+            soundHandler.removeCallbacksAndMessages(null)
+            toneGenerator.release()
+        }
+    }
+
+    fun playFunnyScanSound() {
+        soundHandler.removeCallbacksAndMessages(null)
+        toneGenerator.startTone(ToneGenerator.TONE_DTMF_1, 75)
+        soundHandler.postDelayed({
+            toneGenerator.startTone(ToneGenerator.TONE_DTMF_9, 105)
+        }, 82)
+    }
 
     val options = remember {
         GmsBarcodeScannerOptions.Builder()
@@ -44,7 +65,10 @@ fun BarcodeCaptureButton(
             failed = false
             scanner.startScan()
                 .addOnSuccessListener { barcode ->
-                    barcode.rawValue?.takeIf { it.isNotBlank() }?.let(onBarcode)
+                    barcode.rawValue?.takeIf { it.isNotBlank() }?.let { value ->
+                        playFunnyScanSound()
+                        onBarcode(value)
+                    }
                 }
                 .addOnFailureListener { failed = true }
                 .addOnCompleteListener { reading = false }
