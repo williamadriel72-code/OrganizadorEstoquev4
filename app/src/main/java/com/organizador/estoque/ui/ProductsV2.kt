@@ -25,7 +25,8 @@ import kotlinx.coroutines.withContext
 fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: String = "all") {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-    val insights = remember { InventoryInsights(LocalContext.current) }
+    val context = LocalContext.current
+    val insights = remember(context) { InventoryInsights(context) }
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(initialFilter) }
     var products by remember { mutableStateOf<List<Product>>(emptyList()) }
