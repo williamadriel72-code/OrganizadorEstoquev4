@@ -23,6 +23,7 @@ data class DashboardStats(
     val totalStock: Double = 0.0,
     val lowStock: Long = 0,
     val zeroStock: Long = 0,
+    val negativeStock: Long = 0,
     val withoutAddress: Long = 0,
     val expired: Long = 0,
     val expiring7: Long = 0,
