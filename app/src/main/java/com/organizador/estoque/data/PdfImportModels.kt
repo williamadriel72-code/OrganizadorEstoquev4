@@ -6,6 +6,11 @@ data class PdfImportResult(
     val message: String
 )
 
+data class PdfImportProgress(
+    val percent: Int,
+    val stage: String
+)
+
 data class ExpiryImportRow(
     val productRef: String,
     val expiryDate: String,
