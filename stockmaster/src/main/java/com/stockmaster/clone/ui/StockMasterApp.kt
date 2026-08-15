@@ -112,8 +112,8 @@ private fun LoginScreen(
         Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("StockMaster", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-        Text("Nova versão compatível com o banco local", style = MaterialTheme.typography.bodyLarge)
+        Text("AWS", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        Text("AWS – Gestão de Estoque", style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(24.dp))
 
         Button(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
