@@ -8,16 +8,23 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.stockmaster.clone"
+        applicationId = "com.aws.gestaoestoque"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10001
-        versionName = "1.0.0"
+        versionCode = 10002
+        versionName = "1.0.1"
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = "AWS-Gestao-de-Estoque-${versionName}.apk"
+        }
     }
 }
 
