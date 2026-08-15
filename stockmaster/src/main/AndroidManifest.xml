@@ -7,7 +7,7 @@
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
         <provider
-            android:name="com.stockmaster.clone.data.AwsBundledDataProvider"
+            android:name="com.aws.gestaoestoque.data.AwsBundledDataProvider"
             android:authorities="com.aws.gestaoestoque.bundleddata"
             android:exported="false"
             android:initOrder="100" />
