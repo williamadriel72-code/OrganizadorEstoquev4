@@ -1,0 +1,80 @@
+name: Patch StockMaster Back Navigation
+
+on:
+  push:
+    branches: [ "agent/aws-integrated-data-staging" ]
+    paths:
+      - ".github/workflows/patch-stockmaster-back-navigation.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/aws-integrated-data-staging
+          fetch-depth: 0
+
+      - name: Add safe back navigation and bottom back button
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("stockmaster/src/main/java/com/stockmaster/clone/ui/StockMasterApp.kt")
+          text = path.read_text(encoding="utf-8")
+
+          if "import androidx.activity.compose.BackHandler" not in text:
+              text = text.replace(
+                  "import androidx.activity.compose.rememberLauncherForActivityResult\n",
+                  "import androidx.activity.compose.BackHandler\nimport androidx.activity.compose.rememberLauncherForActivityResult\n",
+                  1,
+              )
+
+          marker = '    var message by remember { mutableStateOf("") }\n'
+          back_code = '''\n    BackHandler(enabled = user != null && screen != "login") {\n        if (screen == "dashboard") {\n            user = null\n            screen = "login"\n        } else {\n            screen = "dashboard"\n        }\n    }\n'''
+          if "BackHandler(enabled = user != null && screen != \"login\")" not in text:
+              if marker not in text:
+                  raise SystemExit("Could not find StockMasterApp state marker")
+              text = text.replace(marker, marker + back_code, 1)
+
+          if 'contentDescription = "Voltar para o painel"' not in text:
+              surface_pos = text.index("        Surface(", text.index("fun StockMasterApp()"))
+              open_brace = text.index("{", surface_pos)
+
+              depth = 0
+              close_brace = None
+              for i in range(open_brace, len(text)):
+                  ch = text[i]
+                  if ch == "{":
+                      depth += 1
+                  elif ch == "}":
+                      depth -= 1
+                      if depth == 0:
+                          close_brace = i
+                          break
+              if close_brace is None:
+                  raise SystemExit("Could not locate Surface closing brace")
+
+              text = text[:open_brace + 1] + "\n            Box(modifier = Modifier.fillMaxSize()) {" + text[open_brace + 1:]
+              added = len("\n            Box(modifier = Modifier.fillMaxSize()) {")
+              close_brace += added
+
+              bottom_button = '''\n\n                if (user != null && screen != "dashboard" && screen != "login") {\n                    FilledTonalButton(\n                        onClick = { screen = "dashboard" },\n                        modifier = Modifier\n                            .align(Alignment.BottomCenter)\n                            .navigationBarsPadding()\n                            .padding(horizontal = 16.dp, vertical = 10.dp)\n                            .fillMaxWidth()\n                            .widthIn(max = 760.dp)\n                            .heightIn(min = 54.dp),\n                        shape = fieldShape\n                    ) {\n                        Text(\n                            text = "←  Voltar",\n                            style = MaterialTheme.typography.titleMedium,\n                            fontWeight = FontWeight.Bold\n                        )\n                    }\n                }\n            }\n'''
+              text = text[:close_brace] + bottom_button + text[close_brace:]
+
+          path.write_text(text, encoding="utf-8")
+
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add stockmaster/src/main/java/com/stockmaster/clone/ui/StockMasterApp.kt
+          git commit -m "Fix Android back navigation and add bottom back button"
+          git push origin HEAD:agent/aws-integrated-data-staging
