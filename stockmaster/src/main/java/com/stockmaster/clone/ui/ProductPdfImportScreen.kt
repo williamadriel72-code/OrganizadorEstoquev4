@@ -44,7 +44,11 @@ fun ProductPdfImportScreen(
                     }
                 }.onSuccess {
                     report = it
-                    message = "Importação finalizada."
+                    message = if (it.errors == 0) {
+                        "Importação finalizada sem linhas rejeitadas."
+                    } else {
+                        "Importação finalizada com ${it.errors} linha(s) não reconhecida(s) ou com erro."
+                    }
                 }.onFailure {
                     message = it.message ?: "Não foi possível importar o PDF."
                 }
@@ -107,7 +111,7 @@ fun ProductPdfImportScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "Importação de mercadorias",
+                        "Importação inteligente de mercadorias",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -119,6 +123,11 @@ fun ProductPdfImportScreen(
                     Text(
                         "Produtos já existentes são atualizados sem duplicar. O estoque do PDF substitui o estoque atual; preços e outros dados que não vêm nesse relatório são preservados.",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "PDFs grandes são processados fora da interface para manter o aplicativo responsivo. O resultado informa qualquer linha que não tenha sido reconhecida.",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
@@ -144,7 +153,7 @@ fun ProductPdfImportScreen(
                                 strokeWidth = 3.dp
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text("Lendo e atualizando as mercadorias...")
+                            Text("Lendo, mesclando e atualizando as mercadorias...")
                         }
                     }
                 }
@@ -168,11 +177,21 @@ fun ProductPdfImportScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        ImportResultLine("Produtos encontrados", result.found)
+                        ImportResultLine("Produtos reconhecidos", result.found)
                         ImportResultLine("Produtos novos", result.inserted)
                         ImportResultLine("Produtos atualizados", result.updated)
-                        ImportResultLine("Produtos ignorados", result.ignored)
-                        ImportResultLine("Erros", result.errors)
+                        ImportResultLine("Duplicados/ignorados", result.ignored)
+                        ImportResultLine("Linhas não reconhecidas / erros", result.errors)
+
+                        if (result.errors > 0) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            Text(
+                                "Atenção: ${result.errors} linha(s) do PDF não puderam ser aplicadas. Confira este número principalmente em relatórios grandes para detectar importação parcial.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 }
             }
@@ -181,7 +200,7 @@ fun ProductPdfImportScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    color = if (report != null) {
+                    color = if (report != null && (report?.errors ?: 0) == 0) {
                         MaterialTheme.colorScheme.secondaryContainer
                     } else {
                         MaterialTheme.colorScheme.errorContainer
@@ -190,7 +209,7 @@ fun ProductPdfImportScreen(
                     Text(
                         text = message,
                         modifier = Modifier.padding(14.dp),
-                        color = if (report != null) {
+                        color = if (report != null && (report?.errors ?: 0) == 0) {
                             MaterialTheme.colorScheme.onSecondaryContainer
                         } else {
                             MaterialTheme.colorScheme.onErrorContainer
