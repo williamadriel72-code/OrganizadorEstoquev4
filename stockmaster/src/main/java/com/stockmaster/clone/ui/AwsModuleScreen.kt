@@ -14,9 +14,12 @@ import androidx.compose.ui.unit.dp
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.stockmaster.clone.data.ExpiryRow
 import com.stockmaster.clone.data.ProductRow
 import com.stockmaster.clone.data.StockMasterDb
 import com.stockmaster.clone.data.UserSession
+import com.stockmaster.clone.data.expiryForProduct
+import com.stockmaster.clone.data.formatExpiryForDisplay
 import java.util.Locale
 
 @Composable
@@ -29,6 +32,7 @@ internal fun AwsModuleScreen(
     var query by remember(module.id) { mutableStateOf("") }
     var results by remember(module.id) { mutableStateOf(emptyList<ProductRow>()) }
     var selected by remember(module.id) { mutableStateOf<ProductRow?>(null) }
+    var productExpiries by remember(module.id) { mutableStateOf(emptyList<ExpiryRow>()) }
     var qty by remember(module.id) { mutableStateOf("1") }
     var expiry by remember(module.id) { mutableStateOf("") }
     var lot by remember(module.id) { mutableStateOf("") }
@@ -42,14 +46,28 @@ internal fun AwsModuleScreen(
     }
     var saleItems by remember(module.id) { mutableStateOf(emptyList<Pair<ProductRow, Double>>()) }
 
+    fun selectProduct(product: ProductRow) {
+        selected = product
+        productExpiries = runCatching { db.expiryForProduct(product.id) }.getOrDefault(emptyList())
+    }
+
     fun search(value: String) {
         query = value
         runCatching {
             db.findExact(value)?.let { listOf(it) } ?: db.searchProducts(value)
         }.onSuccess { rows ->
             results = rows
-            if (rows.size == 1) selected = rows.first()
-        }.onFailure { message = it.message ?: "Falha na pesquisa." }
+            if (rows.size == 1) {
+                selectProduct(rows.first())
+            } else {
+                selected = null
+                productExpiries = emptyList()
+            }
+        }.onFailure {
+            selected = null
+            productExpiries = emptyList()
+            message = it.message ?: "Falha na pesquisa."
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
@@ -143,6 +161,54 @@ internal fun AwsModuleScreen(
                         }
                     }
                 }
+
+                item {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = awsCardShape
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            Text(
+                                "Validade da mercadoria",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            if (productExpiries.isEmpty()) {
+                                Text(
+                                    "SEM VALIDADE CADASTRADA",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            } else {
+                                val nearest = productExpiries.first()
+                                Text(
+                                    "VALIDADE MAIS PRÓXIMA: ${formatExpiryForDisplay(nearest.expiry)}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                if (nearest.quantity != 0.0) {
+                                    Text("Quantidade: ${nearest.quantity}")
+                                }
+                                if (productExpiries.size > 1) {
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 3.dp))
+                                    Text("Outras validades", fontWeight = FontWeight.SemiBold)
+                                    productExpiries.drop(1).take(10).forEach { row ->
+                                        Text(
+                                            "• ${formatExpiryForDisplay(row.expiry)}  •  Qtde: ${row.quantity}" +
+                                                if (row.lot.isNotBlank()) "  •  Lote: ${row.lot}" else ""
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             if (module.id !in setOf("price", "restock")) {
@@ -214,6 +280,7 @@ internal fun AwsModuleScreen(
                                                     }
                                                     db.addExpiry(product, expiry, lot, number, user)
                                                     expiryRows = db.listExpiry()
+                                                    productExpiries = db.expiryForProduct(product.id)
                                                 }
                                                 else -> Unit
                                             }
@@ -281,7 +348,7 @@ internal fun AwsModuleScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                "Validade: ${row.expiry}  •  Lote: ${row.lot.ifBlank { "-" }}  •  Qtde: ${row.quantity}",
+                                "Validade: ${formatExpiryForDisplay(row.expiry)}  •  Lote: ${row.lot.ifBlank { "-" }}  •  Qtde: ${row.quantity}",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -290,7 +357,7 @@ internal fun AwsModuleScreen(
             } else {
                 items(results) { product ->
                     ElevatedCard(
-                        onClick = { selected = product },
+                        onClick = { selectProduct(product) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp)
                     ) {
