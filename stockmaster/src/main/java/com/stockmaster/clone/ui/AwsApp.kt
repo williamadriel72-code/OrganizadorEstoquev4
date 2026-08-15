@@ -33,8 +33,6 @@ internal val awsModules = listOf(
     AwsModuleDef("print", "Impressão", "acessoImpressao"),
     AwsModuleDef("damage", "Avaria", "acessoAvaria"),
     AwsModuleDef("movement", "Movimentação", "acessoMovimentacao"),
-    AwsModuleDef("import_products_pdf", "Importar mercadorias – PDF", null),
-    AwsModuleDef("import_expiry_pdf", "Importar datas de validade – PDF", null),
     AwsModuleDef("expiry", "Controle de validade", null)
 )
 
@@ -183,17 +181,6 @@ fun AwsApp() {
                             user = null
                             screen = "login"
                         }
-                    )
-
-                    screen == "import_products_pdf" -> ProductPdfImportScreen(
-                        db = db,
-                        onBack = { screen = "dashboard" }
-                    )
-
-                    screen == "import_expiry_pdf" -> ExpiryPdfImportScreen(
-                        db = db,
-                        user = user!!,
-                        onBack = { screen = "dashboard" }
                     )
 
                     else -> AwsModuleScreen(
