@@ -46,7 +46,11 @@ fun ExpiryPdfImportScreen(
                     }
                 }.onSuccess {
                     report = it
-                    message = "Importação de validades finalizada."
+                    message = if (it.errors == 0) {
+                        "Importação de validades finalizada sem linhas rejeitadas."
+                    } else {
+                        "Importação finalizada com ${it.errors} linha(s) de validade não reconhecida(s) ou com erro."
+                    }
                 }.onFailure {
                     message = it.message ?: "Não foi possível importar o PDF de validades."
                 }
@@ -105,7 +109,7 @@ fun ExpiryPdfImportScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "Importação de validades",
+                        "Importação inteligente de validades",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -117,6 +121,11 @@ fun ExpiryPdfImportScreen(
                     Text(
                         "A mercadoria é localizada primeiro pelo código e depois pelo EAN. Se a mesma validade já existir, o registro é atualizado em vez de duplicado.",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "PDFs grandes são processados fora da interface. No final, o AWS informa quantas linhas foram reconhecidas e quantas não puderam ser vinculadas corretamente.",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
@@ -140,7 +149,7 @@ fun ExpiryPdfImportScreen(
                                 strokeWidth = 3.dp
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text("Lendo e vinculando as validades...")
+                            Text("Lendo, vinculando e mesclando as validades...")
                         }
                     }
                 }
@@ -164,25 +173,36 @@ fun ExpiryPdfImportScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-                        ExpiryImportResultLine("Validades encontradas", result.found)
+                        ExpiryImportResultLine("Validades reconhecidas", result.found)
                         ExpiryImportResultLine("Novas validades", result.inserted)
                         ExpiryImportResultLine("Validades atualizadas", result.updated)
-                        ExpiryImportResultLine("Ignoradas", result.ignored)
-                        ExpiryImportResultLine("Erros", result.errors)
+                        ExpiryImportResultLine("Duplicadas/não vinculadas", result.ignored)
+                        ExpiryImportResultLine("Linhas não reconhecidas / erros", result.errors)
+
+                        if (result.errors > 0 || result.ignored > 0) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            Text(
+                                "Atenção: confira os números acima. Linhas ignoradas podem indicar produto não localizado por código/EAN; erros podem indicar formato de linha ou data não reconhecido.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 }
             }
 
             if (message.isNotBlank()) {
+                val clean = report != null && (report?.errors ?: 0) == 0 && (report?.ignored ?: 0) == 0
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    color = if (report != null) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer
+                    color = if (clean) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer
                 ) {
                     Text(
                         text = message,
                         modifier = Modifier.padding(14.dp),
-                        color = if (report != null) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                        color = if (clean) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer,
                         textAlign = TextAlign.Center
                     )
                 }
