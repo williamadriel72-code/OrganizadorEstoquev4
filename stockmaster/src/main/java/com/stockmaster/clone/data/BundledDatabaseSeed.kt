@@ -1,4 +1,4 @@
-package com.stockmaster.clone.data
+package com.aws.gestaoestoque.data
 
 import android.content.Context
 import java.io.File
@@ -38,7 +38,7 @@ internal fun ensureBundledDatabase(context: Context): Boolean {
             "Não foi possível preparar o banco integrado."
         }
 
-        val db = StockMasterDb(appContext)
+        val db = AwsDb(appContext)
         db.validateSchema()
         db.close()
         return true
