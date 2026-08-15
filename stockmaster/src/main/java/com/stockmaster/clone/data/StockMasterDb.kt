@@ -64,6 +64,7 @@ class StockMasterDb(private val context: Context) {
         check(hasDatabase()) { "Importe o arquivo .db primeiro." }
         return SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).also { database ->
             db = database
+            configurePerformance(database)
             runCatching { ensureSearchIndexes(database) }
         }
     }
@@ -73,11 +74,24 @@ class StockMasterDb(private val context: Context) {
         db = null
     }
 
+    private fun configurePerformance(database: SQLiteDatabase) {
+        // Ajustes leves: melhoram consultas concorrentes e reaproveitamento de páginas
+        // sem alterar o formato do banco nem usar modos agressivos de escrita.
+        runCatching {
+            database.rawQuery("PRAGMA busy_timeout=3000", null).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getInt(0)
+            }
+        }
+        runCatching { database.execSQL("PRAGMA temp_store=MEMORY") }
+        runCatching { database.execSQL("PRAGMA cache_size=-8192") }
+    }
+
     private fun ensureSearchIndexes(database: SQLiteDatabase) {
         database.execSQL("CREATE INDEX IF NOT EXISTS idx_aws_produto_ean ON produto(ean)")
         database.execSQL("CREATE INDEX IF NOT EXISTS idx_aws_produto_descricao ON produto(descricaoproduto COLLATE NOCASE)")
         database.execSQL("CREATE INDEX IF NOT EXISTS idx_aws_produto_ativo_descricao ON produto(ativo, descricaoproduto COLLATE NOCASE)")
         database.execSQL("CREATE INDEX IF NOT EXISTS idx_aws_validade_produto_data ON controlevalidade(idproduto, validade)")
+        runCatching { database.execSQL("PRAGMA optimize") }
     }
 
     fun validateSchema() {
