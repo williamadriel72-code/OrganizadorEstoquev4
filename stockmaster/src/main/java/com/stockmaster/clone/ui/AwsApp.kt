@@ -19,6 +19,7 @@ import com.stockmaster.clone.data.AwsCredentialStore
 import com.stockmaster.clone.data.SavedCredentials
 import com.stockmaster.clone.data.StockMasterDb
 import com.stockmaster.clone.data.UserSession
+import com.stockmaster.clone.data.importDatabaseSafely
 
 internal data class AwsModuleDef(val id: String, val title: String, val permission: String?)
 
@@ -60,15 +61,18 @@ fun AwsApp() {
     ) { uri ->
         if (uri != null) {
             runCatching {
-                db.importDatabase(uri)
+                db.importDatabaseSafely(context.applicationContext, uri)
                 dbReady = true
                 user = null
                 screen = "login"
             }.onSuccess {
                 message = "Banco importado com sucesso."
-            }.onFailure {
-                dbReady = false
-                message = it.message ?: "Falha ao importar o banco."
+            }.onFailure { error ->
+                dbReady = runCatching {
+                    db.hasDatabase().also { if (it) db.validateSchema() }
+                }.getOrDefault(false)
+                message = (error.message ?: "Falha ao importar o banco.") +
+                    if (dbReady) " Banco anterior mantido e disponível." else ""
             }
         }
     }
