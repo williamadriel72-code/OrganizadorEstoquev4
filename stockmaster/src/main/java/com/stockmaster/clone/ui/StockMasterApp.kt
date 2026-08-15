@@ -36,6 +36,7 @@ private val modules = listOf(
     ModuleDef("print", "Impressão", "acessoImpressao"),
     ModuleDef("damage", "Avaria", "acessoAvaria"),
     ModuleDef("movement", "Movimentação", "acessoMovimentacao"),
+    ModuleDef("import_products_pdf", "Importar mercadorias – PDF", null),
     ModuleDef("expiry", "Controle de validade", null)
 )
 
@@ -107,6 +108,11 @@ fun StockMasterApp() {
                     onOpen = { screen = it },
                     onImport = { importLauncher.launch(arrayOf("application/octet-stream", "application/x-sqlite3", "*/*")) },
                     onLogout = { user = null; screen = "login" }
+                )
+
+                screen == "import_products_pdf" -> ProductPdfImportScreen(
+                    db = db,
+                    onBack = { screen = "dashboard" }
                 )
 
                 else -> ModuleScreen(
