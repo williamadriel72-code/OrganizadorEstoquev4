@@ -40,16 +40,15 @@ fun StockMasterDb.expiryForProduct(productId: String, limit: Int = 100): List<Ex
     )
 }
 
-/** Exibe a data junto com sua situação para que o estado fique visível em qualquer tela. */
+/** Converte a validade para DD/MM/AAAA quando estiver no formato ISO. */
 fun formatExpiryForDisplay(value: String): String {
     val clean = value.trim()
     val iso = Regex("""(\d{4})-(\d{2})-(\d{2}).*""").matchEntire(clean)
-    val dateText = if (iso != null) {
+    return if (iso != null) {
         "${iso.groupValues[3]}/${iso.groupValues[2]}/${iso.groupValues[1]}"
     } else {
         clean
     }
-    return "$dateText • ${expiryStatus(value).label}"
 }
 
 private fun parseExpiryMillis(value: String): Long? {
