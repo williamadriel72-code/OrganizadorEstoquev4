@@ -1,4 +1,4 @@
-package com.stockmaster.clone.data
+package com.aws.gestaoestoque.data
 
 import android.content.ContentValues
 import android.content.Context
