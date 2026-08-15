@@ -11,8 +11,8 @@ android {
         applicationId = "com.aws.gestaoestoque"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10006
-        versionName = "1.0.6"
+        versionCode = 10007
+        versionName = "1.0.7"
     }
 
     buildFeatures {
