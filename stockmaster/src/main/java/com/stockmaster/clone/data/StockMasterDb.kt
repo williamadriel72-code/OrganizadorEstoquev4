@@ -47,6 +47,11 @@ class StockMasterDb(private val context: Context) {
 
     fun importDatabase(uri: Uri) {
         close()
+        // Remove sidecar files from a previously opened SQLite database so a newly
+        // imported database can never inherit stale WAL/SHM state.
+        java.io.File(dbFile.absolutePath + "-wal").delete()
+        java.io.File(dbFile.absolutePath + "-shm").delete()
+        java.io.File(dbFile.absolutePath + "-journal").delete()
         dbFile.parentFile?.mkdirs()
         context.contentResolver.openInputStream(uri).use { input ->
             requireNotNull(input) { "Não foi possível abrir o arquivo selecionado." }
@@ -80,9 +85,22 @@ class StockMasterDb(private val context: Context) {
 
     fun authenticate(login: String, password: String): UserSession? {
         val database = open()
+        val cleanLogin = login.trim()
+        val cleanPassword = password.trim()
         database.rawQuery(
-            "SELECT idusr,nome,login,COALESCE(acessosUser,'{}') FROM usuario WHERE UPPER(login)=UPPER(?) AND senha=? AND ativo='S' LIMIT 1",
-            arrayOf(login.trim(), password)
+            """
+            SELECT idusr,nome,login,COALESCE(acessosUser,'{}')
+            FROM usuario
+            WHERE (
+                UPPER(TRIM(COALESCE(login,''))) = UPPER(?)
+                OR UPPER(TRIM(COALESCE(nome,''))) = UPPER(?)
+                OR TRIM(CAST(idusr AS TEXT)) = ?
+            )
+              AND TRIM(COALESCE(senha,'')) = ?
+              AND UPPER(TRIM(COALESCE(ativo,''))) = 'S'
+            LIMIT 1
+            """.trimIndent(),
+            arrayOf(cleanLogin, cleanLogin, cleanLogin, cleanPassword)
         ).use { c ->
             return if (c.moveToFirst()) {
                 UserSession(c.getString(0), c.getString(1), c.getString(2), c.getString(3))
