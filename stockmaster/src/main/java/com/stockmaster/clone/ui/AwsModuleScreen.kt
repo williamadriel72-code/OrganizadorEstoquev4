@@ -409,7 +409,10 @@ private fun AwsBarcodeButton(modifier: Modifier = Modifier, onBarcode: (String) 
             failed = false
             scanner.startScan()
                 .addOnSuccessListener { barcode ->
-                    barcode.rawValue?.takeIf { it.isNotBlank() }?.let(onBarcode)
+                    barcode.rawValue?.takeIf { it.isNotBlank() }?.let { value ->
+                        playAwsFunnyScanBip()
+                        onBarcode(value)
+                    }
                 }
                 .addOnFailureListener { failed = true }
                 .addOnCompleteListener { reading = false }
