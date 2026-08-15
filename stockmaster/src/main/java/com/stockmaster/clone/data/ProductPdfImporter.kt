@@ -38,20 +38,34 @@ class ProductPdfImporter(
                 temp.outputStream().use { output -> input.copyTo(output) }
             }
 
-            val text = PDDocument.load(temp).use { document ->
+            val parsed = PDDocument.load(temp).use { document ->
                 require(document.numberOfPages > 0) { "O PDF está vazio." }
-                PDFTextStripper().apply {
-                    sortByPosition = true
+
+                // Os relatórios DAM/AWS podem ser extraídos em ordens diferentes conforme
+                // o renderizador PDF. A ordem natural preserva melhor Código + EAN +
+                // Descrição + Estoque. Se ela não reconhecer nada, tentamos a ordenação
+                // visual por posição como fallback.
+                val naturalText = PDFTextStripper().apply {
+                    sortByPosition = false
                 }.getText(document)
+
+                require(naturalText.isNotBlank()) {
+                    "O PDF não possui texto pesquisável. Use um relatório PDF gerado pelo sistema, não uma imagem digitalizada."
+                }
+
+                val naturalResult = parseReport(naturalText)
+                if (naturalResult.products.isNotEmpty()) {
+                    naturalResult
+                } else {
+                    val positionedText = PDFTextStripper().apply {
+                        sortByPosition = true
+                    }.getText(document)
+                    parseReport(positionedText)
+                }
             }
 
-            require(text.isNotBlank()) {
-                "O PDF não possui texto pesquisável. Use um relatório PDF gerado pelo sistema, não uma imagem digitalizada."
-            }
-
-            val parsed = parseReport(text)
             require(parsed.products.isNotEmpty()) {
-                "Nenhuma mercadoria foi reconhecida. O PDF precisa conter Código, EAN, Descrição e Estoque Atual."
+                "Nenhuma mercadoria foi reconhecida. O PDF foi lido, mas o layout das colunas não pôde ser identificado."
             }
 
             return applyToDatabase(parsed.products, parsed.parseErrors)
@@ -76,6 +90,8 @@ class ProductPdfImporter(
         val products = ArrayList<ImportedProduct>()
         var currentGroup: Int? = null
         var pending: PendingProduct? = null
+        var waitingGroupValue = false
+        var pendingCode: Int? = null
         var errors = 0
 
         fun finishPending(stock: Double) {
@@ -96,6 +112,7 @@ class ProductPdfImporter(
                 )
             }
             pending = null
+            pendingCode = null
         }
 
         rawText.lineSequence().forEach { originalLine ->
@@ -108,10 +125,29 @@ class ProductPdfImporter(
                     errors++
                     pending = null
                 }
+                pendingCode = null
                 currentGroup = groupMatch.groupValues[1].toIntOrNull()
+                waitingGroupValue = false
                 val trailing = line.substring(groupMatch.range.last + 1).trim()
                 if (trailing.isBlank()) return@forEach
                 line = trailing
+            } else if (groupLabelOnlyRegex.matches(line)) {
+                if (pending != null) {
+                    errors++
+                    pending = null
+                }
+                pendingCode = null
+                waitingGroupValue = true
+                return@forEach
+            } else if (waitingGroupValue) {
+                val splitGroup = groupValueRegex.matchEntire(line)
+                if (splitGroup != null) {
+                    currentGroup = splitGroup.groupValues[1].toIntOrNull()
+                    waitingGroupValue = false
+                    return@forEach
+                }
+                if (isReportNoise(line)) return@forEach
+                waitingGroupValue = false
             }
 
             if (isReportNoise(line)) return@forEach
@@ -122,6 +158,7 @@ class ProductPdfImporter(
                     errors++
                     pending = null
                 }
+                pendingCode = null
 
                 val id = productMatch.groupValues[1].toIntOrNull()
                 val ean = productMatch.groupValues[2].trim()
@@ -153,6 +190,29 @@ class ProductPdfImporter(
                 return@forEach
             }
 
+            // Alguns extratores Android quebram o código em uma linha e deixam o EAN
+            // com a descrição na linha seguinte. Aceitamos esse formato como fallback.
+            val codeOnly = codeOnlyRegex.matchEntire(line)
+            if (codeOnly != null && pending == null) {
+                pendingCode = codeOnly.groupValues[1].toIntOrNull()
+                return@forEach
+            }
+
+            val code = pendingCode
+            if (code != null && pending == null) {
+                val eanDescription = eanDescriptionRegex.matchEntire(line)
+                if (eanDescription != null) {
+                    pending = PendingProduct(
+                        id = code,
+                        ean = eanDescription.groupValues[1],
+                        groupId = currentGroup,
+                        descriptionParts = mutableListOf(eanDescription.groupValues[2].trim())
+                    )
+                    pendingCode = null
+                    return@forEach
+                }
+            }
+
             val pendingItem = pending
             if (pendingItem != null) {
                 if (standaloneStockRegex.matches(line)) {
@@ -160,10 +220,11 @@ class ProductPdfImporter(
                     if (stock == null) {
                         errors++
                         pending = null
+                        pendingCode = null
                     } else {
                         finishPending(stock)
                     }
-                } else if (!isReportNoise(line)) {
+                } else if (!isReportNoise(line) && !looksLikeFooter(line)) {
                     pendingItem.descriptionParts += line
                 }
             }
@@ -176,6 +237,8 @@ class ProductPdfImporter(
     private fun cleanLine(input: String): String {
         var line = input
             .replace('\u00A0', ' ')
+            .replace("\u000C", "")
+            .replace("\u200B", "")
             .replace(Regex("[\\t ]+"), " ")
             .trim()
 
@@ -191,10 +254,41 @@ class ProductPdfImporter(
             normalized.startsWith("VALOR ESTOQUE") ||
             normalized.startsWith("CUSTO COMPRA") ||
             normalized.startsWith("MARGEM CONTRIBUI") ||
+            normalized.startsWith("RELAÇÃO GERAL DE PRODUTOS") ||
+            normalized.startsWith("RELACAO GERAL DE PRODUTOS") ||
+            normalized.startsWith("EMPRESA :") ||
+            normalized.startsWith("TIPO RELATORIO") ||
+            normalized.startsWith("SITUAÇÃO") ||
+            normalized.startsWith("SITUACAO") ||
+            normalized.startsWith("AGRUPADO POR") ||
+            normalized.startsWith("ORDENADO POR") ||
+            normalized.startsWith("T. PRODUTO") ||
+            normalized.startsWith("T. ITEM") ||
+            normalized.startsWith("T. PROMOÇÃO") ||
+            normalized.startsWith("T. PROMOCAO") ||
+            normalized.startsWith("FILTRO :") ||
+            normalized.startsWith("FILIAL :") ||
+            normalized.startsWith("D.A.M SOLUÇÕES") ||
+            normalized.startsWith("D.A.M SOLUCOES") ||
+            normalized.startsWith("VERSÃO:") ||
+            normalized.startsWith("VERSAO:") ||
+            normalized.startsWith("USUÁRIO:") ||
+            normalized.startsWith("USUARIO:") ||
+            normalized.matches(Regex("^\\d+\\s+DE\\s+\\d+$")) ||
             normalized == "CÓDIGO" ||
+            normalized == "CODIGO" ||
             normalized == "EAN" ||
             normalized == "DESCRIÇÃO" ||
+            normalized == "DESCRICAO" ||
             normalized == "ESTOQUE ATUAL"
+    }
+
+    private fun looksLikeFooter(line: String): Boolean {
+        val normalized = line.uppercase()
+        return normalized.contains("D.A.M SOLUÇÕES") ||
+            normalized.contains("D.A.M SOLUCOES") ||
+            normalized.contains("ADriel WILLIAM".uppercase()) ||
+            normalized.matches(Regex(".*\\d+\\s+DE\\s+\\d+.*"))
     }
 
     private fun applyToDatabase(
@@ -307,8 +401,25 @@ class ProductPdfImporter(
             RegexOption.IGNORE_CASE
         )
 
+        private val groupLabelOnlyRegex = Regex(
+            """^Grupo\s*:\s*$""",
+            RegexOption.IGNORE_CASE
+        )
+
+        private val groupValueRegex = Regex(
+            """^(\d+)\s*-\s*.+$"""
+        )
+
         private val productStartRegex = Regex(
             """^(\d{1,9})\s+([0-9]{8,20})\s+(.+)$"""
+        )
+
+        private val codeOnlyRegex = Regex(
+            """^(\d{1,9})$"""
+        )
+
+        private val eanDescriptionRegex = Regex(
+            """^([0-9]{8,20})\s+(.+)$"""
         )
 
         private val stockAtEndRegex = Regex(
