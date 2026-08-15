@@ -1,4 +1,4 @@
-name: Build StockMaster Nova Versao
+name: Build AWS Gestão de Estoque
 
 on:
   push:
@@ -26,10 +26,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Build StockMaster debug APK
+      - name: Build AWS debug APK
         run: gradle :stockmaster:assembleDebug --stacktrace
-      - name: Upload APK
+      - name: Upload AWS APK
         uses: actions/upload-artifact@v4
         with:
-          name: StockMaster-Nova-Versao-debug
+          name: AWS-Gestao-de-Estoque-debug
           path: stockmaster/build/outputs/apk/debug/stockmaster-debug.apk
