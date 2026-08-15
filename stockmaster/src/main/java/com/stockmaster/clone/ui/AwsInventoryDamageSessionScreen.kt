@@ -478,7 +478,7 @@ private fun DamageReasonSelector(
     selected: String,
     onSelected: (String) -> Unit
 ) {
-    val reasons = listOf("Danificado", "Furto", "Vencido", "Quebra", "Outros")
+    val reasons = listOf("Danificado", "Furto", "Vencido", "Outros")
     var expanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
