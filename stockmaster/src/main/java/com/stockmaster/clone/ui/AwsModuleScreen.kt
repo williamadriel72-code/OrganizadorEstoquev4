@@ -1,4 +1,4 @@
-package com.stockmaster.clone.ui
+package com.aws.gestaoestoque.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,18 +14,18 @@ import androidx.compose.ui.unit.dp
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
-import com.stockmaster.clone.data.ExpiryRow
-import com.stockmaster.clone.data.ProductRow
-import com.stockmaster.clone.data.StockMasterDb
-import com.stockmaster.clone.data.UserSession
-import com.stockmaster.clone.data.expiryForProduct
-import com.stockmaster.clone.data.formatExpiryForDisplay
+import com.aws.gestaoestoque.data.AwsDb
+import com.aws.gestaoestoque.data.ExpiryRow
+import com.aws.gestaoestoque.data.ProductRow
+import com.aws.gestaoestoque.data.UserSession
+import com.aws.gestaoestoque.data.expiryForProduct
+import com.aws.gestaoestoque.data.formatExpiryForDisplay
 import java.util.Locale
 
 @Composable
 internal fun AwsModuleScreen(
     module: AwsModuleDef,
-    db: StockMasterDb,
+    db: AwsDb,
     user: UserSession
 ) {
     var query by remember(module.id) { mutableStateOf("") }
@@ -77,9 +77,7 @@ internal fun AwsModuleScreen(
         ) {
             item {
                 ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = awsCardShape) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp)
-                    ) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Text(
                             "AWS",
                             style = MaterialTheme.typography.labelLarge,
@@ -155,10 +153,7 @@ internal fun AwsModuleScreen(
                 }
 
                 item {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = awsCardShape
-                    ) {
+                    ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = awsCardShape) {
                         Column(
                             modifier = Modifier.padding(18.dp),
                             verticalArrangement = Arrangement.spacedBy(7.dp)
@@ -393,10 +388,7 @@ private fun AwsExpiryStatusBadge(status: AwsExpiryStatus) {
         AwsExpiryStatus.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = background
-    ) {
+    Surface(shape = RoundedCornerShape(10.dp), color = background) {
         Text(
             text = status.label,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
@@ -446,11 +438,13 @@ private fun AwsBarcodeButton(modifier: Modifier = Modifier, onBarcode: (String) 
         modifier = modifier,
         shape = awsFieldShape
     ) {
-        Text(when {
-            reading -> "Abrindo..."
-            failed -> "Tentar de novo"
-            else -> "Bipar código"
-        })
+        Text(
+            when {
+                reading -> "Abrindo..."
+                failed -> "Tentar de novo"
+                else -> "Bipar código"
+            }
+        )
     }
 }
 
