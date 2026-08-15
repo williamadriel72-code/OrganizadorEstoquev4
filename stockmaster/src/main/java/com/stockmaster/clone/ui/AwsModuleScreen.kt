@@ -58,15 +58,17 @@ internal fun AwsModuleScreen(
         runCatching {
             db.findExact(value)?.let { listOf(it) } ?: db.searchProducts(value)
         }.onSuccess { rows ->
-            results = rows
             if (rows.size == 1) {
                 selectProduct(rows.first())
+                results = if (module.id == "price") emptyList() else rows
             } else {
+                results = rows
                 selected = null
                 productExpiries = emptyList()
             }
             message = if (rows.isEmpty()) "Nenhuma mercadoria encontrada." else ""
         }.onFailure {
+            results = emptyList()
             selected = null
             productExpiries = emptyList()
             message = it.message ?: "Falha na pesquisa."
@@ -364,15 +366,17 @@ internal fun AwsModuleScreen(
             }
         }
 
-        item {
-            Column(modifier = Modifier.fillMaxWidth().widthIn(max = 760.dp).padding(horizontal = 18.dp, vertical = 2.dp)) {
-                Text(
-                    if (module.id == "expiry") "Validades registradas" else "Resultados",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = AwsText
-                )
-                if (module.id != "expiry") Text("Toque em uma mercadoria para ver os detalhes", color = AwsMuted, style = MaterialTheme.typography.bodySmall)
+        if (module.id == "expiry" || results.isNotEmpty()) {
+            item {
+                Column(modifier = Modifier.fillMaxWidth().widthIn(max = 760.dp).padding(horizontal = 18.dp, vertical = 2.dp)) {
+                    Text(
+                        if (module.id == "expiry") "Validades registradas" else "Resultados",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AwsText
+                    )
+                    if (module.id != "expiry") Text("Toque em uma mercadoria para ver os detalhes", color = AwsMuted, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
 
@@ -389,7 +393,7 @@ internal fun AwsModuleScreen(
                     }
                 }
             }
-        } else {
+        } else if (results.isNotEmpty()) {
             items(results) { product ->
                 ElevatedCard(
                     onClick = { selectProduct(product) },
