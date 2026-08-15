@@ -18,7 +18,9 @@ import androidx.compose.ui.unit.dp
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.stockmaster.clone.data.AwsCredentialStore
 import com.stockmaster.clone.data.ProductRow
+import com.stockmaster.clone.data.SavedCredentials
 import com.stockmaster.clone.data.StockMasterDb
 import com.stockmaster.clone.data.UserSession
 import java.util.Locale
@@ -44,6 +46,8 @@ private val fieldShape = RoundedCornerShape(16.dp)
 fun StockMasterApp() {
     val context = LocalContext.current
     val db = remember { StockMasterDb(context.applicationContext) }
+    val credentialStore = remember { AwsCredentialStore(context.applicationContext) }
+    var savedCredentials by remember { mutableStateOf(credentialStore.load()) }
     var dbReady by remember { mutableStateOf(runCatching { db.hasDatabase().also { if (it) db.validateSchema() } }.getOrDefault(false)) }
     var user by remember { mutableStateOf<UserSession?>(null) }
     var screen by remember { mutableStateOf("login") }
@@ -74,18 +78,27 @@ fun StockMasterApp() {
                 user == null || screen == "login" -> LoginScreen(
                     dbReady = dbReady,
                     message = message,
+                    savedCredentials = savedCredentials,
                     onImport = { importLauncher.launch(arrayOf("application/octet-stream", "application/x-sqlite3", "*/*")) },
                     onLogin = { login, pass ->
                         runCatching { db.authenticate(login, pass) }
                             .onSuccess { found ->
-                                if (found == null) message = "Usuário ou senha inválidos."
-                                else {
+                                if (found == null) {
+                                    message = "Usuário ou senha inválidos."
+                                } else {
+                                    runCatching { credentialStore.save(login, pass) }
+                                        .onSuccess { savedCredentials = SavedCredentials(login.trim(), pass) }
                                     user = found
                                     screen = "dashboard"
                                     message = ""
                                 }
                             }
                             .onFailure { message = it.message ?: "Erro ao abrir o banco." }
+                    },
+                    onForgetSaved = {
+                        credentialStore.clear()
+                        savedCredentials = null
+                        message = "Login salvo removido."
                     }
                 )
 
@@ -111,11 +124,13 @@ fun StockMasterApp() {
 private fun LoginScreen(
     dbReady: Boolean,
     message: String,
+    savedCredentials: SavedCredentials?,
     onImport: () -> Unit,
-    onLogin: (String, String) -> Unit
+    onLogin: (String, String) -> Unit,
+    onForgetSaved: () -> Unit
 ) {
-    var login by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
+    var login by remember(savedCredentials) { mutableStateOf(savedCredentials?.login.orEmpty()) }
+    var pass by remember(savedCredentials) { mutableStateOf(savedCredentials?.password.orEmpty()) }
 
     Box(
         modifier = Modifier
@@ -205,6 +220,22 @@ private fun LoginScreen(
                         shape = fieldShape
                     ) {
                         Text("Entrar", style = MaterialTheme.typography.titleMedium)
+                    }
+
+                    if (savedCredentials != null) {
+                        Text(
+                            text = "Login salvo neste aparelho",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                        TextButton(
+                            onClick = onForgetSaved,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Esquecer login salvo")
+                        }
                     }
 
                     if (message.isNotBlank()) {
