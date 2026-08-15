@@ -1,4 +1,4 @@
-package com.stockmaster.clone.data
+package com.aws.gestaoestoque.data
 
 import android.content.ContentProvider
 import android.content.ContentValues
@@ -20,8 +20,6 @@ class AwsBundledDataProvider : ContentProvider() {
         val dbFile = ctx.getDatabasePath("aws_estoque_local.db")
         dbFile.parentFile?.mkdirs()
 
-        // O ContentProvider inicia antes da Activity. Assim, no build privado,
-        // o banco aws_seed.db já fica pronto antes da tela de login ser criada.
         runCatching { ensureBundledDatabase(ctx) }
 
         val parentPath = dbFile.parentFile?.absolutePath ?: return true
@@ -42,7 +40,7 @@ class AwsBundledDataProvider : ContentProvider() {
         val ctx = context?.applicationContext ?: return
         executor.execute {
             repeat(5) { attempt ->
-                val db = StockMasterDb(ctx)
+                val db = AwsDb(ctx)
                 try {
                     if (!db.hasDatabase()) return@execute
                     val database = db.open()
