@@ -32,4 +32,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AWS-Gestao-de-Estoque-debug
-          path: stockmaster/build/outputs/apk/debug/stockmaster-debug.apk
+          path: stockmaster/build/outputs/apk/debug/*.apk
