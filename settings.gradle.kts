@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 rootProject.name = "OrganizadorEstoqueV4"
 include(":app")
 include(":scanner")
+include(":stockmaster")
