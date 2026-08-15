@@ -40,15 +40,13 @@ data class ExpiryRow(
 )
 
 class StockMasterDb(private val context: Context) {
-    private val dbFile get() = context.getDatabasePath("stockmaster_local.db")
+    private val dbFile get() = context.getDatabasePath("aws_estoque_local.db")
     private var db: SQLiteDatabase? = null
 
     fun hasDatabase(): Boolean = dbFile.exists() && dbFile.length() > 0
 
     fun importDatabase(uri: Uri) {
         close()
-        // Remove sidecar files from a previously opened SQLite database so a newly
-        // imported database can never inherit stale WAL/SHM state.
         java.io.File(dbFile.absolutePath + "-wal").delete()
         java.io.File(dbFile.absolutePath + "-shm").delete()
         java.io.File(dbFile.absolutePath + "-journal").delete()
@@ -64,12 +62,22 @@ class StockMasterDb(private val context: Context) {
     fun open(): SQLiteDatabase {
         db?.let { if (it.isOpen) return it }
         check(hasDatabase()) { "Importe o arquivo .db primeiro." }
-        return SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).also { db = it }
+        return SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).also { database ->
+            db = database
+            runCatching { ensureSearchIndexes(database) }
+        }
     }
 
     fun close() {
         db?.close()
         db = null
+    }
+
+    private fun ensureSearchIndexes(database: SQLiteDatabase) {
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_aws_produto_ean ON produto(ean)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_aws_produto_descricao ON produto(descricaoproduto COLLATE NOCASE)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_aws_produto_ativo_descricao ON produto(ativo, descricaoproduto COLLATE NOCASE)")
+        database.execSQL("CREATE INDEX IF NOT EXISTS idx_aws_validade_produto_data ON controlevalidade(idproduto, validade)")
     }
 
     fun validateSchema() {
@@ -81,6 +89,7 @@ class StockMasterDb(private val context: Context) {
         }
         val missing = required - found
         require(missing.isEmpty()) { "Banco incompatível. Tabelas ausentes: ${missing.joinToString()}" }
+        ensureSearchIndexes(database)
     }
 
     fun authenticate(login: String, password: String): UserSession? {
@@ -111,37 +120,69 @@ class StockMasterDb(private val context: Context) {
     fun searchProducts(query: String, limit: Int = 100): List<ProductRow> {
         val q = query.trim()
         if (q.isEmpty()) return emptyList()
-        val like = "%$q%"
         val database = open()
-        val out = ArrayList<ProductRow>()
-        database.rawQuery(
+        val out = LinkedHashMap<String, ProductRow>()
+
+        fun collect(sql: String, args: Array<String>) {
+            if (out.size >= limit) return
+            database.rawQuery(sql, args).use { c ->
+                while (c.moveToNext() && out.size < limit) {
+                    val row = productFromCursor(c)
+                    out.putIfAbsent(row.id, row)
+                }
+            }
+        }
+
+        if (q.all { it.isDigit() }) {
+            val prefix = "$q%"
+            collect(
+                """
+                SELECT CAST(id AS TEXT), idempresa, COALESCE(ean,''), COALESCE(descricaoproduto,''),
+                       CAST(COALESCE(idgrupo,'') AS TEXT), idsetor,
+                       COALESCE(precogondola,0), COALESCE(precoavista,0), qtestoque
+                FROM produto
+                WHERE COALESCE(ativo,'S')='S'
+                  AND (CAST(id AS TEXT) LIKE ? OR COALESCE(ean,'') LIKE ?)
+                ORDER BY descricaoproduto COLLATE NOCASE
+                LIMIT ?
+                """.trimIndent(),
+                arrayOf(prefix, prefix, limit.toString())
+            )
+        }
+
+        val prefixText = "$q%"
+        collect(
             """
             SELECT CAST(id AS TEXT), idempresa, COALESCE(ean,''), COALESCE(descricaoproduto,''),
                    CAST(COALESCE(idgrupo,'') AS TEXT), idsetor,
                    COALESCE(precogondola,0), COALESCE(precoavista,0), qtestoque
             FROM produto
             WHERE COALESCE(ativo,'S')='S'
-              AND (CAST(id AS TEXT) LIKE ? OR COALESCE(ean,'') LIKE ? OR UPPER(COALESCE(descricaoproduto,'')) LIKE UPPER(?))
-            ORDER BY descricaoproduto
+              AND COALESCE(descricaoproduto,'') LIKE ? COLLATE NOCASE
+            ORDER BY descricaoproduto COLLATE NOCASE
             LIMIT ?
             """.trimIndent(),
-            arrayOf(like, like, like, limit.toString())
-        ).use { c ->
-            while (c.moveToNext()) {
-                out += ProductRow(
-                    id = c.getString(0),
-                    companyId = c.getInt(1),
-                    ean = c.getString(2),
-                    description = c.getString(3),
-                    groupId = c.getString(4),
-                    sectorId = if (c.isNull(5)) null else c.getInt(5),
-                    price = c.getDouble(6),
-                    cashPrice = c.getDouble(7),
-                    stock = if (c.isNull(8)) null else c.getDouble(8)
-                )
-            }
+            arrayOf(prefixText, limit.toString())
+        )
+
+        if (out.size < limit) {
+            val contains = "%$q%"
+            collect(
+                """
+                SELECT CAST(id AS TEXT), idempresa, COALESCE(ean,''), COALESCE(descricaoproduto,''),
+                       CAST(COALESCE(idgrupo,'') AS TEXT), idsetor,
+                       COALESCE(precogondola,0), COALESCE(precoavista,0), qtestoque
+                FROM produto
+                WHERE COALESCE(ativo,'S')='S'
+                  AND COALESCE(descricaoproduto,'') LIKE ? COLLATE NOCASE
+                ORDER BY descricaoproduto COLLATE NOCASE
+                LIMIT ?
+                """.trimIndent(),
+                arrayOf(contains, limit.toString())
+            )
         }
-        return out
+
+        return out.values.toList()
     }
 
     fun findExact(codeOrEan: String): ProductRow? {
@@ -154,19 +195,27 @@ class StockMasterDb(private val context: Context) {
                    CAST(COALESCE(idgrupo,'') AS TEXT), idsetor,
                    COALESCE(precogondola,0), COALESCE(precoavista,0), qtestoque
             FROM produto
-            WHERE COALESCE(ativo,'S')='S' AND (CAST(id AS TEXT)=? OR ean=?)
+            WHERE COALESCE(ativo,'S')='S' AND (CAST(id AS TEXT)=? OR TRIM(COALESCE(ean,''))=?)
             LIMIT 1
             """.trimIndent(),
             arrayOf(q, q)
         ).use { c ->
             if (!c.moveToFirst()) return null
-            return ProductRow(
-                c.getString(0), c.getInt(1), c.getString(2), c.getString(3), c.getString(4),
-                if (c.isNull(5)) null else c.getInt(5), c.getDouble(6), c.getDouble(7),
-                if (c.isNull(8)) null else c.getDouble(8)
-            )
+            return productFromCursor(c)
         }
     }
+
+    private fun productFromCursor(c: android.database.Cursor): ProductRow = ProductRow(
+        id = c.getString(0),
+        companyId = c.getInt(1),
+        ean = c.getString(2),
+        description = c.getString(3),
+        groupId = c.getString(4),
+        sectorId = if (c.isNull(5)) null else c.getInt(5),
+        price = c.getDouble(6),
+        cashPrice = c.getDouble(7),
+        stock = if (c.isNull(8)) null else c.getDouble(8)
+    )
 
     private fun nowParts(): Triple<String, String, String> {
         val now = Date()
