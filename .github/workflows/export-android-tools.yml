@@ -1,0 +1,27 @@
+name: Export Android Signing Tools
+
+on:
+  push:
+    branches: ["agent/aws-integrated-data-staging"]
+    paths:
+      - ".github/workflows/export-android-tools.yml"
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+      - name: Install build tools
+        run: sdkmanager "build-tools;36.0.0"
+      - name: Prepare tools
+        run: |
+          mkdir -p exported-tools
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" exported-tools/apksigner.jar
+          cp "$ANDROID_HOME/build-tools/36.0.0/zipalign" exported-tools/zipalign
+          chmod +x exported-tools/zipalign
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-signing-tools-36
+          path: exported-tools/
