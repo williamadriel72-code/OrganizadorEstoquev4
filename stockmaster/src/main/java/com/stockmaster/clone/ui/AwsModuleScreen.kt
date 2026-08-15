@@ -144,6 +144,11 @@ internal fun AwsModuleScreen(
                             )
                             Text("Código: ${product.id}  •  EAN: ${product.ean.ifBlank { "-" }}")
                             Text("Grupo: ${product.groupId.ifBlank { "-" }}")
+                            if (product.sectorId != null) {
+                                Text("Localização: Setor ${product.sectorId}", fontWeight = FontWeight.SemiBold)
+                            } else {
+                                Text("Endereço: não disponível no banco")
+                            }
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                             Text("Preço gôndola: R$ ${awsMoney(product.price)}", fontWeight = FontWeight.SemiBold)
                             Text("Preço à vista: R$ ${awsMoney(product.cashPrice)}", fontWeight = FontWeight.SemiBold)
