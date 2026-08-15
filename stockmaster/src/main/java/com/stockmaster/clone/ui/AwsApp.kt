@@ -1,4 +1,4 @@
-package com.stockmaster.clone.ui
+package com.aws.gestaoestoque.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,11 +16,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.stockmaster.clone.data.AwsCredentialStore
-import com.stockmaster.clone.data.SavedCredentials
-import com.stockmaster.clone.data.StockMasterDb
-import com.stockmaster.clone.data.UserSession
-import com.stockmaster.clone.data.importDatabaseSafely
+import com.aws.gestaoestoque.data.AwsCredentialStore
+import com.aws.gestaoestoque.data.AwsDb
+import com.aws.gestaoestoque.data.SavedCredentials
+import com.aws.gestaoestoque.data.UserSession
+import com.aws.gestaoestoque.data.importDatabaseSafely
 
 internal data class AwsModuleDef(val id: String, val title: String, val permission: String?)
 
@@ -42,7 +42,7 @@ internal val awsFieldShape = RoundedCornerShape(16.dp)
 @Composable
 fun AwsApp() {
     val context = LocalContext.current
-    val db = remember { StockMasterDb(context.applicationContext) }
+    val db = remember { AwsDb(context.applicationContext) }
     val credentialStore = remember { AwsCredentialStore(context.applicationContext) }
     var savedCredentials by remember { mutableStateOf(credentialStore.load()) }
     var dbReady by remember {
