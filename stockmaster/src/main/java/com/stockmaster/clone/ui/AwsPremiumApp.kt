@@ -24,6 +24,7 @@ import com.aws.gestaoestoque.data.AwsCredentialStore
 import com.aws.gestaoestoque.data.AwsDb
 import com.aws.gestaoestoque.data.SavedCredentials
 import com.aws.gestaoestoque.data.UserSession
+import com.aws.gestaoestoque.data.expiryNotificationCount
 
 private val PremiumBg = Color(0xFF061936)
 private val PremiumBgDeep = Color(0xFF031027)
@@ -115,12 +116,16 @@ fun AwsPremiumApp() {
 
                     screen == "dashboard" -> PremiumDashboard(
                         user = user!!,
+                        db = db,
                         onOpen = { screen = it },
+                        onNotifications = { screen = "notifications" },
                         onLogout = {
                             user = null
                             screen = "login"
                         }
                     )
+
+                    screen == "notifications" -> AwsNotificationsScreen(db = db)
 
                     screen == "inventory" || screen == "damage" -> AwsInventoryDamageSessionScreen(
                         mode = screen,
@@ -362,10 +367,16 @@ private fun PremiumButton(
 @Composable
 private fun PremiumDashboard(
     user: UserSession,
+    db: AwsDb,
     onOpen: (String) -> Unit,
+    onNotifications: () -> Unit,
     onLogout: () -> Unit
 ) {
     val modules = awsModules.filter { m -> m.permission?.let { user.can(it) } ?: true }
+    val notificationCount = remember {
+        runCatching { db.expiryNotificationCount() }.getOrDefault(0)
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(PremiumPage),
         contentPadding = PaddingValues(bottom = 22.dp),
@@ -391,8 +402,33 @@ private fun PremiumDashboard(
                             )
                             Text("Escolha uma função para continuar", color = Color(0xFFC8D2E5))
                         }
-                        Surface(color = PremiumPurple, shape = RoundedCornerShape(18.dp)) {
-                            Text("3", color = Color.White, modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp), fontWeight = FontWeight.Bold)
+
+                        Box(Modifier.size(54.dp), contentAlignment = Alignment.Center) {
+                            Surface(
+                                onClick = onNotifications,
+                                modifier = Modifier.size(46.dp),
+                                shape = RoundedCornerShape(18.dp),
+                                color = Color.White.copy(alpha = 0.12f)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text("🔔", style = MaterialTheme.typography.titleLarge)
+                                }
+                            }
+                            if (notificationCount > 0) {
+                                Surface(
+                                    modifier = Modifier.align(Alignment.TopEnd),
+                                    color = AwsRed,
+                                    shape = RoundedCornerShape(50)
+                                ) {
+                                    Text(
+                                        if (notificationCount > 99) "99+" else notificationCount.toString(),
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        fontWeight = FontWeight.Black,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            }
                         }
                     }
                 }
