@@ -25,14 +25,17 @@ internal fun ensureBundledDatabase(context: Context): Boolean {
         }
         require(temp.length() > 0L) { "Banco integrado vazio." }
 
-        val sidecars = listOf("-wal", "-shm", "-journal")
-        sidecars.forEach { File(target.absolutePath + it).delete() }
+        listOf("-wal", "-shm", "-journal").forEach {
+            File(target.absolutePath + it).delete()
+        }
 
         if (target.exists()) target.delete()
-        require(temp.renameTo(target)) {
+        if (!temp.renameTo(target)) {
             temp.copyTo(target, overwrite = true)
             temp.delete()
-            ""
+        }
+        require(target.exists() && target.length() > 0L) {
+            "Não foi possível preparar o banco integrado."
         }
 
         val db = StockMasterDb(appContext)
