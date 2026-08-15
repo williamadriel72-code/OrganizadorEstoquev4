@@ -1,4 +1,4 @@
-package com.stockmaster.clone.ui
+package com.aws.gestaoestoque.ui
 
 import android.media.AudioManager
 import android.media.ToneGenerator
