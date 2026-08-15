@@ -122,6 +122,12 @@ fun AwsPremiumApp() {
                         }
                     )
 
+                    screen == "inventory" || screen == "damage" -> AwsInventoryDamageSessionScreen(
+                        mode = screen,
+                        db = db,
+                        user = user!!
+                    )
+
                     else -> AwsModuleScreen(
                         module = awsModules.firstOrNull { it.id == screen } ?: awsModules.first(),
                         db = db,
