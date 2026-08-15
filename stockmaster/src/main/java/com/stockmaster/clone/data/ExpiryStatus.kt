@@ -1,4 +1,4 @@
-package com.stockmaster.clone.data
+package com.aws.gestaoestoque.data
 
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
