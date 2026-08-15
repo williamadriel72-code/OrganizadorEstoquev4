@@ -186,8 +186,7 @@ fun AwsApp() {
                     else -> AwsModuleScreen(
                         module = awsModules.firstOrNull { it.id == screen } ?: awsModules.first(),
                         db = db,
-                        user = user!!,
-                        onBack = { screen = "dashboard" }
+                        user = user!!
                     )
                 }
             }
