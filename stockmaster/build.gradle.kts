@@ -35,5 +35,4 @@ dependencies {
 
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
-    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 }
