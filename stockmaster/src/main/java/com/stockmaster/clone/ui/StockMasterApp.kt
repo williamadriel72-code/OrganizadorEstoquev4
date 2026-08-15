@@ -1,5 +1,6 @@
 package com.stockmaster.clone.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -54,6 +55,15 @@ fun StockMasterApp() {
     var screen by remember { mutableStateOf("login") }
     var message by remember { mutableStateOf("") }
 
+    BackHandler(enabled = user != null && screen != "login") {
+        if (screen == "dashboard") {
+            user = null
+            screen = "login"
+        } else {
+            screen = "dashboard"
+        }
+    }
+
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching {
@@ -75,6 +85,7 @@ fun StockMasterApp() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.surfaceContainerLowest
         ) {
+            Box(modifier = Modifier.fillMaxSize()) {
             when {
                 user == null || screen == "login" -> LoginScreen(
                     dbReady = dbReady,
@@ -122,7 +133,29 @@ fun StockMasterApp() {
                     onBack = { screen = "dashboard" }
                 )
             }
-        }
+        
+
+                if (user != null && screen != "dashboard" && screen != "login") {
+                    FilledTonalButton(
+                        onClick = { screen = "dashboard" },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                            .fillMaxWidth()
+                            .widthIn(max = 760.dp)
+                            .heightIn(min = 54.dp),
+                        shape = fieldShape
+                    ) {
+                        Text(
+                            text = "←  Voltar",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+}
     }
 }
 
