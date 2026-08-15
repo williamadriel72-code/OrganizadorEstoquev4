@@ -23,6 +23,8 @@ import com.aws.gestaoestoque.data.formatExpiryForDisplay
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @Composable
@@ -40,13 +42,22 @@ internal fun AwsModuleScreen(
     var lot by remember(module.id) { mutableStateOf("") }
     var observation by remember(module.id) { mutableStateOf("") }
     var message by remember(module.id) { mutableStateOf("") }
-    var expiryRows by remember(module.id) {
-        mutableStateOf(
-            if (module.id == "expiry") runCatching { db.listExpiry() }.getOrDefault(emptyList())
-            else emptyList()
-        )
-    }
+    var expiryRows by remember(module.id) { mutableStateOf(emptyList<ExpiryRow>()) }
+    var expiryLoading by remember(module.id) { mutableStateOf(module.id == "expiry") }
     var saleItems by remember(module.id) { mutableStateOf(emptyList<Pair<ProductRow, Double>>()) }
+
+    LaunchedEffect(module.id) {
+        if (module.id == "expiry") {
+            expiryLoading = true
+            expiryRows = withContext(Dispatchers.IO) {
+                runCatching { db.listExpiry(60) }.getOrDefault(emptyList())
+            }
+            expiryLoading = false
+        } else {
+            expiryRows = emptyList()
+            expiryLoading = false
+        }
+    }
 
     fun selectProduct(product: ProductRow) {
         selected = product
@@ -311,7 +322,7 @@ internal fun AwsModuleScreen(
                                                     "Use a validade no formato AAAA-MM-DD."
                                                 }
                                                 db.addExpiry(product, expiry, lot, number, user)
-                                                expiryRows = db.listExpiry()
+                                                expiryRows = db.listExpiry(60)
                                                 productExpiries = db.expiryForProduct(product.id)
                                             }
                                             else -> Unit
@@ -380,7 +391,31 @@ internal fun AwsModuleScreen(
             }
         }
 
-        if (module.id == "expiry" && expiryRows.isNotEmpty()) {
+        if (module.id == "expiry" && expiryLoading) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().widthIn(max = 760.dp).padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color.White
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(18.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.dp,
+                            color = AwsPurple
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text("Carregando validades...", color = AwsMuted, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+
+        if (module.id == "expiry" && !expiryLoading && expiryRows.isNotEmpty()) {
             items(expiryRows) { row ->
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth().widthIn(max = 760.dp).padding(horizontal = 16.dp),
@@ -393,7 +428,7 @@ internal fun AwsModuleScreen(
                     }
                 }
             }
-        } else if (results.isNotEmpty()) {
+        } else if (module.id != "expiry" && results.isNotEmpty()) {
             items(results) { product ->
                 ElevatedCard(
                     onClick = { selectProduct(product) },
