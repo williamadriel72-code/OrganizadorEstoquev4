@@ -1,4 +1,4 @@
-package com.stockmaster.clone.data
+package com.aws.gestaoestoque.data
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
@@ -19,7 +19,7 @@ private val requiredAwsTables = setOf(
  * Valida o novo SQLite antes de substituir o banco em uso.
  * Se qualquer etapa falhar, restaura automaticamente o banco anterior.
  */
-fun StockMasterDb.importDatabaseSafely(context: Context, uri: Uri) {
+fun AwsDb.importDatabaseSafely(context: Context, uri: Uri) {
     val appContext = context.applicationContext
     val liveFile = appContext.getDatabasePath("aws_estoque_local.db")
     liveFile.parentFile?.mkdirs()
