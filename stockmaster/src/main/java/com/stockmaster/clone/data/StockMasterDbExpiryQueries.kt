@@ -40,13 +40,16 @@ fun StockMasterDb.expiryForProduct(productId: String, limit: Int = 100): List<Ex
     )
 }
 
+/** Exibe a data junto com sua situação para que o estado fique visível em qualquer tela. */
 fun formatExpiryForDisplay(value: String): String {
     val clean = value.trim()
     val iso = Regex("""(\d{4})-(\d{2})-(\d{2}).*""").matchEntire(clean)
-    if (iso != null) {
-        return "${iso.groupValues[3]}/${iso.groupValues[2]}/${iso.groupValues[1]}"
+    val dateText = if (iso != null) {
+        "${iso.groupValues[3]}/${iso.groupValues[2]}/${iso.groupValues[1]}"
+    } else {
+        clean
     }
-    return clean
+    return "$dateText • ${expiryStatus(value).label}"
 }
 
 private fun parseExpiryMillis(value: String): Long? {
