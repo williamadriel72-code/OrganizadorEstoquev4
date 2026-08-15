@@ -291,6 +291,7 @@ private fun ModuleScreen(
                                     db.addExpiry(product, expiry, lot, number, user)
                                     expiryRows = db.listExpiry()
                                 }
+                                else -> Unit
                             }
                         }.onSuccess {
                             message = "Registro salvo com sucesso."
