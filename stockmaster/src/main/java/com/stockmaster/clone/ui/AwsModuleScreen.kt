@@ -26,8 +26,7 @@ import java.util.Locale
 internal fun AwsModuleScreen(
     module: AwsModuleDef,
     db: StockMasterDb,
-    user: UserSession,
-    onBack: () -> Unit
+    user: UserSession
 ) {
     var query by remember(module.id) { mutableStateOf("") }
     var results by remember(module.id) { mutableStateOf(emptyList<ProductRow>()) }
@@ -78,27 +77,20 @@ internal fun AwsModuleScreen(
         ) {
             item {
                 ElevatedCard(modifier = Modifier.fillMaxWidth(), shape = awsCardShape) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp)
                     ) {
-                        OutlinedButton(onClick = onBack, shape = RoundedCornerShape(14.dp)) {
-                            Text("Voltar")
-                        }
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "AWS",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                module.title,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Text(
+                            "AWS",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            module.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
