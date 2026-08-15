@@ -1,4 +1,4 @@
-package com.stockmaster.clone.ui
+package com.aws.gestaoestoque.ui
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
