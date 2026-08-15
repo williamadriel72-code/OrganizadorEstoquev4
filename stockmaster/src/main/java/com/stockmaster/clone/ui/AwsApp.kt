@@ -1,5 +1,6 @@
 package com.stockmaster.clone.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -56,6 +57,20 @@ fun AwsApp() {
     var screen by remember { mutableStateOf("login") }
     var message by remember { mutableStateOf("") }
 
+    fun goBack() {
+        if (user == null || screen == "login") return
+        if (screen == "dashboard") {
+            user = null
+            screen = "login"
+        } else {
+            screen = "dashboard"
+        }
+    }
+
+    BackHandler(enabled = user != null && screen != "login") {
+        goBack()
+    }
+
     val databaseLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -77,78 +92,117 @@ fun AwsApp() {
         }
     }
 
+    val showBottomBack = user != null && screen != "login" && screen != "dashboard"
+
     MaterialTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainerLowest
-        ) {
-            when {
-                user == null || screen == "login" -> AwsLoginScreen(
-                    dbReady = dbReady,
-                    message = message,
-                    savedCredentials = savedCredentials,
-                    onImportDatabase = {
-                        databaseLauncher.launch(
-                            arrayOf("application/octet-stream", "application/x-sqlite3", "*/*")
-                        )
-                    },
-                    onLogin = { login, pass ->
-                        runCatching { db.authenticate(login, pass) }
-                            .onSuccess { found ->
-                                if (found == null) {
-                                    message = "Usuário ou senha inválidos."
-                                } else {
-                                    runCatching { credentialStore.save(login, pass) }
-                                        .onSuccess {
-                                            savedCredentials = SavedCredentials(login.trim(), pass)
-                                        }
-                                    user = found
-                                    screen = "dashboard"
-                                    message = ""
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+            bottomBar = {
+                if (showBottomBack) {
+                    Surface(
+                        tonalElevation = 3.dp,
+                        shadowElevation = 6.dp
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            FilledTonalButton(
+                                onClick = { goBack() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .widthIn(max = 720.dp)
+                                    .heightIn(min = 54.dp),
+                                shape = awsFieldShape
+                            ) {
+                                Text(
+                                    "←  Voltar",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        ) { innerPadding ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                color = MaterialTheme.colorScheme.surfaceContainerLowest
+            ) {
+                when {
+                    user == null || screen == "login" -> AwsLoginScreen(
+                        dbReady = dbReady,
+                        message = message,
+                        savedCredentials = savedCredentials,
+                        onImportDatabase = {
+                            databaseLauncher.launch(
+                                arrayOf("application/octet-stream", "application/x-sqlite3", "*/*")
+                            )
+                        },
+                        onLogin = { login, pass ->
+                            runCatching { db.authenticate(login, pass) }
+                                .onSuccess { found ->
+                                    if (found == null) {
+                                        message = "Usuário ou senha inválidos."
+                                    } else {
+                                        runCatching { credentialStore.save(login, pass) }
+                                            .onSuccess {
+                                                savedCredentials = SavedCredentials(login.trim(), pass)
+                                            }
+                                        user = found
+                                        screen = "dashboard"
+                                        message = ""
+                                    }
                                 }
-                            }
-                            .onFailure {
-                                message = it.message ?: "Erro ao abrir o banco."
-                            }
-                    },
-                    onForgetSaved = {
-                        credentialStore.clear()
-                        savedCredentials = null
-                        message = "Login salvo removido."
-                    }
-                )
+                                .onFailure {
+                                    message = it.message ?: "Erro ao abrir o banco."
+                                }
+                        },
+                        onForgetSaved = {
+                            credentialStore.clear()
+                            savedCredentials = null
+                            message = "Login salvo removido."
+                        }
+                    )
 
-                screen == "dashboard" -> AwsDashboardScreen(
-                    user = user!!,
-                    onOpen = { screen = it },
-                    onImportDatabase = {
-                        databaseLauncher.launch(
-                            arrayOf("application/octet-stream", "application/x-sqlite3", "*/*")
-                        )
-                    },
-                    onLogout = {
-                        user = null
-                        screen = "login"
-                    }
-                )
+                    screen == "dashboard" -> AwsDashboardScreen(
+                        user = user!!,
+                        onOpen = { screen = it },
+                        onImportDatabase = {
+                            databaseLauncher.launch(
+                                arrayOf("application/octet-stream", "application/x-sqlite3", "*/*")
+                            )
+                        },
+                        onLogout = {
+                            user = null
+                            screen = "login"
+                        }
+                    )
 
-                screen == "import_products_pdf" -> ProductPdfImportScreen(
-                    db = db,
-                    onBack = { screen = "dashboard" }
-                )
+                    screen == "import_products_pdf" -> ProductPdfImportScreen(
+                        db = db,
+                        onBack = { screen = "dashboard" }
+                    )
 
-                screen == "import_expiry_pdf" -> ExpiryPdfImportScreen(
-                    db = db,
-                    user = user!!,
-                    onBack = { screen = "dashboard" }
-                )
+                    screen == "import_expiry_pdf" -> ExpiryPdfImportScreen(
+                        db = db,
+                        user = user!!,
+                        onBack = { screen = "dashboard" }
+                    )
 
-                else -> AwsModuleScreen(
-                    module = awsModules.firstOrNull { it.id == screen } ?: awsModules.first(),
-                    db = db,
-                    user = user!!,
-                    onBack = { screen = "dashboard" }
-                )
+                    else -> AwsModuleScreen(
+                        module = awsModules.firstOrNull { it.id == screen } ?: awsModules.first(),
+                        db = db,
+                        user = user!!,
+                        onBack = { screen = "dashboard" }
+                    )
+                }
             }
         }
     }
