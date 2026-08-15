@@ -178,12 +178,14 @@ internal fun AwsModuleScreen(
                                 )
                             } else {
                                 val nearest = productExpiries.first()
+                                val nearestStatus = awsExpiryStatus(nearest.expiry)
                                 Text(
                                     "VALIDADE MAIS PRÓXIMA: ${formatExpiryForDisplay(nearest.expiry)}",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
+                                AwsExpiryStatusBadge(nearestStatus)
                                 if (nearest.quantity != 0.0) {
                                     Text("Quantidade: ${nearest.quantity}")
                                 }
@@ -192,7 +194,7 @@ internal fun AwsModuleScreen(
                                     Text("Outras validades", fontWeight = FontWeight.SemiBold)
                                     productExpiries.drop(1).take(10).forEach { row ->
                                         Text(
-                                            "• ${formatExpiryForDisplay(row.expiry)}  •  Qtde: ${row.quantity}" +
+                                            "• ${formatExpiryForDisplay(row.expiry)}  •  ${awsExpiryStatus(row.expiry).label}  •  Qtde: ${row.quantity}" +
                                                 if (row.lot.isNotBlank()) "  •  Lote: ${row.lot}" else ""
                                         )
                                     }
@@ -340,7 +342,7 @@ internal fun AwsModuleScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                "Validade: ${formatExpiryForDisplay(row.expiry)}  •  Lote: ${row.lot.ifBlank { "-" }}  •  Qtde: ${row.quantity}",
+                                "Validade: ${formatExpiryForDisplay(row.expiry)}  •  ${awsExpiryStatus(row.expiry).label}  •  Lote: ${row.lot.ifBlank { "-" }}  •  Qtde: ${row.quantity}",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -371,6 +373,37 @@ internal fun AwsModuleScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AwsExpiryStatusBadge(status: AwsExpiryStatus) {
+    val background = when (status) {
+        AwsExpiryStatus.EXPIRED -> MaterialTheme.colorScheme.errorContainer
+        AwsExpiryStatus.TODAY -> MaterialTheme.colorScheme.tertiaryContainer
+        AwsExpiryStatus.NEAR -> MaterialTheme.colorScheme.secondaryContainer
+        AwsExpiryStatus.OK -> MaterialTheme.colorScheme.primaryContainer
+        AwsExpiryStatus.UNKNOWN -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val foreground = when (status) {
+        AwsExpiryStatus.EXPIRED -> MaterialTheme.colorScheme.onErrorContainer
+        AwsExpiryStatus.TODAY -> MaterialTheme.colorScheme.onTertiaryContainer
+        AwsExpiryStatus.NEAR -> MaterialTheme.colorScheme.onSecondaryContainer
+        AwsExpiryStatus.OK -> MaterialTheme.colorScheme.onPrimaryContainer
+        AwsExpiryStatus.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = background
+    ) {
+        Text(
+            text = status.label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            color = foreground,
+            fontWeight = FontWeight.ExtraBold,
+            style = MaterialTheme.typography.labelLarge
+        )
     }
 }
 
