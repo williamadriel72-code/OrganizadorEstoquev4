@@ -1,9 +1,9 @@
-package com.stockmaster.clone
+package com.aws.gestaoestoque
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.stockmaster.clone.ui.AwsApp
+import com.aws.gestaoestoque.ui.AwsApp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
