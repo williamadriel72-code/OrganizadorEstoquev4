@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.stockmaster.clone"
+    namespace = "com.aws.gestaoestoque"
     compileSdk = 36
 
     defaultConfig {
