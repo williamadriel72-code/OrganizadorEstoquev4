@@ -3,6 +3,7 @@ package com.stockmaster.clone.data
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -43,13 +44,64 @@ class StockMasterDb(private val context: Context) {
     private val dbFile get() = context.getDatabasePath("aws_estoque_local.db")
     private var db: SQLiteDatabase? = null
 
+    init {
+        installBundledDatabaseIfMissing()
+    }
+
+    /**
+     * Na versão integrada, o APK contém assets/aws_seed.db.
+     * Na primeira abertura ele é copiado para o diretório privado do aplicativo,
+     * antes da tela de login. Builds sem esse asset continuam aceitando importação manual.
+     */
+    private fun installBundledDatabaseIfMissing() {
+        if (dbFile.exists() && dbFile.length() > 0L) return
+
+        val tempFile = File(dbFile.absolutePath + ".seed.tmp")
+        runCatching {
+            dbFile.parentFile?.mkdirs()
+            context.assets.open("aws_seed.db").use { input ->
+                tempFile.outputStream().use { output -> input.copyTo(output) }
+            }
+            require(tempFile.length() > 0L) { "Banco integrado vazio." }
+
+            val verify = SQLiteDatabase.openDatabase(
+                tempFile.absolutePath,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+            try {
+                val ok = verify.rawQuery("PRAGMA quick_check", null).use { cursor ->
+                    cursor.moveToFirst() && cursor.getString(0).equals("ok", ignoreCase = true)
+                }
+                require(ok) { "Banco integrado inválido." }
+
+                val required = setOf("produto", "usuario", "controlevalidade")
+                val found = mutableSetOf<String>()
+                verify.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null).use { cursor ->
+                    while (cursor.moveToNext()) found += cursor.getString(0)
+                }
+                require(required.all { it in found }) { "Banco integrado incompatível." }
+            } finally {
+                verify.close()
+            }
+
+            if (!tempFile.renameTo(dbFile)) {
+                tempFile.copyTo(dbFile, overwrite = true)
+                tempFile.delete()
+            }
+        }.onFailure {
+            tempFile.delete()
+            // Build público sem aws_seed.db: mantém o fluxo normal de importação manual.
+        }
+    }
+
     fun hasDatabase(): Boolean = dbFile.exists() && dbFile.length() > 0
 
     fun importDatabase(uri: Uri) {
         close()
-        java.io.File(dbFile.absolutePath + "-wal").delete()
-        java.io.File(dbFile.absolutePath + "-shm").delete()
-        java.io.File(dbFile.absolutePath + "-journal").delete()
+        File(dbFile.absolutePath + "-wal").delete()
+        File(dbFile.absolutePath + "-shm").delete()
+        File(dbFile.absolutePath + "-journal").delete()
         dbFile.parentFile?.mkdirs()
         context.contentResolver.openInputStream(uri).use { input ->
             requireNotNull(input) { "Não foi possível abrir o arquivo selecionado." }
@@ -75,8 +127,6 @@ class StockMasterDb(private val context: Context) {
     }
 
     private fun configurePerformance(database: SQLiteDatabase) {
-        // Ajustes leves: melhoram consultas concorrentes e reaproveitamento de páginas
-        // sem alterar o formato do banco nem usar modos agressivos de escrita.
         runCatching {
             database.rawQuery("PRAGMA busy_timeout=3000", null).use { cursor ->
                 if (cursor.moveToFirst()) cursor.getInt(0)
