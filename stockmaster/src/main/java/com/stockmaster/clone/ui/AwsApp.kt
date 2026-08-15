@@ -1,8 +1,6 @@
 package com.aws.gestaoestoque.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,7 +18,6 @@ import com.aws.gestaoestoque.data.AwsCredentialStore
 import com.aws.gestaoestoque.data.AwsDb
 import com.aws.gestaoestoque.data.SavedCredentials
 import com.aws.gestaoestoque.data.UserSession
-import com.aws.gestaoestoque.data.importDatabaseSafely
 
 internal data class AwsModuleDef(val id: String, val title: String, val permission: String?)
 
@@ -45,11 +42,9 @@ fun AwsApp() {
     val db = remember { AwsDb(context.applicationContext) }
     val credentialStore = remember { AwsCredentialStore(context.applicationContext) }
     var savedCredentials by remember { mutableStateOf(credentialStore.load()) }
-    var dbReady by remember {
-        mutableStateOf(
-            runCatching { db.hasDatabase().also { if (it) db.validateSchema() } }
-                .getOrDefault(false)
-        )
+    val dbReady = remember {
+        runCatching { db.hasDatabase().also { if (it) db.validateSchema() } }
+            .getOrDefault(false)
     }
     var user by remember { mutableStateOf<UserSession?>(null) }
     var screen by remember { mutableStateOf("login") }
@@ -69,27 +64,6 @@ fun AwsApp() {
         goBack()
     }
 
-    val databaseLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            runCatching {
-                db.importDatabaseSafely(context.applicationContext, uri)
-                dbReady = true
-                user = null
-                screen = "login"
-            }.onSuccess {
-                message = "Banco importado com sucesso."
-            }.onFailure { error ->
-                dbReady = runCatching {
-                    db.hasDatabase().also { if (it) db.validateSchema() }
-                }.getOrDefault(false)
-                message = (error.message ?: "Falha ao importar o banco.") +
-                    if (dbReady) " Banco anterior mantido e disponível." else ""
-            }
-        }
-    }
-
     val showBottomBack = user != null && screen != "login" && screen != "dashboard"
 
     MaterialTheme {
@@ -97,10 +71,7 @@ fun AwsApp() {
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
             bottomBar = {
                 if (showBottomBack) {
-                    Surface(
-                        tonalElevation = 3.dp,
-                        shadowElevation = 6.dp
-                    ) {
+                    Surface(tonalElevation = 3.dp, shadowElevation = 6.dp) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -128,9 +99,7 @@ fun AwsApp() {
             }
         ) { innerPadding ->
             Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
                 color = MaterialTheme.colorScheme.surfaceContainerLowest
             ) {
                 when {
@@ -138,11 +107,6 @@ fun AwsApp() {
                         dbReady = dbReady,
                         message = message,
                         savedCredentials = savedCredentials,
-                        onImportDatabase = {
-                            databaseLauncher.launch(
-                                arrayOf("application/octet-stream", "application/x-sqlite3", "*/*")
-                            )
-                        },
                         onLogin = { login, pass ->
                             runCatching { db.authenticate(login, pass) }
                                 .onSuccess { found ->
@@ -159,7 +123,7 @@ fun AwsApp() {
                                     }
                                 }
                                 .onFailure {
-                                    message = it.message ?: "Erro ao abrir o banco."
+                                    message = it.message ?: "Erro ao abrir o banco AWS."
                                 }
                         },
                         onForgetSaved = {
@@ -172,11 +136,6 @@ fun AwsApp() {
                     screen == "dashboard" -> AwsDashboardScreen(
                         user = user!!,
                         onOpen = { screen = it },
-                        onImportDatabase = {
-                            databaseLauncher.launch(
-                                arrayOf("application/octet-stream", "application/x-sqlite3", "*/*")
-                            )
-                        },
                         onLogout = {
                             user = null
                             screen = "login"
@@ -199,7 +158,6 @@ private fun AwsLoginScreen(
     dbReady: Boolean,
     message: String,
     savedCredentials: SavedCredentials?,
-    onImportDatabase: () -> Unit,
     onLogin: (String, String) -> Unit,
     onForgetSaved: () -> Unit
 ) {
@@ -244,18 +202,10 @@ private fun AwsLoginScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        if (dbReady) "Banco de dados carregado. Entre com seu usuário."
-                        else "Importe o banco de dados para liberar o acesso.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        if (dbReady) "Banco AWS integrado carregado. Entre com seu usuário."
+                        else "Não foi possível carregar o banco integrado do AWS.",
+                        color = if (dbReady) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
                     )
-
-                    OutlinedButton(
-                        onClick = onImportDatabase,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                        shape = awsFieldShape
-                    ) {
-                        Text(if (dbReady) "Trocar arquivo .db" else "Importar arquivo .db")
-                    }
 
                     OutlinedTextField(
                         value = login,
@@ -321,7 +271,6 @@ private fun AwsLoginScreen(
 private fun AwsDashboardScreen(
     user: UserSession,
     onOpen: (String) -> Unit,
-    onImportDatabase: () -> Unit,
     onLogout: () -> Unit
 ) {
     Box(
@@ -391,17 +340,12 @@ private fun AwsDashboardScreen(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = onImportDatabase,
-                    modifier = Modifier.weight(1f).heightIn(min = 50.dp),
-                    shape = awsFieldShape
-                ) { Text("Trocar banco") }
-                OutlinedButton(
-                    onClick = onLogout,
-                    modifier = Modifier.weight(1f).heightIn(min = 50.dp),
-                    shape = awsFieldShape
-                ) { Text("Sair") }
+            OutlinedButton(
+                onClick = onLogout,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                shape = awsFieldShape
+            ) {
+                Text("Sair")
             }
         }
     }
