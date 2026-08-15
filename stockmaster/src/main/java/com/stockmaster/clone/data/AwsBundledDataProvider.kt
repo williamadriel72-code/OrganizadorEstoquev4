@@ -5,12 +5,11 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
 import android.os.FileObserver
-import java.io.File
 import java.util.concurrent.Executors
 
 /**
- * Dispara a instalação do conjunto integrado em segundo plano quando o app abre
- * e também quando o banco aws_estoque_local.db é criado/substituído.
+ * Garante o banco integrado na primeira abertura e dispara a instalação
+ * complementar do conjunto de mercadorias/validades quando necessário.
  */
 class AwsBundledDataProvider : ContentProvider() {
     private val executor = Executors.newSingleThreadExecutor()
@@ -21,8 +20,13 @@ class AwsBundledDataProvider : ContentProvider() {
         val dbFile = ctx.getDatabasePath("aws_estoque_local.db")
         dbFile.parentFile?.mkdirs()
 
+        // O ContentProvider inicia antes da Activity. Assim, no build privado,
+        // o banco aws_seed.db já fica pronto antes da tela de login ser criada.
+        runCatching { ensureBundledDatabase(ctx) }
+
+        val parentPath = dbFile.parentFile?.absolutePath ?: return true
         observer = object : FileObserver(
-            dbFile.parentFile?.absolutePath ?: return true,
+            parentPath,
             CLOSE_WRITE or MOVED_TO or CREATE
         ) {
             override fun onEvent(event: Int, path: String?) {
