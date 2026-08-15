@@ -2,7 +2,9 @@ name: Build AWS Gestão de Estoque
 
 on:
   push:
-    branches: [ "agent/stockmaster-nova-versao" ]
+    branches:
+      - "agent/stockmaster-nova-versao"
+      - "agent/aws-integrated-data-staging"
     paths:
       - "stockmaster/**"
       - "settings.gradle.kts"
@@ -29,9 +31,9 @@ jobs:
       - name: Build AWS debug APK
         run: gradle :stockmaster:assembleDebug --stacktrace
       - name: Prepare AWS APK filename
-        run: cp stockmaster/build/outputs/apk/debug/stockmaster-debug.apk AWS-Gestao-de-Estoque-1.0.1.apk
+        run: cp stockmaster/build/outputs/apk/debug/stockmaster-debug.apk AWS-Gestao-de-Estoque-1.0.2-integrado.apk
       - name: Upload AWS APK
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Gestao-de-Estoque-1.0.1
-          path: AWS-Gestao-de-Estoque-1.0.1.apk
+          name: AWS-Gestao-de-Estoque-1.0.2-integrado
+          path: AWS-Gestao-de-Estoque-1.0.2-integrado.apk
