@@ -1,0 +1,35 @@
+name: Build StockMaster Nova Versao
+
+on:
+  push:
+    branches: [ "agent/stockmaster-nova-versao" ]
+    paths:
+      - "stockmaster/**"
+      - "settings.gradle.kts"
+      - ".github/workflows/stockmaster-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Build StockMaster debug APK
+        run: gradle :stockmaster:assembleDebug --stacktrace
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StockMaster-Nova-Versao-debug
+          path: stockmaster/build/outputs/apk/debug/stockmaster-debug.apk
