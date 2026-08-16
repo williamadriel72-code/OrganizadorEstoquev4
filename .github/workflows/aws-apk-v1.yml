@@ -16,7 +16,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Preparar estoque geral sem filial
+      - name: Preparar som do bip
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d app/src/main/res/raw/scan_funny.b64 > app/src/main/res/raw/scan_funny.ogg
+          rm app/src/main/res/raw/scan_funny.b64
+
+      - name: Preparar estoque geral e scanner rápido
         run: python scripts/prepare_single_stock.py
 
       - name: Java 17
@@ -71,7 +78,7 @@ jobs:
           set -euo pipefail
           UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
           ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.3.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.4.apk"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
@@ -85,8 +92,8 @@ jobs:
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Gestao-Estoque-v5.0.3-signed
-          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.3.apk
+          name: AWS-Gestao-Estoque-v5.0.4-signed
+          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.4.apk
           if-no-files-found: error
 
       - name: Publicar release fixa
@@ -95,13 +102,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.3.apk"
-          ASSET="AWS-Gestao-Estoque-5.0.3.apk"
-          TAG="v5.0.3"
+          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.4.apk"
+          ASSET="AWS-Gestao-Estoque-5.0.4.apk"
+          TAG="v5.0.4"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
-              --title "AWS Gestão de Estoque 5.0.3" \
-              --notes "Estoque geral sem filial, importação de produtos e validades, assinatura permanente e atualização centralizada."
+              --title "AWS Gestão de Estoque 5.0.4" \
+              --notes "Scanner mais rápido com exibição imediata do produto, cache local, carregamento paralelo de estoque/endereço/validade e novo som de bip."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
