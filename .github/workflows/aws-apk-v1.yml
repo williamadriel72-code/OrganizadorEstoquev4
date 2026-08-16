@@ -23,6 +23,9 @@ jobs:
           base64 -d app/src/main/res/raw/scan_funny.b64 > app/src/main/res/raw/scan_funny.ogg
           rm app/src/main/res/raw/scan_funny.b64
 
+      - name: Tornar o bip confiável
+        run: python scripts/prepare_reliable_bip.py
+
       - name: Preparar estoque geral e scanner rápido
         run: python scripts/prepare_single_stock.py
 
@@ -81,7 +84,7 @@ jobs:
           set -euo pipefail
           UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
           ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.5.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.6.apk"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
@@ -95,8 +98,8 @@ jobs:
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Gestao-Estoque-v5.0.5-signed
-          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.5.apk
+          name: AWS-Gestao-Estoque-v5.0.6-signed
+          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.6.apk
           if-no-files-found: error
 
       - name: Publicar release fixa
@@ -105,13 +108,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.5.apk"
-          ASSET="AWS-Gestao-Estoque-5.0.5.apk"
-          TAG="v5.0.5"
+          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.6.apk"
+          ASSET="AWS-Gestao-Estoque-5.0.6.apk"
+          TAG="v5.0.6"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
-              --title "AWS Gestão de Estoque 5.0.5" \
-              --notes "Atualizador interno: download e progresso dentro do APK, validação de pacote/versão/assinatura e abertura automática do instalador Android. Mantém scanner rápido e som personalizado."
+              --title "AWS Gestão de Estoque 5.0.6" \
+              --notes "Correção do som do bip: reprodução pelo canal de mídia com MediaPlayer, reinício imediato a cada leitura. Mantém atualizador interno e scanner rápido."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
