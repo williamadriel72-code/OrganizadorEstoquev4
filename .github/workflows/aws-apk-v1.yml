@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -88,3 +88,19 @@ jobs:
           name: AWS-Gestao-Estoque-v5.0.3-signed
           path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.3.apk
           if-no-files-found: error
+
+      - name: Publicar release fixa
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.3.apk"
+          TAG="v5.0.3"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK" \
+              --title "AWS Gestão de Estoque 5.0.3" \
+              --notes "Estoque geral sem filial, importação de produtos e validades, assinatura permanente e atualização centralizada."
+          fi
