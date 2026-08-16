@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#071a39">
+<title>AWS - Gestão de Estoque</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--n:#071a39;--n2:#0a2149;--p:#7c3aed;--p2:#a855f7;--bg:#f4f6fb;--text:#172033;--muted:#778095;--line:#e8ebf2;--ok:#19a66a;--warn:#f59e0b;--bad:#ef4444}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}button,input,select{font:inherit}.hidden{display:none!important}
+.toast{position:fixed;z-index:99;left:50%;bottom:24px;transform:translate(-50%,130px);padding:12px 16px;border-radius:13px;background:#111827;color:#fff;transition:.25s;max-width:90%;text-align:center}.toast.show{transform:translate(-50%,0)}.toast.ok{background:#065f46}.toast.err{background:#7f1d1d}
+.login{min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 10% 0%,rgba(139,92,246,.22),transparent 32%),linear-gradient(160deg,#06152f,#081e43 58%,#06152f)}
+.loginbox{width:min(420px,100%);color:#fff}.brand{text-align:center;margin-bottom:24px}.cube{width:100px;height:100px;margin:auto;border-radius:28px;display:grid;place-items:center;font-size:48px;background:linear-gradient(145deg,rgba(124,58,237,.35),rgba(79,141,247,.2));border:1px solid rgba(168,85,247,.55);box-shadow:0 0 45px rgba(124,58,237,.24)}
+.brand h1{font-size:52px;margin:16px 0 4px;letter-spacing:-2px;background:linear-gradient(90deg,#bda5ff,#7c3aed,#e0b9ff);-webkit-background-clip:text;color:transparent}.brand p{margin:0;color:#dce5f8}
+.card{border:1px solid rgba(139,92,246,.5);border-radius:22px;padding:21px;background:rgba(5,22,51,.57);box-shadow:0 24px 60px rgba(0,0,0,.22)}.tabs{display:flex;background:rgba(255,255,255,.06);padding:4px;border-radius:13px;margin-bottom:16px}.tab{flex:1;border:0;background:transparent;color:#aebdd8;padding:10px;border-radius:10px}.tab.active{background:linear-gradient(90deg,var(--p),var(--p2));color:#fff}.field{margin:13px 0}.field label{font-size:12px;color:#afbdd5;display:block;margin:0 0 6px 3px}.field input{width:100%;border:1px solid rgba(139,92,246,.55);border-radius:13px;padding:14px;background:rgba(1,12,31,.35);outline:0;color:#fff}.field input::placeholder{color:#7e91b3}.primary{width:100%;border:0;border-radius:13px;padding:14px;color:#fff;font-weight:750;background:linear-gradient(90deg,#6d28d9,#9554ed)}.note{font-size:11px;line-height:1.5;color:#90a3c5;text-align:center;margin-top:14px}
+.app{min-height:100vh}.top{background:var(--n);color:#fff;padding:20px 18px 24px;position:sticky;top:0;z-index:10}.toprow{display:flex;justify-content:space-between;align-items:center;gap:12px}.top h2{font-size:27px;margin:8px 0 3px}.top h2 span{color:#a78bfa}.top p{margin:0;color:#b6c3da;font-size:13px}.logout{border:1px solid rgba(255,255,255,.16);background:transparent;color:#fff;border-radius:11px;padding:8px 12px}.branch{width:100%;margin-top:15px;border:0;border-radius:12px;padding:11px 12px;color:#172033;background:#fff}
+.content{padding:15px;max-width:920px;margin:auto}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;margin-top:-5px}.action{border:1px solid var(--line);background:#fff;border-radius:17px;padding:16px;text-align:left;min-height:127px;box-shadow:0 8px 22px rgba(31,41,55,.05)}.icon{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;background:#f0e9ff;font-size:21px;margin-bottom:10px}.action:nth-child(2n) .icon{background:#eaf1ff}.action:nth-child(3n) .icon{background:#eaf8f2}.action h3{font-size:15px;margin:0 0 5px}.action p{font-size:11px;line-height:1.45;color:var(--muted);margin:0}.wide{grid-column:span 2}
+.searchhead{display:flex;align-items:center;gap:11px;margin-bottom:14px}.back{width:42px;height:42px;border:0;border-radius:12px;background:#fff}.searchhead h2{font-size:21px;margin:0}.searchbox{display:grid;gap:9px}.searchbox input{width:100%;border:1px solid var(--line);background:#fff;border-radius:13px;padding:14px;outline:0}.scan{border:0;border-radius:13px;padding:14px;background:linear-gradient(90deg,#6d28d9,#8b5cf6);color:#fff;font-weight:750}.empty{background:#fff;border:1px dashed #d7dce7;border-radius:16px;padding:35px 18px;text-align:center;color:var(--muted);margin-top:14px}.product{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:13px;box-shadow:0 10px 26px rgba(31,41,55,.06)}.prodrow{display:grid;grid-template-columns:68px 1fr;gap:13px}.pic{height:78px;border-radius:13px;background:linear-gradient(145deg,#f0eaff,#e8eefc);display:grid;place-items:center;font-size:30px;overflow:hidden}.pic img{width:100%;height:100%;object-fit:contain}.product h3{font-size:16px;margin:1px 0 8px}.meta{font-size:12px;display:grid;gap:5px}.meta span{color:#6b7280}.stock{color:#7c3aed!important;font-weight:800}.exp{border-top:1px solid var(--line);margin-top:13px;padding-top:11px}.exp h4{margin:0 0 8px;font-size:14px}.exprow{display:flex;justify-content:space-between;gap:8px;background:#f8f9fc;border-left:4px solid #22c55e;padding:8px 9px;border-radius:9px;margin:5px 0;font-size:11px}.exprow.warn{border-left-color:var(--warn)}.exprow.bad{border-left-color:var(--bad)}
+@media(min-width:760px){.grid{grid-template-columns:repeat(4,1fr)}.wide{grid-column:span 2}.searchbox{grid-template-columns:1fr auto}.top{padding-left:calc((100% - 920px)/2 + 15px);padding-right:calc((100% - 920px)/2 + 15px)}}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<section id="auth" class="login">
+ <div class="loginbox">
+  <div class="brand"><div class="cube">📦</div><h1>AWS</h1><p>Gestão de Estoque</p></div>
+  <div class="card">
+   <div class="tabs"><button id="tLogin" class="tab active">Entrar</button><button id="tSignup" class="tab">Primeiro acesso</button></div>
+   <form id="loginForm"><div class="field"><label>E-mail</label><input id="loginEmail" type="email" placeholder="Digite seu e-mail" required></div><div class="field"><label>Senha</label><input id="loginPass" type="password" placeholder="Digite sua senha" required></div><button class="primary">Entrar</button></form>
+   <form id="signupForm" class="hidden"><div class="field"><label>Nome</label><input id="signupName" placeholder="Seu nome" required></div><div class="field"><label>E-mail</label><input id="signupEmail" type="email" placeholder="Seu e-mail" required></div><div class="field"><label>Senha</label><input id="signupPass" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required></div><button class="primary">Criar acesso</button><div class="note">O primeiro usuário criado será o administrador inicial.</div></form>
+   <div class="note">🔰 Acesso protegido pelo Supabase.</div>
+  </div>
+ </div>
+</section>
+<section id="app" class="app hidden">
+ <header class="top"><div class="toprow"><div><small>AWS · Gestão de Estoque</small><h2>Olá, <span id="hello">Usuário</span></h2><p id="role">Carregando perfil...</p></div><button id="logout" class="logout">Sair</button></div><select id="branch" class="branch"><option value="">Todas as filiais</option></select></header>
+ <main class="content">
+  <section id="home">
+   <div class="grid">
+    <button class="action" data-search><div class="icon">🔎</div><h3>Busca de produto</h3><p>Consulte código, EAN, estoque, endereço e validade.</p></button>
+    <button class="action" data-soon><div class="icon">📦</div><h3>Reposição</h3><p>Sugestão e controle de reposição.</p></button>
+    <button class="action" data-soon><div class="icon">🧾</div><h3>Inventário</h3><p>Contagem e gestão de estoque.</p></button>
+    <button class="action" data-soon><div class="icon">✅</div><h3>Conferência</h3><p>Conferir mercadorias e volumes.</p></button>
+    <button class="action" data-soon><div class="icon">⚠️</div><h3>Avaria</h3><p>Registro e controle de avarias.</p></button>
+    <button class="action" data-soon><div class="icon">🔄</div><h3>Movimentação</h3><p>Entradas, saídas e transferências.</p></button>
+    <button class="action" data-soon><div class="icon">🏷️</div><h3>Endereçamento</h3><p>Rua, prateleira, nível e posição.</p></button>
+    <button class="action" data-soon><div class="icon">📥</div><h3>Importações</h3><p>Produtos, estoque, endereço e validade.</p></button>
+    <button class="action wide" data-soon><div class="icon">📅</div><h3>Controle de validade</h3><p>Acompanhe lotes, vencidos e próximos do vencimento.</p></button>
+   </div>
+  </section>
+  <section id="search" class="hidden"><div class="searchhead"><button id="back" class="back">←</button><div><h2>Busca de produto</h2><small>Nome, código interno ou EAN</small></div></div><div class="searchbox"><input id="q" placeholder="Digite o nome, código ou EAN"><button id="scan" class="scan">▥ Bipar código</button></div><div id="results"><div class="empty">Digite alguma informação para localizar um produto.</div></div></section>
+ </main>
+</section>
+<script>
+const URL='https://rlgsbtolosxyymosidns.supabase.co';
+const KEY='sb_publishable_cdYfnl879c7gh4WQE27S5g_CxEtVxde';
+const db=supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+const $=id=>document.getElementById(id);let profile=null,timer=null;
+function toast(m,t=''){const x=$('toast');x.textContent=m;x.className='toast show '+t;clearTimeout(window._t);window._t=setTimeout(()=>x.className='toast',2800)}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function mode(signup){$('loginForm').classList.toggle('hidden',signup);$('signupForm').classList.toggle('hidden',!signup);$('tLogin').classList.toggle('active',!signup);$('tSignup').classList.toggle('active',signup)}
+$('tLogin').onclick=()=>mode(false);$('tSignup').onclick=()=>mode(true);
+$('loginForm').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;b.textContent='Entrando...';const {error}=await db.auth.signInWithPassword({email:$('loginEmail').value.trim(),password:$('loginPass').value});b.disabled=false;b.textContent='Entrar';if(error)return toast(error.message,'err');start()};
+$('signupForm').onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;b.textContent='Criando...';const {data,error}=await db.auth.signUp({email:$('signupEmail').value.trim(),password:$('signupPass').value,options:{data:{nome:$('signupName').value.trim()}}});b.disabled=false;b.textContent='Criar acesso';if(error)return toast(error.message,'err');if(data.session){toast('Acesso criado.','ok');start()}else{toast('Confirme seu e-mail para entrar.','ok');mode(false)}};
+async function start(){const {data:{session}}=await db.auth.getSession();if(!session){$('auth').classList.remove('hidden');$('app').classList.add('hidden');return}const {data,error}=await db.from('perfis').select('nome,papel,filial_id,ativo').eq('usuario_id',session.user.id).maybeSingle();if(error)console.log(error);profile=data||{nome:session.user.email.split('@')[0],papel:'funcionario',filial_id:null,ativo:true};if(profile.ativo===false){await db.auth.signOut();return toast('Usuário desativado.','err')}const n=profile.nome||'Usuário';$('hello').textContent=n.split(/\s+/)[0];$('role').textContent={administrador:'Administrador',gerente:'Gerente',funcionario:'Funcionário'}[profile.papel]||'Usuário';$('auth').classList.add('hidden');$('app').classList.remove('hidden');await branches();show('home')}
+async function branches(){const {data}=await db.from('filiais').select('id,nome').eq('ativo',true).order('nome');const s=$('branch');s.innerHTML='<option value="">Todas as filiais</option>';(data||[]).forEach(b=>s.insertAdjacentHTML('beforeend',`<option value="${b.id}">${esc(b.nome)}</option>`));if(profile?.filial_id){s.value=profile.filial_id;s.disabled=profile.papel!=='administrador'}}
+function show(v){$('home').classList.toggle('hidden',v!=='home');$('search').classList.toggle('hidden',v!=='search');if(v==='search')setTimeout(()=>$('q').focus(),50)}
+$('[data-search]').onclick=()=>show('search');$('back').onclick=()=>show('home');document.querySelectorAll('[data-soon]').forEach(b=>b.onclick=()=>toast('Módulo em construção.'));
+$('logout').onclick=async()=>{await db.auth.signOut();$('app').classList.add('hidden');$('auth').classList.remove('hidden')};
+function brDate(v){if(!v)return'—';const a=v.split('-');return`${a[2]}/${a[1]}/${a[0]}`}
+function expClass(v){const t=new Date();t.setHours(0,0,0,0);const d=new Date(v+'T00:00:00');const days=Math.round((d-t)/86400000);return days<0?'bad':days<=30?'warn':''}
+async function find(term){term=term.trim();if(!term){$('results').innerHTML='<div class="empty">Digite alguma informação para localizar um produto.</div>';return}$('results').innerHTML='<div class="empty">Buscando...</div>';const safe=term.replaceAll(',',' ');const {data,error}=await db.from('produtos').select('id,nome,codigo_interno,codigo_barras,categoria,foto_url').eq('ativo',true).or(`nome.ilike.%${safe}%,codigo_interno.ilike.%${safe}%,codigo_barras.ilike.%${safe}%`).limit(20);if(error)return $('results').innerHTML='<div class="empty">Erro ao consultar produtos.</div>';if(!data?.length)return $('results').innerHTML='<div class="empty">Nenhum produto encontrado.</div>';render(data)}
+async function render(items){const ids=items.map(x=>x.id),f=$('branch').value;let sq=db.from('estoques').select('produto_id,filial_id,quantidade,endereco,rua,prateleira,nivel,posicao,filiais(nome)').in('produto_id',ids);if(f)sq=sq.eq('filial_id',f);const {data:st}=await sq;let vq=db.from('validades').select('produto_id,validade,quantidade,lote').in('produto_id',ids).order('validade');if(f)vq=vq.eq('filial_id',f);const {data:va}=await vq;const sm={},vm={};(st||[]).forEach(x=>(sm[x.produto_id]??=[]).push(x));(va||[]).forEach(x=>(vm[x.produto_id]??=[]).push(x));$('results').innerHTML=items.map(p=>{const ss=sm[p.id]||[],qty=ss.reduce((a,x)=>a+Number(x.quantidade||0),0),addr=ss[0]?.endereco||[ss[0]?.rua,ss[0]?.prateleira,ss[0]?.nivel,ss[0]?.posicao].filter(Boolean).join(' - ')||'Sem endereço',fil=ss.length>1?ss.length+' filiais':ss[0]?.filiais?.nome||'Sem estoque',vs=(vm[p.id]||[]).slice(0,5),img=p.foto_url?`<img src="${esc(p.foto_url)}">`:'📦',vhtml=vs.length?vs.map(v=>`<div class="exprow ${expClass(v.validade)}"><b>${brDate(v.validade)}</b><span>${Number(v.quantidade||0)} un.${v.lote?' · '+esc(v.lote):''}</span></div>`).join(''):'<small>Sem validade cadastrada.</small>';return`<article class="product"><div class="prodrow"><div class="pic">${img}</div><div><h3>${esc(p.nome)}</h3><div class="meta"><div><span>Código:</span> <b>${esc(p.codigo_interno||'—')}</b></div><div><span>EAN:</span> <b>${esc(p.codigo_barras||'—')}</b></div><div><span>Estoque:</span> <b class="stock">${qty}</b></div><div><span>Filial:</span> <b>${esc(fil)}</b></div><div><span>Endereço:</span> <b>${esc(addr)}</b></div></div></div></div><div class="exp"><h4>Validade</h4>${vhtml}</div></article>`}).join('')}
+$('q').oninput=e=>{clearTimeout(timer);timer=setTimeout(()=>find(e.target.value),350)};$('branch').onchange=()=>{if(!$('search').classList.contains('hidden')&&$('q').value.trim())find($('q').value)};
+window.onNativeBarcode=code=>{if(!code)return;$('q').value=String(code);show('search');find(String(code));toast('Código lido: '+code,'ok')};window.onNativeScannerError=m=>{if(m&&m!=='Leitura cancelada.')toast(m,'err')};
+$('scan').onclick=()=>{if(window.AndroidApp?.scanBarcode)AndroidApp.scanBarcode();else toast('Leitor disponível no APK.','err')};
+window.androidBack=()=>{if(!$('search').classList.contains('hidden'))show('home');else if(window.AndroidApp?.exitApp)AndroidApp.exitApp()};
+db.auth.onAuthStateChange((e,s)=>{if(e==='SIGNED_OUT'){$('app').classList.add('hidden');$('auth').classList.remove('hidden')}});start();
+</script>
+</body></html>
