@@ -68,7 +68,8 @@ object PdfImportParser {
     private val companyStock = Regex("""Empresa:\s*(\d+)\s+(.+)""", RegexOption.IGNORE_CASE)
     private val companyValidity = Regex("""Filial\s*:\s*(\d+)\s*-\s*(.+)""", RegexOption.IGNORE_CASE)
     private val stockProduct = Regex("""^Produto:\s*(\d+)\s+(.+)$""", RegexOption.IGNORE_CASE)
-    private val trailingNumbers = Regex("""(-?\d+(?:[.,]\d+)?)\s+(-?\d+(?:[.,]\d+)?)\s*$""")
+    private val stockDataStart = Regex("""^(\d{1,7})\s+(\d{8,14})\b(.*)$""")
+    private val stockQtyBeforePlaceholder = Regex("""(-?\d+(?:[.,]\d+)?)\s+___/___/______""")
     private val dateAny = Regex("""(\d{2}/\d{2}/\d{4})""")
     private val dateGroup = Regex("""Data\s+Validade\s+(\d{2}/\d{2}/\d{4})""", RegexOption.IGNORE_CASE)
     private val productLine = Regex("""^(\d{1,7})\s+(\d{8,14})\s+(.+)$""")
@@ -89,7 +90,6 @@ object PdfImportParser {
                 if (totalPages <= 0) throw IllegalArgumentException("O PDF não possui páginas.")
 
                 val stripper = PDFTextStripper().apply { sortByPosition = true }
-
                 var type: String? = null
                 var companyCode: String? = null
                 var companyName: String? = null
@@ -97,6 +97,7 @@ object PdfImportParser {
                 val stockItems = ArrayList<PdfImportItem>()
                 var currentStockCode: String? = null
                 var currentStockName: String? = null
+                var pendingStock: PendingStock? = null
 
                 val validityItems = ArrayList<PdfImportItem>()
                 var currentDate: String? = null
@@ -110,16 +111,13 @@ object PdfImportParser {
                     if (type == null) {
                         type = when {
                             text.contains("Relatório de Conferência de Estoque", ignoreCase = true) -> "estoque"
-                            text.contains("Relação Geral de Produtos", ignoreCase = true) &&
-                                text.contains("Data Validade", ignoreCase = true) -> "validades"
-                            text.contains("Data Validade", ignoreCase = true) &&
-                                text.contains("Filial", ignoreCase = true) -> "validades"
+                            text.contains("Relação Geral de Produtos", ignoreCase = true) && text.contains("Data Validade", ignoreCase = true) -> "validades"
+                            text.contains("Data Validade", ignoreCase = true) && text.contains("Filial", ignoreCase = true) -> "validades"
                             else -> null
                         }
                     }
 
-                    val rawLines = text.split('\n')
-                    for (raw in rawLines) {
+                    for (raw in text.split('\n')) {
                         var line = normalize(raw)
                         if (line.isBlank()) continue
 
@@ -139,32 +137,24 @@ object PdfImportParser {
                             if (header != null) {
                                 currentStockCode = header.groupValues[1].trim()
                                 currentStockName = header.groupValues[2].trim()
+                                pendingStock = null
                                 continue
                             }
 
                             val code = currentStockCode
                             val name = currentStockName
-                            if (code != null && name != null && line.startsWith("$code ")) {
-                                val afterCode = line.removePrefix(code).trimStart()
-                                val eanMatch = Regex("""^(\d{8,14})\s+(.+)$""").find(afterCode)
-                                if (eanMatch != null) {
-                                    val ean = eanMatch.groupValues[1]
-                                    val beforeForm = eanMatch.groupValues[2]
-                                        .substringBefore("___/___/______")
-                                        .trim()
-                                    val nums = trailingNumbers.find(beforeForm)
-                                    if (nums != null) {
-                                        val unCx = parseNumber(nums.groupValues[1])
-                                        val qty = parseNumber(nums.groupValues[2])
-                                        stockItems.add(
-                                            PdfImportItem(
-                                                codigoInterno = code,
-                                                ean = ean,
-                                                nome = name,
-                                                unCx = unCx,
-                                                quantidade = qty
-                                            )
-                                        )
+                            if (code != null && name != null) {
+                                val data = stockDataStart.find(line)
+                                if (data != null && data.groupValues[1] == code) {
+                                    pendingStock = PendingStock(code, data.groupValues[2].trim(), name)
+                                }
+
+                                val qtyMatch = stockQtyBeforePlaceholder.find(line)
+                                if (qtyMatch != null && pendingStock != null) {
+                                    val qty = parseNumber(qtyMatch.groupValues[1])
+                                    if (qty != null) {
+                                        stockItems.add(pendingStock!!.toItem(qty))
+                                        pendingStock = null
                                         currentStockCode = null
                                         currentStockName = null
                                     }
@@ -176,9 +166,7 @@ object PdfImportParser {
 
                             val group = dateGroup.find(line)
                             if (group != null) {
-                                pendingValidity?.let { pending ->
-                                    currentDate?.let { d -> validityItems.add(pending.toItem(d)) }
-                                }
+                                pendingValidity?.let { pending -> currentDate?.let { d -> validityItems.add(pending.toItem(d)) } }
                                 pendingValidity = null
                                 currentDate = toIso(group.groupValues[1])
                                 continue
@@ -194,9 +182,7 @@ object PdfImportParser {
 
                             val p = productLine.find(line)
                             if (p != null) {
-                                pendingValidity?.let { pending ->
-                                    currentDate?.let { d -> validityItems.add(pending.toItem(d)) }
-                                }
+                                pendingValidity?.let { pending -> currentDate?.let { d -> validityItems.add(pending.toItem(d)) } }
 
                                 val code = p.groupValues[1].trim()
                                 val ean = p.groupValues[2].trim()
@@ -204,14 +190,7 @@ object PdfImportParser {
                                 val endDate = dateAny.find(desc)
                                 if (endDate != null && endDate.range.last == desc.lastIndex) {
                                     desc = desc.substring(0, endDate.range.first).trim()
-                                    validityItems.add(
-                                        PdfImportItem(
-                                            codigoInterno = code,
-                                            ean = ean,
-                                            nome = desc,
-                                            validade = toIso(endDate.value)
-                                        )
-                                    )
+                                    validityItems.add(PdfImportItem(code, ean, desc, validade = toIso(endDate.value)))
                                     pendingValidity = null
                                 } else {
                                     pendingValidity = PendingValidity(code, ean, desc)
@@ -225,15 +204,11 @@ object PdfImportParser {
                         }
                     }
 
-                    if (page == 1 || page == totalPages || page % 10 == 0) {
-                        progress(page, totalPages)
-                    }
+                    if (page == 1 || page == totalPages || page % 10 == 0) progress(page, totalPages)
                 }
 
                 if (type == "validades") {
-                    pendingValidity?.let { pending ->
-                        currentDate?.let { d -> validityItems.add(pending.toItem(d)) }
-                    }
+                    pendingValidity?.let { pending -> currentDate?.let { d -> validityItems.add(pending.toItem(d)) } }
                 }
 
                 val resolvedType = type ?: throw IllegalArgumentException(
@@ -246,16 +221,11 @@ object PdfImportParser {
                     unique.values.toList()
                 } else {
                     val unique = LinkedHashMap<String, PdfImportItem>()
-                    validityItems.forEach { item ->
-                        val key = "${item.codigoInterno}|${item.validade}"
-                        unique[key] = item
-                    }
+                    validityItems.forEach { item -> unique["${item.codigoInterno}|${item.validade}"] = item }
                     unique.values.toList()
                 }
 
-                if (finalItems.isEmpty()) {
-                    throw IllegalArgumentException("Nenhum item foi reconhecido no PDF.")
-                }
+                if (finalItems.isEmpty()) throw IllegalArgumentException("Nenhum item foi reconhecido no PDF.")
 
                 return ParsedPdfImport(
                     type = resolvedType,
@@ -269,25 +239,48 @@ object PdfImportParser {
         }
     }
 
-    private data class PendingValidity(
-        val code: String,
-        val ean: String,
-        val name: String
-    ) {
+    private data class PendingStock(val code: String, val ean: String, val name: String) {
+        fun toItem(qty: Double): PdfImportItem = PdfImportItem(
+            codigoInterno = code,
+            ean = ean,
+            nome = name,
+            unCx = null,
+            quantidade = qty
+        )
+    }
+
+    private data class PendingValidity(val code: String, val ean: String, val name: String) {
         fun append(part: String): PendingValidity = copy(name = normalize("$name $part"))
-        fun toItem(date: String): PdfImportItem = PdfImportItem(codigoInterno = code, ean = ean, nome = name.trim(), validade = date)
+        fun toItem(date: String): PdfImportItem = PdfImportItem(code, ean, name.trim(), validade = date)
     }
 
     private fun normalize(value: String): String = value.replace('\u00A0', ' ').trim().replace(spaces, " ")
-    private fun parseNumber(value: String): Double? = value.replace(".", "").replace(",", ".").toDoubleOrNull()
-    private fun toIso(value: String): String { val parts = value.split("/"); return if (parts.size == 3) "${parts[2]}-${parts[1]}-${parts[0]}" else value }
+
+    private fun parseNumber(value: String): Double? {
+        val v = value.trim()
+        return if (v.contains(',')) v.replace(".", "").replace(",", ".").toDoubleOrNull() else v.toDoubleOrNull()
+    }
+
+    private fun toIso(value: String): String {
+        val parts = value.split("/")
+        return if (parts.size == 3) "${parts[2]}-${parts[1]}-${parts[0]}" else value
+    }
+
     private fun cleanCompanyName(raw: String): String = normalize(raw).substringBefore("Data Validade").substringBefore("Data:").trim()
+
     private fun stripValidityFooter(line: String, totalPages: Int): String {
         val marker = Regex("""D\.A\.M\s+Soluções.*?\sDe\s+$totalPages""", setOf(RegexOption.IGNORE_CASE))
         return normalize(line.replace(marker, ""))
     }
+
     private fun isValidityNoise(line: String): Boolean {
         val l = line.lowercase()
-        return l.startsWith("quantidade de itens agrupados") || l.startsWith("relação geral de produtos") || l.startsWith("situação") || l.startsWith("tipo relatorio") || l.startsWith("produto validade") || l.startsWith("empresa") || l.startsWith("filtro") || l.startsWith("t. produto") || l.startsWith("tipo custo") || l.startsWith("custo compra") || l.startsWith("filial") || l.startsWith("d.a.m soluções") || l.contains("usuário:")
+        return l.startsWith("quantidade de itens agrupados") ||
+            l.startsWith("relação geral de produtos") ||
+            l.startsWith("situação") || l.startsWith("tipo relatorio") ||
+            l.startsWith("produto validade") || l.startsWith("empresa") ||
+            l.startsWith("filtro") || l.startsWith("t. produto") ||
+            l.startsWith("tipo custo") || l.startsWith("custo compra") ||
+            l.startsWith("filial") || l.startsWith("d.a.m soluções") || l.contains("usuário:")
     }
 }
