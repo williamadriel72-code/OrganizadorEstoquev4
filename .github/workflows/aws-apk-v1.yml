@@ -5,6 +5,10 @@ on:
     branches: [ "aws-supabase-apk-v1" ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,12 +35,53 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
-      - name: Build APK
-        run: gradle :app:assembleDebug --stacktrace
+      - name: Build unsigned release
+        run: gradle :app:assembleRelease --stacktrace
 
-      - name: Upload APK
+      - name: Obtain permanent signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          OIDC_JSON=$(curl -fsSL \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=aws-apk-signing")
+          OIDC_TOKEN=$(echo "$OIDC_JSON" | jq -r '.value')
+          SIGNING_JSON=$(curl -fsSL \
+            -H "Authorization: Bearer ${OIDC_TOKEN}" \
+            "https://rlgsbtolosxyymosidns.supabase.co/functions/v1/github-apk-signing")
+
+          STORE_PASS=$(echo "$SIGNING_JSON" | jq -r '.store_password')
+          KEY_ALIAS=$(echo "$SIGNING_JSON" | jq -r '.key_alias')
+          KEY_PASS=$(echo "$SIGNING_JSON" | jq -r '.key_password')
+          echo "$SIGNING_JSON" | jq -r '.keystore_base64' | base64 -d > "$RUNNER_TEMP/aws-estoque-release.jks"
+
+          echo "::add-mask::$STORE_PASS"
+          echo "::add-mask::$KEY_PASS"
+          echo "STORE_PASS=$STORE_PASS" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "KEY_PASS=$KEY_PASS" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/aws-estoque-release.jks" >> "$GITHUB_ENV"
+
+      - name: Align and sign APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.2.apk"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:STORE_PASS \
+            --key-pass env:KEY_PASS \
+            --out "$SIGNED" \
+            "$ALIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
+
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Gestao-Estoque-v5-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: AWS-Gestao-Estoque-v5.0.2-signed
+          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.2.apk
           if-no-files-found: error
