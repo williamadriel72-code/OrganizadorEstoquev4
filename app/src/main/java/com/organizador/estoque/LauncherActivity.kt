@@ -3,6 +3,8 @@ package com.organizador.estoque
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.database.Cursor
+import android.media.AudioAttributes
+import android.media.SoundPool
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -21,6 +23,10 @@ import kotlin.concurrent.thread
 class LauncherActivity : ComponentActivity() {
     private lateinit var webView: WebView
 
+    private var bipSoundPool: SoundPool? = null
+    private var bipSoundId: Int = 0
+    @Volatile private var bipSoundReady = false
+
     @Volatile
     private var pendingImport: ParsedPdfImport? = null
 
@@ -32,6 +38,7 @@ class LauncherActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         PDFBoxResourceLoader.init(applicationContext)
+        prepareBipSound()
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
@@ -51,6 +58,30 @@ class LauncherActivity : ComponentActivity() {
                 webView.evaluateJavascript("window.androidBack && window.androidBack();", null)
             }
         })
+    }
+
+    private fun prepareBipSound() {
+        val attributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
+        bipSoundPool = SoundPool.Builder()
+            .setMaxStreams(1)
+            .setAudioAttributes(attributes)
+            .build()
+            .also { pool ->
+                pool.setOnLoadCompleteListener { _, sampleId, status ->
+                    if (sampleId == bipSoundId && status == 0) bipSoundReady = true
+                }
+                bipSoundId = pool.load(this, R.raw.scan_funny, 1)
+            }
+    }
+
+    private fun playBipSound() {
+        val pool = bipSoundPool ?: return
+        if (!bipSoundReady || bipSoundId == 0) return
+        pool.play(bipSoundId, 1f, 1f, 1, 0, 1f)
     }
 
     private fun parseSelectedPdf(uri: Uri) {
@@ -112,6 +143,7 @@ class LauncherActivity : ComponentActivity() {
                     .addOnSuccessListener { barcode ->
                         val raw = barcode.rawValue.orEmpty()
                         if (raw.isNotBlank()) {
+                            playBipSound()
                             webView.evaluateJavascript(
                                 "window.onNativeBarcode && window.onNativeBarcode(${JSONObject.quote(raw)});",
                                 null
@@ -180,6 +212,9 @@ class LauncherActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        bipSoundPool?.release()
+        bipSoundPool = null
+        bipSoundReady = false
         webView.removeJavascriptInterface("AndroidApp")
         webView.destroy()
         pendingImport = null
