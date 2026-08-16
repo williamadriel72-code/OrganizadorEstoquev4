@@ -1,6 +1,7 @@
 package com.organizador.estoque
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
@@ -40,7 +41,7 @@ class LauncherActivity : ComponentActivity() {
             webViewClient = WebViewClient()
             webChromeClient = WebChromeClient()
             addJavascriptInterface(AndroidBridge(), "AndroidApp")
-            loadUrl("file:///android_asset/index_v2.html")
+            loadUrl("file:///android_asset/index.html")
         }
 
         setContentView(webView)
@@ -150,6 +151,26 @@ class LauncherActivity : ComponentActivity() {
         @JavascriptInterface
         fun clearPendingImport() {
             pendingImport = null
+        }
+
+        @JavascriptInterface
+        fun getAppVersionCode(): Int = BuildConfig.VERSION_CODE
+
+        @JavascriptInterface
+        fun getAppVersionName(): String = BuildConfig.VERSION_NAME
+
+        @JavascriptInterface
+        fun openUpdateUrl(url: String) {
+            runOnUiThread {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } catch (_: Throwable) {
+                    webView.evaluateJavascript(
+                        "window.onNativeUpdateError && window.onNativeUpdateError('Não foi possível abrir o download da atualização.');",
+                        null
+                    )
+                }
+            }
         }
 
         @JavascriptInterface
