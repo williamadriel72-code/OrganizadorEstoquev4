@@ -40,7 +40,7 @@ class LauncherActivity : ComponentActivity() {
             webViewClient = WebViewClient()
             webChromeClient = WebChromeClient()
             addJavascriptInterface(AndroidBridge(), "AndroidApp")
-            loadUrl("file:///android_asset/index.html")
+            loadUrl("file:///android_asset/index_v2.html")
         }
 
         setContentView(webView)
