@@ -31,6 +31,19 @@ js = js.replace("const f=await ensureBranch(),total=Number(pending.totalItems||0
 js = js.replace("await stockBatch(items,f)", "await stockBatch(items)")
 js = js.replace("await validityBatch(items,f)", "await validityBatch(items)")
 js = js.replace(";await loadBranches();", ";")
+
+# Troca o fluxo de várias consultas por uma chamada transacional em lote no Supabase.
+rpc_batch = r'''async function stockBatch(items){
+ const payload=items.map(i=>({codigo_interno:String(i.codigoInterno||''),codigo_barras:i.ean?String(i.ean):null,nome:i.nome||null,unidades_por_caixa:i.unCx==null?null:Number(i.unCx),quantidade:Number(i.quantidade||0)}));
+ const{data,error}=await db.rpc('importar_estoque_geral_lote',{p_itens:payload});if(error)throw error;return data||{processados:0};
+}
+async function validityBatch(items){
+ const payload=items.map(i=>({codigo_interno:String(i.codigoInterno||''),validade:i.validade||null}));
+ const{data,error}=await db.rpc('importar_validades_geral_lote',{p_itens:payload});if(error)throw error;return{inserted:Number(data?.inseridos||0),notInStock:Number(data?.nao_encontrados||0),duplicates:Number(data?.duplicados||0)};
+}
+'''
+js = re.sub(r"function productRows\(items\)\{.*?\n\}\n\$\('confirmImport'\)", rpc_batch + "$('confirmImport')", js, flags=re.S)
+
 js = re.sub(
     r"function apkUrl\(path\)\{return`\$\{SUPABASE_URL\}/storage/v1/object/public/app-updates/\$\{String\(path\|\|''\)\.split\('/'\)\.map\(encodeURIComponent\)\.join\('/'\)\}`\}",
     "function apkUrl(path){const p=String(path||'');if(/^https?:\\/\\//i.test(p))return p;return`${SUPABASE_URL}/storage/v1/object/public/app-updates/${p.split('/').map(encodeURIComponent).join('/')}`}",
@@ -38,4 +51,4 @@ js = re.sub(
 )
 app_path.write_text(js, encoding='utf-8')
 
-print('Interface preparada para estoque geral sem filial.')
+print('Interface preparada para estoque geral sem filial e importação RPC em lote.')
