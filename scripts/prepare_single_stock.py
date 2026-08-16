@@ -32,7 +32,6 @@ js = js.replace("await stockBatch(items,f)", "await stockBatch(items)")
 js = js.replace("await validityBatch(items,f)", "await validityBatch(items)")
 js = js.replace(";await loadBranches();", ";")
 
-# Troca o fluxo de várias consultas por uma chamada transacional em lote no Supabase.
 rpc_batch = r'''async function stockBatch(items){
  const payload=items.map(i=>({codigo_interno:String(i.codigoInterno||''),codigo_barras:i.ean?String(i.ean):null,nome:i.nome||null,unidades_por_caixa:i.unCx==null?null:Number(i.unCx),quantidade:Number(i.quantidade||0)}));
  const{data,error}=await db.rpc('importar_estoque_geral_lote',{p_itens:payload});if(error)throw error;return data||{processados:0};
@@ -50,7 +49,6 @@ js = re.sub(
     js
 )
 
-# Busca ultrarrápida para o scanner: índice local + busca exata + detalhes em paralelo.
 fast_scan = r'''function expClass(v){const t=new Date();t.setHours(0,0,0,0);const d=new Date(v+'T00:00:00');const days=Math.round((d-t)/86400000);return days<0?'bad':days<=30?'warn':''}
 const PRODUCT_INDEX_KEY='aws_product_index_v2';
 const productByCode=new Map();
@@ -102,7 +100,7 @@ async function findProduct(term){
 $('q').oninput=e=>{clearTimeout(timer);timer=setTimeout(()=>findProduct(e.target.value),220)};
 window.onNativeBarcode=code=>scanProduct(code);
 '''
-js = re.sub(r"function expClass\(v\)\{.*?window\.onNativeBarcode=.*?;window\.onNativeScannerError", fast_scan + "window.onNativeScannerError", js, flags=re.S)
+js = re.sub(r"function expClass\(v\)\{.*?window\.onNativeBarcode=.*?;window\.onNativeScannerError", lambda _: fast_scan + "window.onNativeScannerError", js, flags=re.S)
 js = js.replace("show('home');await checkUpdate();", "show('home');refreshProductIndex();await checkUpdate();")
 
 app_path.write_text(js, encoding='utf-8')
