@@ -31,6 +31,11 @@ js = js.replace("const f=await ensureBranch(),total=Number(pending.totalItems||0
 js = js.replace("await stockBatch(items,f)", "await stockBatch(items)")
 js = js.replace("await validityBatch(items,f)", "await validityBatch(items)")
 js = js.replace(";await loadBranches();", ";")
+js = re.sub(
+    r"function apkUrl\(path\)\{return`\$\{SUPABASE_URL\}/storage/v1/object/public/app-updates/\$\{String\(path\|\|''\)\.split\('/'\)\.map\(encodeURIComponent\)\.join\('/'\)\}`\}",
+    "function apkUrl(path){const p=String(path||'');if(/^https?:\\/\\//i.test(p))return p;return`${SUPABASE_URL}/storage/v1/object/public/app-updates/${p.split('/').map(encodeURIComponent).join('/')}`}",
+    js
+)
 app_path.write_text(js, encoding='utf-8')
 
 print('Interface preparada para estoque geral sem filial.')
