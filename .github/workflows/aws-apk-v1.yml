@@ -32,6 +32,9 @@ jobs:
       - name: Preparar módulos operacionais
         run: python scripts/prepare_operational_modules.py
 
+      - name: Refinar módulos operacionais
+        run: python scripts/refine_operational_modules.py
+
       - name: Preparar atualizador interno
         run: python scripts/prepare_internal_updater.py
 
