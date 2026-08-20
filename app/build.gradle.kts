@@ -43,7 +43,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.8")
     implementation("androidx.paging:paging-runtime:3.5.0")
     implementation("androidx.paging:paging-compose:3.5.0")
-    implementation("androidx.work:work-runtime:2.11.2")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 }
