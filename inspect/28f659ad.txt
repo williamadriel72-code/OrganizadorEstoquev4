@@ -1,0 +1,77 @@
+package com.organizador.estoque.data
+
+import android.content.Context
+import android.util.Base64
+import java.io.ByteArrayInputStream
+import java.util.zip.GZIPInputStream
+
+class BundledCatalogSeeder(private val context: Context) {
+    fun seedIfNeeded(): Boolean {
+        val prefs = context.getSharedPreferences("catalog_snapshot", Context.MODE_PRIVATE)
+        if (prefs.getString("version", null) == SNAPSHOT_VERSION) return false
+
+        val encoded = buildString {
+            for (part in 1..ASSET_PARTS) {
+                val assetPath = "catalog/estoque_2026_08_20_${part.toString().padStart(2, '0')}.b64"
+                context.assets.open(assetPath).bufferedReader(Charsets.US_ASCII).use { append(it.readText()) }
+            }
+        }
+        val zipped = Base64.decode(encoded, Base64.DEFAULT)
+        val products = ArrayList<Product>(EXPECTED_PRODUCTS)
+        val expiries = ArrayList<ExpiryImportRow>()
+        val prices = LinkedHashMap<String, Double>(EXPECTED_PRODUCTS)
+
+        GZIPInputStream(ByteArrayInputStream(zipped)).bufferedReader(Charsets.UTF_8).useLines { lines ->
+            lines.forEach { line ->
+                val fields = line.split('\t', limit = 6)
+                if (fields.size != 6) return@forEach
+                val code = fields[0]
+                val ean = fields[1]
+                val description = fields[2]
+                val stock = fields[3].toDoubleOrNull() ?: 0.0
+                val price = fields[4].toDoubleOrNull() ?: 0.0
+                val expiryIso = fields[5].takeIf { it.isNotBlank() }
+                    ?.let(StockPdfParser::normalizeExpiryValue)
+
+                products += Product(
+                    code = code,
+                    ean = ean,
+                    description = description,
+                    groupCode = null,
+                    category = null,
+                    stock = stock,
+                    controlsExpiry = expiryIso != null,
+                    active = true
+                )
+                prices[code] = price
+                if (expiryIso != null) {
+                    expiries += ExpiryImportRow(
+                        productRef = ean,
+                        expiryDate = expiryIso,
+                        quantity = stock.coerceAtLeast(0.0)
+                    )
+                }
+            }
+        }
+
+        check(products.size == EXPECTED_PRODUCTS) {
+            "Base interna incompleta: ${products.size} de $EXPECTED_PRODUCTS produtos"
+        }
+        check(products.mapNotNull { it.ean }.toSet().size == EXPECTED_PRODUCTS) {
+            "Base interna contém EAN duplicado"
+        }
+
+        InventorySnapshotInstaller(context).replace(products)
+        ExpiryImportStore(context).replace(expiries)
+        CatalogPriceStore(context).replace(prices)
+
+        prefs.edit().putString("version", SNAPSHOT_VERSION).apply()
+        return true
+    }
+
+    companion object {
+        private const val SNAPSHOT_VERSION = "2026-08-20-v8"
+        private const val EXPECTED_PRODUCTS = 13040
+        private const val ASSET_PARTS = 22
+    }
+}
