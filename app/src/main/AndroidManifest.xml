@@ -24,6 +24,10 @@
                 android:resource="@xml/update_file_paths" />
         </provider>
 
+        <receiver
+            android:name=".UpdateInstallReceiver"
+            android:exported="false" />
+
         <activity
             android:name=".LauncherActivity"
             android:exported="true">
