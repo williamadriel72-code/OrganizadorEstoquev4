@@ -1,4 +1,4 @@
-commit=011f9a6cbfadbd411661168540f33b9d39a4ce07
+commit=5807c9235f1a102fce7eb11896b8674585e61431
 login=success
 reposicao_inventario=success
 updater=success
@@ -26,14 +26,14 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:packageReleaseResources
 > Task :app:processReleaseNavigationResources
 > Task :app:stripReleaseDebugSymbols
-> Task :app:javaPreCompileRelease
 > Task :app:extractReleaseNativeSymbolTables
-> Task :app:parseReleaseLocalResources
 > Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:javaPreCompileRelease
+> Task :app:parseReleaseLocalResources
 > Task :app:mapReleaseSourceSetPaths
 > Task :app:checkReleaseAarMetadata
-> Task :app:generateReleaseRFile
 > Task :app:compileReleaseNavigationResources
+> Task :app:generateReleaseRFile
 > Task :app:mergeReleaseResources
 > Task :app:createReleaseCompatibleScreenManifests
 > Task :app:extractDeepLinksRelease
@@ -41,9 +41,8 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:processReleaseManifest
 > Task :app:desugarReleaseFileDependencies
 > Task :app:mergeReleaseStartupProfile
-> Task :app:processReleaseManifestForPackage
-> Task :app:processReleaseResources
 > Task :app:compileReleaseKotlin
+> Task :app:processReleaseManifestForPackage
 > Task :app:mergeExtDexRelease
 
 > Task :app:compileReleaseKotlin
@@ -53,14 +52,15 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/NumberFormatBr.kt:6:24 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
 
 > Task :app:compileReleaseJavaWithJavac
-> Task :app:dexBuilderRelease
 > Task :app:mergeReleaseArtProfile
 > Task :app:generateReleaseAssets UP-TO-DATE
-> Task :app:mergeReleaseGlobalSynthetics
 > Task :app:mergeReleaseAssets
+> Task :app:processReleaseResources
+> Task :app:compressReleaseAssets
+> Task :app:dexBuilderRelease
+> Task :app:mergeReleaseGlobalSynthetics
 > Task :app:extractReleaseVersionControlInfo
 > Task :app:extractProguardFiles
-> Task :app:compressReleaseAssets
 > Task :app:generateReleaseLintVitalReportModel
 > Task :app:processReleaseJavaRes
 > Task :app:optimizeReleaseResources
@@ -77,8 +77,8 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 > Task :app:packageRelease
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787192715606.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787193426502.json
 
-BUILD SUCCESSFUL in 2m 18s
+BUILD SUCCESSFUL in 2m 16s
 49 actionable tasks: 49 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html
