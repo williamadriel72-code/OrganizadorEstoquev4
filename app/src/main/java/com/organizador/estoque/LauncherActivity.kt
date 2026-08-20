@@ -5,12 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.organizador.estoque.data.InventoryDb
 import com.organizador.estoque.data.InventoryRepository
-import com.organizador.estoque.ui.ModernInventoryApp
+import com.organizador.estoque.ui.SupabaseGate
 
 class LauncherActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val repository = InventoryRepository(InventoryDb(applicationContext))
-        setContent { ModernInventoryApp(repository) }
+        setContent { SupabaseGate(repository) }
     }
 }
