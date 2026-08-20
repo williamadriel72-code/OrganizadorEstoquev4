@@ -1,4 +1,4 @@
-commit=9e5a522afbfd7905c290a5cebdc509d8ae96917f
+commit=1cca1e8a8618afd7b7f1e4f0c031d794e1895387
 login=failure
 reposicao_inventario=skipped
 updater=skipped
@@ -8,4 +8,4 @@ sign=skipped
 upload=skipped
 release=skipped
 --- log ---
-Inicialização de autenticação não encontrada.
+Chamada final start() não encontrada.
