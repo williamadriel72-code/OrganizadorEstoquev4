@@ -1,11 +1,80 @@
-commit=c2d9826118064f663a89cd2accb62c6ed03f4790
-login=failure
-reposicao_inventario=skipped
-updater=skipped
-build=skipped
-signing_key=skipped
-sign=skipped
-upload=skipped
-release=skipped
+commit=dd4feafc2fea62c4fee24819b4e54e5ced943636
+login=success
+reposicao_inventario=success
+updater=success
+build=success
+signing_key=success
+sign=success
+upload=success
+release=success
 --- log ---
-Chamada final start() não encontrada.
+Login persistente validado sem depender da inicialização antiga.
+Reposição FEFO e Inventário com acúmulo/revisão preparados e validados.
+Atualizador interno preparado com progresso, retry e instalação nativa.
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:generateReleaseBuildConfig
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:processReleaseNavigationResources
+> Task :app:stripReleaseDebugSymbols
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:javaPreCompileRelease
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:checkReleaseAarMetadata
+> Task :app:compileReleaseNavigationResources
+> Task :app:parseReleaseLocalResources
+> Task :app:generateReleaseRFile
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:mergeReleaseResources
+> Task :app:extractDeepLinksRelease
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:desugarReleaseFileDependencies
+> Task :app:mergeReleaseStartupProfile
+> Task :app:compileReleaseKotlin
+> Task :app:processReleaseManifestForPackage
+> Task :app:mergeExtDexRelease
+
+> Task :app:compileReleaseKotlin
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/PdfImportParser.kt:156:68 Unnecessary non-null assertion (!!) on a non-null receiver of type 'PdfImportParser.PendingStock'.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/PdfImportParser.kt:202:66 Unnecessary non-null assertion (!!) on a non-null receiver of type 'PdfImportParser.PendingValidity'.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/DashboardV2.kt:106:33 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/NumberFormatBr.kt:6:24 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
+
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseAssets
+> Task :app:processReleaseResources
+> Task :app:compressReleaseAssets
+> Task :app:dexBuilderRelease
+> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:extractProguardFiles
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:mergeDexRelease
+> Task :app:processReleaseJavaRes
+> Task :app:optimizeReleaseResources
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:compileReleaseArtProfile
+> Task :app:mergeReleaseJavaResource
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787190720889.json
+
+BUILD SUCCESSFUL in 1m 36s
+49 actionable tasks: 49 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html
