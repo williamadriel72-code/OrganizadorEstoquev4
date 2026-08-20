@@ -1,6 +1,6 @@
 package com.organizador.estoque
 
-import android.app.DevicePolicyManager
+import android.app.admin.DevicePolicyManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
