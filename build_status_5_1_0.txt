@@ -1,4 +1,4 @@
-commit=cc3176838bb2dca66a3df8cd643a7805b6cf6b4d
+commit=d2c3cadb8d288ac024091821e9be9708efae8e0f
 login=success
 reposicao_inventario=success
 updater=success
@@ -10,7 +10,7 @@ sign=skipped
 upload=skipped
 release=skipped
 --- log ---
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787254823366.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787254823405.json
 
 FAILURE: Build failed with an exception.
 
@@ -208,5 +208,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 1m 38s
-26 actionable tasks: 26 executed
+BUILD FAILED in 1m 44s
+25 actionable tasks: 25 executed
