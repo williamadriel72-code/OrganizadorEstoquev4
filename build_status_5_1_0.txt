@@ -1,4 +1,4 @@
-commit=6651aaa6197826b36144cf5ce837f20cd9e38b8e
+commit=16572cb77125e78346095b3e57db06f43c877beb
 login=success
 reposicao_inventario=success
 updater=success
@@ -27,13 +27,13 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:processReleaseNavigationResources
 > Task :app:stripReleaseDebugSymbols
 > Task :app:extractReleaseNativeSymbolTables
-> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
 > Task :app:javaPreCompileRelease
 > Task :app:parseReleaseLocalResources
-> Task :app:mapReleaseSourceSetPaths
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
 > Task :app:checkReleaseAarMetadata
-> Task :app:generateReleaseRFile
+> Task :app:mapReleaseSourceSetPaths
 > Task :app:compileReleaseNavigationResources
+> Task :app:generateReleaseRFile
 > Task :app:mergeReleaseResources
 > Task :app:createReleaseCompatibleScreenManifests
 > Task :app:extractDeepLinksRelease
@@ -61,14 +61,14 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 > Task :app:compileReleaseJavaWithJavac
 > Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseArtProfile
-> Task :app:mergeReleaseAssets
-> Task :app:extractReleaseVersionControlInfo
-> Task :app:extractProguardFiles
 > Task :app:processReleaseResources
-> Task :app:compressReleaseAssets
-> Task :app:generateReleaseLintVitalReportModel
+> Task :app:mergeReleaseAssets
 > Task :app:dexBuilderRelease
 > Task :app:mergeReleaseGlobalSynthetics
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:extractProguardFiles
+> Task :app:compressReleaseAssets
+> Task :app:generateReleaseLintVitalReportModel
 > Task :app:processReleaseJavaRes
 > Task :app:optimizeReleaseResources
 > Task :app:collectReleaseDependencies
@@ -84,8 +84,8 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 > Task :app:packageRelease
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787263888342.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787263897725.json
 
-BUILD SUCCESSFUL in 2m 27s
+BUILD SUCCESSFUL in 2m 21s
 49 actionable tasks: 49 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html
