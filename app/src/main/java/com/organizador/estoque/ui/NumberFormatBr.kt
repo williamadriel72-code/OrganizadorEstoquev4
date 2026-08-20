@@ -10,6 +10,8 @@ fun formatNumberBr(value: Double): String = NumberFormat.getNumberInstance(local
     maximumFractionDigits = 2
 }.format(value)
 
+fun formatCurrencyBr(value: Double): String = NumberFormat.getCurrencyInstance(localeBr).format(value)
+
 fun formatIntegerBr(value: Int): String = NumberFormat.getIntegerInstance(localeBr).format(value)
 fun formatIntegerBr(value: Long): String = NumberFormat.getIntegerInstance(localeBr).format(value)
 

@@ -16,3 +16,10 @@ data class ExpiryImportRow(
     val expiryDate: String,
     val quantity: Double
 )
+
+data class StockPdfSnapshot(
+    val products: List<Product>,
+    val expiries: List<ExpiryImportRow>,
+    val prices: Map<String, Double>,
+    val invalidExpiryCount: Int
+)

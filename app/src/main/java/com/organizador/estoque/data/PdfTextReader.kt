@@ -18,7 +18,7 @@ class PdfTextReader(context: Context) {
             ?: error("Não foi possível abrir o PDF selecionado.")
         return input.use { stream ->
             PDDocument.load(stream).use { document ->
-                PDFTextStripper().getText(document)
+                PDFTextStripper().apply { sortByPosition = true }.getText(document)
             }
         }
     }

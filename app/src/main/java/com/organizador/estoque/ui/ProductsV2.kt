@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.organizador.estoque.data.CatalogPriceStore
 import com.organizador.estoque.data.ExpiryBatch
 import com.organizador.estoque.data.InventoryRepository
 import com.organizador.estoque.data.Product
@@ -25,6 +26,10 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: String = "all") {
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val priceStore = remember { CatalogPriceStore(context) }
+    DisposableEffect(priceStore) { onDispose { priceStore.close() } }
+
     val listState = rememberLazyListState()
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(initialFilter) }
@@ -32,6 +37,7 @@ fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: 
     var scannedRef by rememberSaveable { mutableStateOf<String?>(null) }
     var scannedProductCode by remember { mutableStateOf<String?>(null) }
     var scannedExpiries by remember { mutableStateOf<List<ExpiryBatch>>(emptyList()) }
+    var scannedPrice by remember { mutableStateOf<Double?>(null) }
 
     LaunchedEffect(initialFilter) { filter = initialFilter }
 
@@ -49,16 +55,19 @@ fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: 
         if (ref.isBlank()) {
             scannedProductCode = null
             scannedExpiries = emptyList()
+            scannedPrice = null
             return@LaunchedEffect
         }
 
         val result = withContext(Dispatchers.IO) {
             val product = repository.findExact(ref)
             val expiries = product?.let { repository.expiryBatchesForProduct(it.code) }.orEmpty()
-            product?.code to expiries
+            val price = product?.let { priceStore.priceFor(it.code) }
+            Triple(product?.code, expiries, price)
         }
         scannedProductCode = result.first
         scannedExpiries = result.second
+        scannedPrice = result.third
     }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -98,6 +107,7 @@ fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: 
                                 scannedRef = null
                                 scannedProductCode = null
                                 scannedExpiries = emptyList()
+                                scannedPrice = null
                             },
                             modifier = Modifier.weight(1f),
                             label = { Text("Pesquisar código, EAN ou descrição") },
@@ -117,6 +127,7 @@ fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: 
                             scannedRef = null
                             scannedProductCode = null
                             scannedExpiries = emptyList()
+                            scannedPrice = null
                         },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Pesquisar código, EAN ou descrição") },
@@ -174,11 +185,13 @@ fun ProductsV2(repository: InventoryRepository, refreshKey: Int, initialFilter: 
                     contentPadding = PaddingValues(bottom = 18.dp)
                 ) {
                     items(products, key = { it.code }, contentType = { "product" }) { p ->
+                        val scanned = scannedProductCode == p.code
                         ProductCardV2(
                             product = p,
                             desktop = desktop,
-                            isScannedProduct = scannedProductCode == p.code,
-                            scannedExpiries = scannedExpiries
+                            isScannedProduct = scanned,
+                            scannedExpiries = if (scanned) scannedExpiries else emptyList(),
+                            scannedPrice = if (scanned) scannedPrice else null
                         )
                     }
                 }
@@ -192,7 +205,8 @@ private fun ProductCardV2(
     product: Product,
     desktop: Boolean,
     isScannedProduct: Boolean,
-    scannedExpiries: List<ExpiryBatch>
+    scannedExpiries: List<ExpiryBatch>,
+    scannedPrice: Double?
 ) {
     val accent = when {
         product.stock < 0.0 -> Color(0xFFFF7A59)
@@ -231,10 +245,19 @@ private fun ProductCardV2(
                 }
 
                 Column(
-                    Modifier.width(135.dp),
+                    Modifier.width(150.dp),
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
+                    if (isScannedProduct) {
+                        Text("Valor", color = Color(0xFF9FB0C4), fontSize = 11.sp)
+                        Text(
+                            scannedPrice?.let(::formatCurrencyBr) ?: "Não informado",
+                            color = Color(0xFFB8C5D3),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                     Text("Estoque", color = Color(0xFF9FB0C4), fontSize = 11.sp)
                     Text(
                         formatNumberBr(product.stock),
@@ -253,7 +276,15 @@ private fun ProductCardV2(
                     fontSize = 12.sp
                 )
 
-                if (isScannedProduct) ExpiryLines(scannedExpiries)
+                if (isScannedProduct) {
+                    Text(
+                        "Valor: ${scannedPrice?.let(::formatCurrencyBr) ?: "Não informado"}",
+                        color = Color(0xFFB8C5D3),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    ExpiryLines(scannedExpiries)
+                }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
@@ -277,7 +308,7 @@ private fun ProductCardV2(
 private fun ExpiryLines(expiries: List<ExpiryBatch>) {
     if (expiries.isEmpty()) {
         Text(
-            "Validade: Sem validade cadastrada",
+            "Validade: Não informada",
             color = Color(0xFFFFC857),
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold

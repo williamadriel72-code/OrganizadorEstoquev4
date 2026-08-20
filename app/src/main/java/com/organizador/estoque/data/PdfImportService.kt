@@ -7,6 +7,8 @@ class PdfImportService(context: Context, private val repository: InventoryReposi
     private val appContext = context.applicationContext
     private val reader = PdfTextReader(appContext)
     private val expiryStore = ExpiryImportStore(appContext)
+    private val priceStore = CatalogPriceStore(appContext)
+    private val snapshotInstaller = InventorySnapshotInstaller(appContext)
 
     fun importStock(
         uri: Uri,
@@ -15,25 +17,26 @@ class PdfImportService(context: Context, private val repository: InventoryReposi
         onProgress(PdfImportProgress(5, "Lendo PDF"))
         val text = reader.read(uri)
 
-        onProgress(PdfImportProgress(35, "Processando produtos"))
-        val parsed = StockPdfParser.parse(text)
-        if (parsed.isEmpty()) throw IllegalArgumentException("PDF de estoque sem produtos reconhecidos")
+        onProgress(PdfImportProgress(35, "Processando produtos, valores e validades"))
+        val snapshot = StockPdfParser.parseSnapshot(text)
+        val products = snapshot.products
+        if (products.isEmpty()) throw IllegalArgumentException("PDF de estoque sem produtos reconhecidos")
 
-        onProgress(PdfImportProgress(50, "Conferindo produtos"))
-        val existingByCode = repository.findExistingByCodes(parsed.map { it.code })
-        val products = parsed.map { incoming ->
-            val existing = existingByCode[incoming.code]
-            if (existing == null) incoming else incoming.copy(
-                groupCode = existing.groupCode,
-                category = existing.category,
-                controlsExpiry = existing.controlsExpiry
-            )
-        }
+        onProgress(PdfImportProgress(70, "Substituindo base de produtos"))
+        snapshotInstaller.replace(products)
 
-        onProgress(PdfImportProgress(85, "Atualizando estoque"))
-        repository.replaceInventory(products)
+        onProgress(PdfImportProgress(85, "Atualizando preços"))
+        priceStore.replace(snapshot.prices)
+
+        onProgress(PdfImportProgress(92, "Atualizando validades"))
+        val expiryResult = expiryStore.replace(snapshot.expiries)
+
         onProgress(PdfImportProgress(100, "Concluído"))
-        return PdfImportResult(products.size, 0, "Importação de estoque concluída")
+        return PdfImportResult(
+            imported = products.size,
+            skipped = expiryResult.second,
+            message = "Estoque, preços e validades atualizados • ${snapshot.invalidExpiryCount} sem validade informada"
+        )
     }
 
     fun importExpiries(
