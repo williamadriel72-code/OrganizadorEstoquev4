@@ -1,6 +1,19 @@
 from pathlib import Path
 import re
 
+worker = Path('app/src/main/java/com/organizador/estoque/BackgroundUpdateWorker.kt')
+worker_kt = worker.read_text(encoding='utf-8')
+worker_kt = worker_kt.replace('import android.app.DevicePolicyManager\n', 'import android.app.admin.DevicePolicyManager\n')
+worker.write_text(worker_kt, encoding='utf-8')
+
+gradle = Path('app/build.gradle.kts')
+gradle_text = gradle.read_text(encoding='utf-8')
+gradle_text = gradle_text.replace(
+    'implementation("androidx.work:work-runtime:2.11.2")',
+    'implementation("androidx.work:work-runtime-ktx:2.11.2")'
+)
+gradle.write_text(gradle_text, encoding='utf-8')
+
 launcher = Path('app/src/main/java/com/organizador/estoque/LauncherActivity.kt')
 kt = launcher.read_text(encoding='utf-8')
 
