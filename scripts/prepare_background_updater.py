@@ -46,8 +46,8 @@ launcher.write_text(kt, encoding='utf-8')
 
 app_js = Path('app/src/main/assets/app.js')
 js = app_js.read_text(encoding='utf-8')
-pattern = re.compile(r"function apkUrl\(path\)\{.*?\}\n", re.S)
-replacement = "function apkUrl(path){const raw=String(path||'').trim();if(/^https:\\/\\//i.test(raw))return raw;return`${SUPABASE_URL}/storage/v1/object/public/app-updates/${raw.split('/').map(encodeURIComponent).join('/')}`}\n"
+pattern = re.compile(r"^function apkUrl\(path\).*$", re.M)
+replacement = "function apkUrl(path){const raw=String(path||'').trim();if(/^https:\\/\\//i.test(raw))return raw;return`${SUPABASE_URL}/storage/v1/object/public/app-updates/${raw.split('/').map(encodeURIComponent).join('/')}`}"
 js, count = pattern.subn(replacement, js, count=1)
 if count != 1:
     raise SystemExit('Não foi possível atualizar apkUrl em app.js')
