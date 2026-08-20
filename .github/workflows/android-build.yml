@@ -40,28 +40,28 @@ jobs:
         shell: bash
         run: |
           mkdir -p builds
-          rm -f builds/OrganizadorEstoque-v4.0.4.apk builds/BUILD_FAILED.txt
+          rm -f builds/OrganizadorEstoque-v4.0.5.apk builds/BUILD_FAILED.txt
           if [ "${{ steps.android_build.outputs.status }}" = "0" ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk builds/OrganizadorEstoque-v4.0.4.apk
-            printf 'OK\nVersion: 4.0.4\nCommit: %s\n' "$GITHUB_SHA" > builds/BUILD_STATUS.txt
+            cp app/build/outputs/apk/debug/app-debug.apk builds/OrganizadorEstoque-v4.0.5.apk
+            printf 'OK\nVersion: 4.0.5\nCommit: %s\n' "$GITHUB_SHA" > builds/BUILD_STATUS.txt
           else
             cp android-build.log builds/BUILD_FAILED.txt
-            printf 'FAILED\nVersion: 4.0.4\nCommit: %s\n' "$GITHUB_SHA" > builds/BUILD_STATUS.txt
+            printf 'FAILED\nVersion: 4.0.5\nCommit: %s\n' "$GITHUB_SHA" > builds/BUILD_STATUS.txt
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- builds/BUILD_STATUS.txt builds/BUILD_FAILED.txt builds/OrganizadorEstoque-v4.0.4.apk 2>/dev/null || true
+          git add -- builds/BUILD_STATUS.txt builds/BUILD_FAILED.txt builds/OrganizadorEstoque-v4.0.5.apk 2>/dev/null || true
           git add -- builds/BUILD_STATUS.txt
           if [ -f builds/BUILD_FAILED.txt ]; then git add -- builds/BUILD_FAILED.txt; fi
-          if [ -f builds/OrganizadorEstoque-v4.0.4.apk ]; then git add -- builds/OrganizadorEstoque-v4.0.4.apk; fi
-          git commit -m "Publica APK 4.0.4 [skip ci]"
+          if [ -f builds/OrganizadorEstoque-v4.0.5.apk ]; then git add -- builds/OrganizadorEstoque-v4.0.5.apk; fi
+          git commit -m "Publica APK 4.0.5 [skip ci]"
           git push
 
       - name: Upload APK artifact
         if: steps.android_build.outputs.status == '0'
         uses: actions/upload-artifact@v4
         with:
-          name: OrganizadorEstoque-v4.0.4-debug
+          name: OrganizadorEstoque-v4.0.5-debug
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Fail workflow when Android build fails
