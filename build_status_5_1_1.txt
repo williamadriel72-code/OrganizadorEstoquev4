@@ -1,4 +1,4 @@
-commit=f9e0b18a9b884084b9ee8a5cfd5e46500d8284cc
+commit=ee532fbb747d97589f6190d329bfca93ccf289c7
 bip=success
 login=success
 reposicao_inventario=success
@@ -11,7 +11,8 @@ sign=skipped
 upload=skipped
 release=skipped
 --- log ---
-> Task :app:checkReleaseAarMetadata
+> Task :app:parseReleaseLocalResources
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
 > Task :app:compileReleaseNavigationResources
 > Task :app:generateReleaseRFile
 > Task :app:mergeReleaseResources
@@ -21,8 +22,6 @@ release=skipped
 > Task :app:processReleaseManifest
 > Task :app:desugarReleaseFileDependencies
 > Task :app:mergeReleaseStartupProfile
-> Task :app:processReleaseManifestForPackage
-> Task :app:processReleaseResources
 
 > Task :app:compileReleaseKotlin
 e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/BackgroundUpdateWorker.kt:3:20 Unresolved reference 'DevicePolicyManager'.
@@ -30,8 +29,9 @@ e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/BackgroundUpdateWorker.kt:246:20 Unresolved reference 'isDeviceOwnerApp'.
 
 > Task :app:compileReleaseKotlin FAILED
+> Task :app:processReleaseManifestForPackage
 > Task :app:mergeExtDexRelease
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787254570291.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787254609374.json
 
 FAILURE: Build failed with an exception.
 
@@ -229,5 +229,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 1m 39s
-26 actionable tasks: 26 executed
+BUILD FAILED in 1m 36s
+25 actionable tasks: 25 executed
