@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.core.content.FileProvider
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -82,12 +83,16 @@ class BackgroundUpdateWorker(
 
             val apk = downloadAndValidate(remote)
             if (canInstallSilentlyOrPrompt()) {
-                commitInstall(apk)
+                try {
+                    commitInstall(apk)
+                } catch (_: Throwable) {
+                    showInstallNotification(remote, apk)
+                }
             } else {
                 showPermissionNotification(remote)
             }
             Result.success()
-        } catch (t: Throwable) {
+        } catch (_: Throwable) {
             if (runAttemptCount < 3) Result.retry() else Result.success()
         }
     }
@@ -253,33 +258,72 @@ class BackgroundUpdateWorker(
 
     private fun commitInstall(file: File) {
         val installer = applicationContext.packageManager.packageInstaller
-        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
-            setAppPackageName(applicationContext.packageName)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                setInstallReason(PackageManager.INSTALL_REASON_USER)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                setRequireUserAction(
-                    if (isDeviceOwner()) PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED
-                    else PackageInstaller.SessionParams.USER_ACTION_REQUIRED
-                )
-            }
-        }
-        val sessionId = installer.createSession(params)
-        installer.openSession(sessionId).use { session ->
-            file.inputStream().use { input ->
-                session.openWrite("base.apk", 0, file.length()).use { output ->
-                    input.copyTo(output)
-                    session.fsync(output)
+        var sessionId = -1
+        try {
+            val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                setAppPackageName(applicationContext.packageName)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    setInstallReason(PackageManager.INSTALL_REASON_USER)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setRequireUserAction(
+                        if (isDeviceOwner()) PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED
+                        else PackageInstaller.SessionParams.USER_ACTION_REQUIRED
+                    )
                 }
             }
-            val statusIntent = Intent(applicationContext, UpdateInstallReceiver::class.java).apply {
-                action = "${applicationContext.packageName}.UPDATE_INSTALL_STATUS"
+            sessionId = installer.createSession(params)
+            installer.openSession(sessionId).use { session ->
+                file.inputStream().use { input ->
+                    session.openWrite("base.apk", 0, file.length()).use { output ->
+                        input.copyTo(output)
+                        session.fsync(output)
+                    }
+                }
+                val statusIntent = Intent(applicationContext, UpdateInstallReceiver::class.java).apply {
+                    action = "${applicationContext.packageName}.UPDATE_INSTALL_STATUS"
+                }
+                val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+                val pending = PendingIntent.getBroadcast(applicationContext, sessionId, statusIntent, flags)
+                session.commit(pending.intentSender)
             }
-            val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
-            val pending = PendingIntent.getBroadcast(applicationContext, sessionId, statusIntent, flags)
-            session.commit(pending.intentSender)
+        } catch (t: Throwable) {
+            if (sessionId >= 0) runCatching { installer.abandonSession(sessionId) }
+            throw t
+        }
+    }
+
+    private fun showInstallNotification(remote: RemoteVersion, file: File) {
+        ensureChannel()
+        val uri = FileProvider.getUriForFile(
+            applicationContext,
+            "${applicationContext.packageName}.updates",
+            file
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val pending = PendingIntent.getActivity(
+            applicationContext,
+            remote.code,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = Notification.Builder(applicationContext, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_inventory)
+            .setContentTitle("Atualização ${remote.name} pronta")
+            .setContentText("Toque para instalar. O APK já foi baixado e validado.")
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .setPriority(Notification.PRIORITY_HIGH)
+            .build()
+        try {
+            (applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .notify(NOTIFICATION_ID, notification)
+        } catch (_: SecurityException) {
         }
     }
 
