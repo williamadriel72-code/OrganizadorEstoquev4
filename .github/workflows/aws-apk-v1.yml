@@ -38,6 +38,9 @@ jobs:
       - name: Preparar login persistente
         run: python scripts/prepare_persistent_login.py
 
+      - name: Aplicar regras de Reposição e Inventário
+        run: python scripts/prepare_reposicao_inventario_v2.py
+
       - name: Preparar atualizador interno
         run: python scripts/prepare_internal_updater.py
 
@@ -123,7 +126,7 @@ jobs:
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
               --title "AWS Gestão de Estoque 5.0.8" \
-              --notes "Login persistente opcional: nova opção Manter conectado neste aparelho, com sessão Supabase salva no armazenamento privado do APK sem guardar a senha. Mantém módulos operacionais, scanner rápido, bip pelo canal de mídia e atualizador interno."
+              --notes "Login persistente opcional. Reposição com baixa FEFO pelas validades sem alterar o estoque físico. Inventário com pesquisa por nome, EAN e código interno, contagem acumulada, opções Somar à contagem ou Definir como total, revisão e edição antes do acerto final do estoque. Mantém scanner rápido, bip no canal de mídia e atualizador interno."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
