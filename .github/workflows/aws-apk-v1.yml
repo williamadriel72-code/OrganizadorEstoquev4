@@ -35,6 +35,9 @@ jobs:
       - name: Refinar módulos operacionais
         run: python scripts/refine_operational_modules.py
 
+      - name: Preparar login persistente
+        run: python scripts/prepare_persistent_login.py
+
       - name: Preparar atualizador interno
         run: python scripts/prepare_internal_updater.py
 
@@ -90,7 +93,7 @@ jobs:
           set -euo pipefail
           UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
           ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.7.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.8.apk"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
@@ -104,8 +107,8 @@ jobs:
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Gestao-Estoque-v5.0.7-signed
-          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.7.apk
+          name: AWS-Gestao-Estoque-v5.0.8-signed
+          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.8.apk
           if-no-files-found: error
 
       - name: Publicar release fixa
@@ -114,13 +117,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.7.apk"
-          ASSET="AWS-Gestao-Estoque-5.0.7.apk"
-          TAG="v5.0.7"
+          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.0.8.apk"
+          ASSET="AWS-Gestao-Estoque-5.0.8.apk"
+          TAG="v5.0.8"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
-              --title "AWS Gestão de Estoque 5.0.7" \
-              --notes "Módulos operacionais conectados ao Supabase: Reposição, Inventário, Conferência, Avaria e Movimentações. Permissões por usuário validadas no servidor, registro de dispositivo e movimentação atômica com auditoria. Mantém scanner rápido, bip pelo canal de mídia e atualizador interno."
+              --title "AWS Gestão de Estoque 5.0.8" \
+              --notes "Login persistente opcional: nova opção Manter conectado neste aparelho, com sessão Supabase salva no armazenamento privado do APK sem guardar a senha. Mantém módulos operacionais, scanner rápido, bip pelo canal de mídia e atualizador interno."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
