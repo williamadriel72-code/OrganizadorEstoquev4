@@ -1,0 +1,11 @@
+commit=9e5a522afbfd7905c290a5cebdc509d8ae96917f
+login=failure
+reposicao_inventario=skipped
+updater=skipped
+build=skipped
+signing_key=skipped
+sign=skipped
+upload=skipped
+release=skipped
+--- log ---
+Inicialização de autenticação não encontrada.
