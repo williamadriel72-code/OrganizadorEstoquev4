@@ -35,6 +35,9 @@ jobs:
       - name: Refinar módulos operacionais
         run: python scripts/refine_operational_modules.py
 
+      - name: Restaurar inicialização automática
+        run: python scripts/restore_auth_bootstrap.py
+
       - name: Preparar login persistente
         id: persistent_login
         shell: bash
