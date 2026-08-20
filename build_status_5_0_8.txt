@@ -1,4 +1,4 @@
-commit=7f39a9e8cfb3b052da0784a2db7f1599e6c6dcd4
+commit=fa714eb11c0c530f399a68b6d46c045674bd2eb8
 login=success
 reposicao_inventario=success
 updater=success
@@ -16,18 +16,18 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:preReleaseBuild UP-TO-DATE
 > Task :app:mergeReleaseJniLibFolders
 > Task :app:mergeReleaseNativeLibs
-> Task :app:checkReleaseDuplicateClasses
 > Task :app:generateReleaseBuildConfig
 > Task :app:generateReleaseResources
+> Task :app:checkReleaseDuplicateClasses
 > Task :app:packageReleaseResources
 > Task :app:processReleaseNavigationResources
 > Task :app:stripReleaseDebugSymbols
-> Task :app:javaPreCompileRelease
 > Task :app:extractReleaseNativeSymbolTables
+> Task :app:javaPreCompileRelease
 > Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
-> Task :app:checkReleaseAarMetadata
 > Task :app:mapReleaseSourceSetPaths
 > Task :app:parseReleaseLocalResources
+> Task :app:checkReleaseAarMetadata
 > Task :app:compileReleaseNavigationResources
 > Task :app:generateReleaseRFile
 > Task :app:mergeReleaseResources
@@ -35,9 +35,9 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:extractDeepLinksRelease
 > Task :app:processReleaseMainManifest
 > Task :app:processReleaseManifest
-> Task :app:processReleaseManifestForPackage
 > Task :app:desugarReleaseFileDependencies
 > Task :app:mergeReleaseStartupProfile
+> Task :app:processReleaseManifestForPackage
 > Task :app:processReleaseResources
 > Task :app:compileReleaseKotlin
 > Task :app:mergeExtDexRelease
@@ -73,8 +73,8 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 > Task :app:packageRelease
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787191900865.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787192640695.json
 
-BUILD SUCCESSFUL in 2m 16s
+BUILD SUCCESSFUL in 2m 17s
 49 actionable tasks: 49 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html
