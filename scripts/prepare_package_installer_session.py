@@ -13,8 +13,9 @@ pattern = re.compile(r'''    private fun launchInstaller\(file: File\) \{\n.*?\n
 replacement = '''    private fun launchInstaller(file: File) {
         awaitingInstallPermission = false
         pendingInstallFile = null
+        val installer = packageManager.packageInstaller
+        var sessionId = -1
         try {
-            val installer = packageManager.packageInstaller
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                 setAppPackageName(packageName)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -25,7 +26,7 @@ replacement = '''    private fun launchInstaller(file: File) {
                 }
             }
 
-            val sessionId = installer.createSession(params)
+            sessionId = installer.createSession(params)
             installer.openSession(sessionId).use { session ->
                 file.inputStream().use { input ->
                     session.openWrite("base.apk", 0, file.length()).use { output ->
@@ -42,8 +43,22 @@ replacement = '''    private fun launchInstaller(file: File) {
                 val statusReceiver = PendingIntent.getBroadcast(this, sessionId, statusIntent, pendingFlags)
                 session.commit(statusReceiver.intentSender)
             }
-        } catch (t: Throwable) {
-            notifyUpdateError("APK validado, mas o instalador do Android recusou a sessão: ${t.message ?: "erro desconhecido"}")
+        } catch (sessionError: Throwable) {
+            if (sessionId >= 0) runCatching { installer.abandonSession(sessionId) }
+            try {
+                val uri = FileProvider.getUriForFile(this, "$packageName.updates", file)
+                val fallback = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                notifyUpdateProgress(100, file.length(), file.length(), "Abrindo instalador do Android...")
+                startActivity(fallback)
+            } catch (fallbackError: Throwable) {
+                notifyUpdateError(
+                    "APK validado, mas o Android não conseguiu abrir a instalação: ${fallbackError.message ?: sessionError.message ?: "erro desconhecido"}"
+                )
+            }
         }
     }
 
@@ -51,10 +66,10 @@ replacement = '''    private fun launchInstaller(file: File) {
 
 kt, count = pattern.subn(replacement, kt, count=1)
 if count != 1:
-    raise SystemExit('Método launchInstaller não encontrado para troca por PackageInstaller.Session.')
+    raise SystemExit('Método launchInstaller não encontrado para aplicar fallback.')
 
-if 'PackageInstaller.SessionParams' not in kt or 'UpdateInstallReceiver::class.java' not in kt:
-    raise SystemExit('Instalador por sessão não foi aplicado corretamente.')
+if 'PackageInstaller.SessionParams' not in kt or 'FileProvider.getUriForFile' not in kt:
+    raise SystemExit('Fallback do instalador não foi aplicado corretamente.')
 
 path.write_text(kt, encoding='utf-8')
-print('Instalador Android preparado com PackageInstaller.Session.')
+print('Instalador preparado: PackageInstaller.Session com fallback FileProvider sem novo download.')
