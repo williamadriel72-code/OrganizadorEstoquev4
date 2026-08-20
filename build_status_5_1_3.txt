@@ -1,0 +1,95 @@
+commit=59a415cf22d1fad78f8224b46653d3a9da317ea1
+bip=success
+login=success
+reposicao_inventario=success
+updater=success
+package_installer=success
+validity=success
+background_update=success
+build=success
+signing_key=success
+sign=success
+upload=success
+release=success
+--- log ---
+Bip reforçado: áudio personalizado preparado corretamente + tom de fallback Android.
+Login persistente validado sem depender da inicialização antiga.
+Reposição FEFO e Inventário com acúmulo/revisão preparados e validados.
+Atualizador interno preparado com progresso, retry e instalação nativa.
+Instalador preparado: PackageInstaller.Session com fallback FileProvider sem novo download.
+Controle de validade preparado: filtros, pesquisa, lista e PDF A4.
+Atualização automática preparada: WorkManager + endpoint de versão + URL direta ou Storage.
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:generateReleaseBuildConfig
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:processReleaseNavigationResources
+> Task :app:stripReleaseDebugSymbols
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:javaPreCompileRelease
+> Task :app:parseReleaseLocalResources
+> Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:compileReleaseNavigationResources
+> Task :app:generateReleaseRFile
+> Task :app:mergeReleaseResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:desugarReleaseFileDependencies
+> Task :app:mergeReleaseStartupProfile
+> Task :app:compileReleaseKotlin
+> Task :app:processReleaseManifestForPackage
+> Task :app:mergeExtDexRelease
+
+> Task :app:compileReleaseKotlin
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/BackgroundUpdateWorker.kt:240:13 Annotations on block-level expressions are parsed differently depending on the presence of a new line. Add a new line after the annotations to annotate the entire expression.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/BackgroundUpdateWorker.kt:321:14 'fun setPriority(p0: Int): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/BackgroundUpdateWorker.kt:321:39 'static field PRIORITY_HIGH: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/BackgroundUpdateWorker.kt:348:14 'fun setPriority(p0: Int): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/BackgroundUpdateWorker.kt:348:39 'static field PRIORITY_HIGH: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/PdfImportParser.kt:156:68 Unnecessary non-null assertion (!!) on a non-null receiver of type 'PdfImportParser.PendingStock'.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/PdfImportParser.kt:202:66 Unnecessary non-null assertion (!!) on a non-null receiver of type 'PdfImportParser.PendingValidity'.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/UpdateInstallReceiver.kt:72:14 'fun setPriority(p0: Int): Notification.Builder!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/UpdateInstallReceiver.kt:72:39 'static field PRIORITY_HIGH: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/DashboardV2.kt:106:33 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/NumberFormatBr.kt:6:24 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
+
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseAssets
+> Task :app:processReleaseResources
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:compressReleaseAssets
+> Task :app:dexBuilderRelease
+> Task :app:extractProguardFiles
+> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:processReleaseJavaRes
+> Task :app:optimizeReleaseResources
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:mergeReleaseJavaResource
+> Task :app:mergeDexRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787263929267.json
+
+BUILD SUCCESSFUL in 2m 26s
+49 actionable tasks: 49 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html
