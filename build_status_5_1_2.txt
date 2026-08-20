@@ -1,4 +1,4 @@
-commit=48b00b0da62615996c15f967557f2aff4301aead
+commit=a38318b7fc04849b921802a72d065756b94f9743
 bip=success
 login=success
 reposicao_inventario=success
@@ -16,7 +16,7 @@ Bip reforçado: áudio personalizado preparado corretamente + tom de fallback An
 Login persistente validado sem depender da inicialização antiga.
 Reposição FEFO e Inventário com acúmulo/revisão preparados e validados.
 Atualizador interno preparado com progresso, retry e instalação nativa.
-Instalador Android preparado com PackageInstaller.Session.
+Instalador preparado: PackageInstaller.Session com fallback FileProvider sem novo download.
 Controle de validade preparado: filtros, pesquisa, lista e PDF A4.
 Atualização automática preparada: WorkManager + endpoint de versão + URL direta ou Storage.
 Starting a Gradle Daemon (subsequent builds will be faster)
@@ -24,9 +24,9 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:preReleaseBuild UP-TO-DATE
 > Task :app:mergeReleaseJniLibFolders
 > Task :app:mergeReleaseNativeLibs
+> Task :app:checkReleaseDuplicateClasses
 > Task :app:generateReleaseBuildConfig
 > Task :app:generateReleaseResources
-> Task :app:checkReleaseDuplicateClasses
 > Task :app:packageReleaseResources
 > Task :app:processReleaseNavigationResources
 > Task :app:stripReleaseDebugSymbols
@@ -34,8 +34,8 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:javaPreCompileRelease
 > Task :app:parseReleaseLocalResources
 > Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
-> Task :app:mapReleaseSourceSetPaths
 > Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
 > Task :app:compileReleaseNavigationResources
 > Task :app:generateReleaseRFile
 > Task :app:mergeReleaseResources
@@ -61,16 +61,16 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/NumberFormatBr.kt:6:24 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
 
 > Task :app:compileReleaseJavaWithJavac
-> Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseArtProfile
+> Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseAssets
-> Task :app:processReleaseResources
-> Task :app:compressReleaseAssets
-> Task :app:dexBuilderRelease
-> Task :app:mergeReleaseGlobalSynthetics
 > Task :app:extractReleaseVersionControlInfo
 > Task :app:extractProguardFiles
+> Task :app:processReleaseResources
+> Task :app:compressReleaseAssets
 > Task :app:generateReleaseLintVitalReportModel
+> Task :app:dexBuilderRelease
+> Task :app:mergeReleaseGlobalSynthetics
 > Task :app:processReleaseJavaRes
 > Task :app:optimizeReleaseResources
 > Task :app:collectReleaseDependencies
@@ -86,8 +86,8 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 > Task :app:packageRelease
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787254980984.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787263852719.json
 
-BUILD SUCCESSFUL in 2m 16s
+BUILD SUCCESSFUL in 2m 22s
 49 actionable tasks: 49 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html
