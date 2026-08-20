@@ -1,4 +1,4 @@
-commit=fa714eb11c0c530f399a68b6d46c045674bd2eb8
+commit=4fd3c2995bca16c8fa912fe5725b6cb5ab5e8f25
 login=success
 reposicao_inventario=success
 updater=success
@@ -28,8 +28,8 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:javaPreCompileRelease
 > Task :app:parseReleaseLocalResources
 > Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
-> Task :app:mapReleaseSourceSetPaths
 > Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
 > Task :app:compileReleaseNavigationResources
 > Task :app:generateReleaseRFile
 > Task :app:mergeReleaseResources
@@ -38,10 +38,9 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:processReleaseMainManifest
 > Task :app:processReleaseManifest
 > Task :app:desugarReleaseFileDependencies
-> Task :app:processReleaseManifestForPackage
 > Task :app:mergeReleaseStartupProfile
-> Task :app:processReleaseResources
 > Task :app:compileReleaseKotlin
+> Task :app:processReleaseManifestForPackage
 > Task :app:mergeExtDexRelease
 
 > Task :app:compileReleaseKotlin
@@ -51,15 +50,16 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/NumberFormatBr.kt:6:24 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
 
 > Task :app:compileReleaseJavaWithJavac
-> Task :app:dexBuilderRelease
-> Task :app:mergeReleaseArtProfile
 > Task :app:generateReleaseAssets UP-TO-DATE
-> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:mergeReleaseArtProfile
 > Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
 > Task :app:extractReleaseVersionControlInfo
 > Task :app:extractProguardFiles
-> Task :app:compressReleaseAssets
 > Task :app:generateReleaseLintVitalReportModel
+> Task :app:processReleaseResources
+> Task :app:dexBuilderRelease
+> Task :app:mergeReleaseGlobalSynthetics
 > Task :app:processReleaseJavaRes
 > Task :app:optimizeReleaseResources
 > Task :app:collectReleaseDependencies
@@ -75,8 +75,8 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 > Task :app:packageRelease
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787192627195.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787192677658.json
 
-BUILD SUCCESSFUL in 1m 47s
+BUILD SUCCESSFUL in 2m 19s
 49 actionable tasks: 49 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html
