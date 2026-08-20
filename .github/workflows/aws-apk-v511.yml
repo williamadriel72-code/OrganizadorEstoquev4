@@ -1,4 +1,4 @@
-name: Build AWS Estoque APK 5.1.2
+name: Build AWS Estoque APK 5.1.3
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_guaranteed_bip.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-512.log"
+          python scripts/prepare_guaranteed_bip.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
 
       - name: Preparar estoque geral e scanner rápido
         run: python scripts/prepare_single_stock.py
@@ -50,44 +50,44 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_persistent_login.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-512.log"
+          python scripts/prepare_persistent_login.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
 
       - name: Aplicar regras de Reposição e Inventário
         id: repo_inv
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_reposicao_inventario_v2.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-512.log"
+          python scripts/prepare_reposicao_inventario_v2.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
 
       - name: Preparar atualizador interno
         id: updater
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_internal_updater.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-512.log"
+          python scripts/prepare_internal_updater.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
 
-      - name: Usar PackageInstaller Session
+      - name: Usar PackageInstaller com fallback
         id: package_installer
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_package_installer_session.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-512.log"
+          python scripts/prepare_package_installer_session.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
 
       - name: Preparar Controle de Validade
         id: validity
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_validity_control.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-512.log"
+          python scripts/prepare_validity_control.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
 
       - name: Preparar atualização automática em segundo plano
         id: background_update
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_background_updater.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-512.log"
+          python scripts/prepare_background_updater.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
 
-      - name: Definir versão 5.1.2
+      - name: Definir versão 5.1.3
         shell: bash
         run: |
           python - <<'PY'
@@ -95,10 +95,10 @@ jobs:
           p=Path('app/build.gradle.kts')
           s=p.read_text()
           import re
-          s=re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 50013', s, count=1)
-          s=re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "5.1.2"', s, count=1)
+          s=re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 50014', s, count=1)
+          s=re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "5.1.3"', s, count=1)
           p.write_text(s)
-          print('Versão definida: 5.1.2 / 50013')
+          print('Versão definida: 5.1.3 / 50014')
           PY
 
       - name: Java 17
@@ -125,7 +125,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          gradle :app:assembleRelease --stacktrace 2>&1 | tee -a "$RUNNER_TEMP/aws-build-512.log"
+          gradle :app:assembleRelease --stacktrace 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
 
       - name: Obtain permanent signing key
         id: signing_key
@@ -159,7 +159,7 @@ jobs:
           set -euo pipefail
           UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
           ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.2.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.3.apk"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
@@ -174,8 +174,8 @@ jobs:
         id: upload_apk
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Gestao-Estoque-v5.1.2-signed
-          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.2.apk
+          name: AWS-Gestao-Estoque-v5.1.3-signed
+          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.3.apk
           if-no-files-found: error
 
       - name: Publicar release fixa
@@ -185,18 +185,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.2.apk"
-          ASSET="AWS-Gestao-Estoque-5.1.2.apk"
-          TAG="v5.1.2"
+          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.3.apk"
+          ASSET="AWS-Gestao-Estoque-5.1.3.apk"
+          TAG="v5.1.3"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
-              --title "AWS Gestão de Estoque 5.1.2" \
-              --notes "Atualização automática em segundo plano: verifica o servidor periodicamente mesmo com o app fechado, baixa o APK internamente, valida versão e assinatura e entrega a confirmação de instalação do Android. Corrige URLs GitHub/Storage no atualizador interno."
+              --title "AWS Gestão de Estoque 5.1.3" \
+              --notes "Corrige erro 'Failed to allocate ... only 0 allocatable'. O atualizador tenta PackageInstaller.Session e, se o Android recusar a alocação, usa automaticamente o instalador padrão com o APK já baixado e validado, sem novo download. Mantém atualização automática em segundo plano."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
 
-      - name: Registrar diagnóstico da build 5.1.2
+      - name: Registrar diagnóstico da build 5.1.3
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -217,7 +217,7 @@ jobs:
         shell: bash
         run: |
           set -u
-          FILE="$RUNNER_TEMP/build_status_5_1_2.txt"
+          FILE="$RUNNER_TEMP/build_status_5_1_3.txt"
           {
             echo "commit=${GITHUB_SHA}"
             echo "bip=${BIP_STATUS}"
@@ -233,13 +233,13 @@ jobs:
             echo "upload=${UPLOAD_STATUS}"
             echo "release=${RELEASE_STATUS}"
             echo "--- log ---"
-            if [ -f "$RUNNER_TEMP/aws-build-512.log" ]; then tail -n 240 "$RUNNER_TEMP/aws-build-512.log"; fi
+            if [ -f "$RUNNER_TEMP/aws-build-513.log" ]; then tail -n 240 "$RUNNER_TEMP/aws-build-513.log"; fi
           } > "$FILE"
           CONTENT=$(base64 -w0 "$FILE")
-          PATH_API="repos/${REPO}/contents/build_status_5_1_2.txt"
+          PATH_API="repos/${REPO}/contents/build_status_5_1_3.txt"
           OLD_SHA=$(gh api "$PATH_API?ref=$BRANCH" --jq '.sha' 2>/dev/null || true)
           if [ -n "$OLD_SHA" ]; then
-            gh api --method PUT "$PATH_API" -f message='Atualizar diagnóstico build 5.1.2' -f content="$CONTENT" -f sha="$OLD_SHA" -f branch="$BRANCH" >/dev/null
+            gh api --method PUT "$PATH_API" -f message='Atualizar diagnóstico build 5.1.3' -f content="$CONTENT" -f sha="$OLD_SHA" -f branch="$BRANCH" >/dev/null
           else
-            gh api --method PUT "$PATH_API" -f message='Registrar diagnóstico build 5.1.2' -f content="$CONTENT" -f branch="$BRANCH" >/dev/null
+            gh api --method PUT "$PATH_API" -f message='Registrar diagnóstico build 5.1.3' -f content="$CONTENT" -f branch="$BRANCH" >/dev/null
           fi
