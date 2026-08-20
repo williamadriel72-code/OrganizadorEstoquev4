@@ -1,4 +1,4 @@
-commit=53fb6eeee431ab5c2993efa542a9d3254c500de7
+commit=7f39a9e8cfb3b052da0784a2db7f1599e6c6dcd4
 login=success
 reposicao_inventario=success
 updater=success
@@ -18,20 +18,20 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:preReleaseBuild UP-TO-DATE
 > Task :app:mergeReleaseJniLibFolders
 > Task :app:mergeReleaseNativeLibs
-> Task :app:checkReleaseDuplicateClasses
 > Task :app:generateReleaseBuildConfig
+> Task :app:checkReleaseDuplicateClasses
 > Task :app:generateReleaseResources
 > Task :app:packageReleaseResources
 > Task :app:processReleaseNavigationResources
 > Task :app:stripReleaseDebugSymbols
-> Task :app:extractReleaseNativeSymbolTables
 > Task :app:javaPreCompileRelease
+> Task :app:extractReleaseNativeSymbolTables
 > Task :app:parseReleaseLocalResources
 > Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
-> Task :app:checkReleaseAarMetadata
 > Task :app:mapReleaseSourceSetPaths
-> Task :app:compileReleaseNavigationResources
+> Task :app:checkReleaseAarMetadata
 > Task :app:generateReleaseRFile
+> Task :app:compileReleaseNavigationResources
 > Task :app:mergeReleaseResources
 > Task :app:createReleaseCompatibleScreenManifests
 > Task :app:extractDeepLinksRelease
@@ -50,13 +50,13 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/NumberFormatBr.kt:6:24 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
 
 > Task :app:compileReleaseJavaWithJavac
-> Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseArtProfile
+> Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseAssets
-> Task :app:compressReleaseAssets
 > Task :app:extractReleaseVersionControlInfo
 > Task :app:extractProguardFiles
 > Task :app:processReleaseResources
+> Task :app:compressReleaseAssets
 > Task :app:generateReleaseLintVitalReportModel
 > Task :app:dexBuilderRelease
 > Task :app:mergeReleaseGlobalSynthetics
@@ -75,8 +75,8 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 > Task :app:packageRelease
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787191832652.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787191906151.json
 
-BUILD SUCCESSFUL in 2m 13s
+BUILD SUCCESSFUL in 2m 24s
 49 actionable tasks: 49 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html
