@@ -1,4 +1,4 @@
-commit=a9d9daca458d41608e892e647d8bd8a282a08529
+commit=53fb6eeee431ab5c2993efa542a9d3254c500de7
 login=success
 reposicao_inventario=success
 updater=success
@@ -24,8 +24,8 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:stripReleaseDebugSymbols
 > Task :app:extractReleaseNativeSymbolTables
 > Task :app:javaPreCompileRelease
-> Task :app:parseReleaseLocalResources
 > Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:parseReleaseLocalResources
 > Task :app:checkReleaseAarMetadata
 > Task :app:mapReleaseSourceSetPaths
 > Task :app:compileReleaseNavigationResources
@@ -51,11 +51,11 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 > Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseArtProfile
 > Task :app:mergeReleaseAssets
-> Task :app:compressReleaseAssets
 > Task :app:extractReleaseVersionControlInfo
 > Task :app:extractProguardFiles
-> Task :app:processReleaseResources
+> Task :app:compressReleaseAssets
 > Task :app:generateReleaseLintVitalReportModel
+> Task :app:processReleaseResources
 > Task :app:dexBuilderRelease
 > Task :app:mergeReleaseGlobalSynthetics
 > Task :app:processReleaseJavaRes
@@ -73,8 +73,8 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 > Task :app:packageRelease
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787191798251.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/build_apk-1787191832206.json
 
-BUILD SUCCESSFUL in 2m 29s
+BUILD SUCCESSFUL in 2m 24s
 49 actionable tasks: 49 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html
