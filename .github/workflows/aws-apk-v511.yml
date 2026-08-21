@@ -1,8 +1,11 @@
-name: Build AWS Estoque APK 5.1.3
+name: Build AWS Estoque APK 5.1.4
 
 on:
   push:
     branches: [ "aws-supabase-apk-v1" ]
+    paths:
+      - ".github/workflows/aws-apk-v514.yml"
+      - "build_trigger_5_1_4.txt"
   workflow_dispatch:
 
 permissions:
@@ -23,7 +26,7 @@ jobs:
           base64 -d app/src/main/res/raw/scan_funny.b64 > app/src/main/res/raw/scan_funny.ogg
           rm app/src/main/res/raw/scan_funny.b64
 
-      - name: Tornar o bip confiável
+      - name: Tornar bip confiavel
         run: python scripts/prepare_reliable_bip.py
 
       - name: Garantir bip com fallback Android
@@ -31,18 +34,18 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_guaranteed_bip.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
+          python scripts/prepare_guaranteed_bip.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-514.log"
 
-      - name: Preparar estoque geral e scanner rápido
+      - name: Preparar estoque geral e scanner rapido
         run: python scripts/prepare_single_stock.py
 
-      - name: Preparar módulos operacionais
+      - name: Preparar modulos operacionais
         run: python scripts/prepare_operational_modules.py
 
-      - name: Refinar módulos operacionais
+      - name: Refinar modulos operacionais
         run: python scripts/refine_operational_modules.py
 
-      - name: Restaurar inicialização automática
+      - name: Restaurar inicializacao automatica
         run: python scripts/restore_auth_bootstrap.py
 
       - name: Preparar login persistente
@@ -50,55 +53,62 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_persistent_login.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
+          python scripts/prepare_persistent_login.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-514.log"
 
-      - name: Aplicar regras de Reposição e Inventário
+      - name: Aplicar regras de Reposicao e Inventario
         id: repo_inv
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_reposicao_inventario_v2.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
+          python scripts/prepare_reposicao_inventario_v2.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-514.log"
 
       - name: Preparar atualizador interno
         id: updater
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_internal_updater.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
+          python scripts/prepare_internal_updater.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-514.log"
 
       - name: Usar PackageInstaller com fallback
         id: package_installer
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_package_installer_session.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
+          python scripts/prepare_package_installer_session.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-514.log"
 
       - name: Preparar Controle de Validade
         id: validity
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_validity_control.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
+          python scripts/prepare_validity_control.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-514.log"
 
-      - name: Preparar atualização automática em segundo plano
+      - name: Preparar atualizacao automatica em segundo plano
         id: background_update
         shell: bash
         run: |
           set -o pipefail
-          python scripts/prepare_background_updater.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
+          python scripts/prepare_background_updater.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-514.log"
 
-      - name: Definir versão 5.1.3
+      - name: Preparar preco dos produtos
+        id: product_price
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/prepare_product_price.py 2>&1 | tee -a "$RUNNER_TEMP/aws-build-514.log"
+
+      - name: Definir versao 5.1.4
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           p=Path('app/build.gradle.kts')
           s=p.read_text()
-          import re
-          s=re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 50014', s, count=1)
-          s=re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "5.1.3"', s, count=1)
+          s=re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 50015', s, count=1)
+          s=re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "5.1.4"', s, count=1)
           p.write_text(s)
-          print('Versão definida: 5.1.3 / 50014')
+          print('Versao definida: 5.1.4 / 50015')
           PY
 
       - name: Java 17
@@ -125,26 +135,20 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          gradle :app:assembleRelease --stacktrace 2>&1 | tee -a "$RUNNER_TEMP/aws-build-513.log"
+          gradle :app:assembleRelease --stacktrace 2>&1 | tee -a "$RUNNER_TEMP/aws-build-514.log"
 
       - name: Obtain permanent signing key
         id: signing_key
         shell: bash
         run: |
           set -euo pipefail
-          OIDC_JSON=$(curl -fsSL \
-            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=aws-apk-signing")
+          OIDC_JSON=$(curl -fsSL -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=aws-apk-signing")
           OIDC_TOKEN=$(echo "$OIDC_JSON" | jq -r '.value')
-          SIGNING_JSON=$(curl -fsSL \
-            -H "Authorization: Bearer ${OIDC_TOKEN}" \
-            "https://rlgsbtolosxyymosidns.supabase.co/functions/v1/github-apk-signing")
-
+          SIGNING_JSON=$(curl -fsSL -H "Authorization: Bearer ${OIDC_TOKEN}" "https://rlgsbtolosxyymosidns.supabase.co/functions/v1/github-apk-signing")
           STORE_PASS=$(echo "$SIGNING_JSON" | jq -r '.store_password')
           KEY_ALIAS=$(echo "$SIGNING_JSON" | jq -r '.key_alias')
           KEY_PASS=$(echo "$SIGNING_JSON" | jq -r '.key_password')
           echo "$SIGNING_JSON" | jq -r '.keystore_base64' | base64 -d > "$RUNNER_TEMP/aws-estoque-release.jks"
-
           echo "::add-mask::$STORE_PASS"
           echo "::add-mask::$KEY_PASS"
           echo "STORE_PASS=$STORE_PASS" >> "$GITHUB_ENV"
@@ -159,23 +163,17 @@ jobs:
           set -euo pipefail
           UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
           ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.3.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.4.apk"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
-          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
-            --ks "$KEYSTORE_PATH" \
-            --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass env:STORE_PASS \
-            --key-pass env:KEY_PASS \
-            --out "$SIGNED" \
-            "$ALIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign --ks "$KEYSTORE_PATH" --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out "$SIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
 
       - name: Upload signed APK
         id: upload_apk
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Gestao-Estoque-v5.1.3-signed
-          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.3.apk
+          name: AWS-Gestao-Estoque-v5.1.4-signed
+          path: app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.4.apk
           if-no-files-found: error
 
       - name: Publicar release fixa
@@ -185,18 +183,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.3.apk"
-          ASSET="AWS-Gestao-Estoque-5.1.3.apk"
-          TAG="v5.1.3"
+          APK="app/build/outputs/apk/release/AWS-Gestao-Estoque-5.1.4.apk"
+          ASSET="AWS-Gestao-Estoque-5.1.4.apk"
+          TAG="v5.1.4"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" \
-              --title "AWS Gestão de Estoque 5.1.3" \
-              --notes "Corrige erro 'Failed to allocate ... only 0 allocatable'. O atualizador tenta PackageInstaller.Session e, se o Android recusar a alocação, usa automaticamente o instalador padrão com o APK já baixado e validado, sem novo download. Mantém atualização automática em segundo plano."
+            gh release create "$TAG" --title "AWS Gestao de Estoque 5.1.4" --notes "Exibe o preco do produto em reais na busca e no scanner. O cache local agora inclui preco e e invalidado para atualizar os 13.040 produtos. Mantem atualizacao automatica e fallback de instalacao."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
 
-      - name: Registrar diagnóstico da build 5.1.3
+      - name: Registrar diagnostico da build 5.1.4
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -209,6 +205,7 @@ jobs:
           PACKAGE_INSTALLER_STATUS: ${{ steps.package_installer.outcome }}
           VALIDITY_STATUS: ${{ steps.validity.outcome }}
           BACKGROUND_UPDATE_STATUS: ${{ steps.background_update.outcome }}
+          PRICE_STATUS: ${{ steps.product_price.outcome }}
           BUILD_STATUS: ${{ steps.build_apk.outcome }}
           KEY_STATUS: ${{ steps.signing_key.outcome }}
           SIGN_STATUS: ${{ steps.sign_apk.outcome }}
@@ -217,7 +214,7 @@ jobs:
         shell: bash
         run: |
           set -u
-          FILE="$RUNNER_TEMP/build_status_5_1_3.txt"
+          FILE="$RUNNER_TEMP/build_status_5_1_4.txt"
           {
             echo "commit=${GITHUB_SHA}"
             echo "bip=${BIP_STATUS}"
@@ -227,19 +224,20 @@ jobs:
             echo "package_installer=${PACKAGE_INSTALLER_STATUS}"
             echo "validity=${VALIDITY_STATUS}"
             echo "background_update=${BACKGROUND_UPDATE_STATUS}"
+            echo "product_price=${PRICE_STATUS}"
             echo "build=${BUILD_STATUS}"
             echo "signing_key=${KEY_STATUS}"
             echo "sign=${SIGN_STATUS}"
             echo "upload=${UPLOAD_STATUS}"
             echo "release=${RELEASE_STATUS}"
             echo "--- log ---"
-            if [ -f "$RUNNER_TEMP/aws-build-513.log" ]; then tail -n 240 "$RUNNER_TEMP/aws-build-513.log"; fi
+            if [ -f "$RUNNER_TEMP/aws-build-514.log" ]; then tail -n 260 "$RUNNER_TEMP/aws-build-514.log"; fi
           } > "$FILE"
           CONTENT=$(base64 -w0 "$FILE")
-          PATH_API="repos/${REPO}/contents/build_status_5_1_3.txt"
+          PATH_API="repos/${REPO}/contents/build_status_5_1_4.txt"
           OLD_SHA=$(gh api "$PATH_API?ref=$BRANCH" --jq '.sha' 2>/dev/null || true)
           if [ -n "$OLD_SHA" ]; then
-            gh api --method PUT "$PATH_API" -f message='Atualizar diagnóstico build 5.1.3' -f content="$CONTENT" -f sha="$OLD_SHA" -f branch="$BRANCH" >/dev/null
+            gh api --method PUT "$PATH_API" -f message='Atualizar diagnostico build 5.1.4' -f content="$CONTENT" -f sha="$OLD_SHA" -f branch="$BRANCH" >/dev/null
           else
-            gh api --method PUT "$PATH_API" -f message='Registrar diagnóstico build 5.1.3' -f content="$CONTENT" -f branch="$BRANCH" >/dev/null
+            gh api --method PUT "$PATH_API" -f message='Registrar diagnostico build 5.1.4' -f content="$CONTENT" -f branch="$BRANCH" >/dev/null
           fi
