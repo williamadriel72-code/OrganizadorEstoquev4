@@ -1,16 +1,17 @@
-name: Build Scanner APK
+name: Build Multi Figurinhas APK
 
 on:
   workflow_dispatch:
   push:
     paths:
       - 'scanner/**'
-      - 'settings.gradle.kts'
-      - 'build.gradle.kts'
       - '.github/workflows/scanner-build.yml'
 
+permissions:
+  contents: write
+
 jobs:
-  build-scanner:
+  build-multifigurinhas:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,13 +31,44 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
 
-      - name: Build Scanner APK
-        run: gradle :scanner:assembleDebug --no-daemon
+      - name: Build APK
+        id: apk_build
+        shell: bash
+        run: |
+          set +e
+          gradle :scanner:assembleDebug --stacktrace --no-daemon 2>&1 | tee multifigurinhas-build.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
 
-      - name: Upload Scanner APK
+      - name: Publish result to branch
+        shell: bash
+        run: |
+          mkdir -p multifigurinhas-builds
+          rm -f multifigurinhas-builds/MultiFigurinhas-debug.apk multifigurinhas-builds/BUILD_FAILED.txt
+          if [ "${{ steps.apk_build.outputs.status }}" = "0" ]; then
+            cp scanner/build/outputs/apk/debug/scanner-debug.apk multifigurinhas-builds/MultiFigurinhas-debug.apk
+            printf 'OK\nCommit: %s\n' "$GITHUB_SHA" > multifigurinhas-builds/BUILD_STATUS.txt
+          else
+            cp multifigurinhas-build.log multifigurinhas-builds/BUILD_FAILED.txt
+            printf 'FAILED\nCommit: %s\n' "$GITHUB_SHA" > multifigurinhas-builds/BUILD_STATUS.txt
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add multifigurinhas-builds
+          git commit -m "Publica Multi Figurinhas APK [skip ci]" || true
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Upload APK artifact
+        if: steps.apk_build.outputs.status == '0'
         uses: actions/upload-artifact@v4
         with:
-          name: ScannerOrganizador-USB-debug
+          name: MultiFigurinhas-debug
           path: scanner/build/outputs/apk/debug/scanner-debug.apk
-          if-no-files-found: error
+
+      - name: Fail if build failed
+        if: steps.apk_build.outputs.status != '0'
+        run: exit 1
