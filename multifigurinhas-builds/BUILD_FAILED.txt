@@ -1,0 +1,380 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.5.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :scanner:preBuild UP-TO-DATE
+> Task :scanner:preDebugBuild UP-TO-DATE
+> Task :scanner:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :scanner:generateDebugResources
+> Task :scanner:packageDebugResources
+> Task :scanner:processDebugNavigationResources
+> Task :scanner:generateDebugAssets UP-TO-DATE
+> Task :scanner:javaPreCompileDebug
+> Task :scanner:mergeDebugAssets
+> Task :scanner:compressDebugAssets
+> Task :scanner:parseDebugLocalResources
+> Task :scanner:generateDebugGlobalSynthetics
+> Task :scanner:generateDebugRFile
+> Task :scanner:checkDebugDuplicateClasses
+> Task :scanner:desugarDebugFileDependencies
+> Task :scanner:checkDebugAarMetadata
+> Task :scanner:mapDebugSourceSetPaths
+> Task :scanner:mergeLibDexDebug
+> Task :scanner:compileDebugNavigationResources
+> Task :scanner:mergeDebugResources
+> Task :scanner:createDebugCompatibleScreenManifests
+> Task :scanner:extractDeepLinksDebug
+> Task :scanner:processDebugMainManifest
+> Task :scanner:processDebugManifest
+> Task :scanner:mergeDebugJniLibFolders
+> Task :scanner:processDebugManifestForPackage
+> Task :scanner:mergeDebugNativeLibs NO-SOURCE
+> Task :scanner:stripDebugDebugSymbols NO-SOURCE
+> Task :scanner:processDebugResources
+> Task :scanner:mergeExtDexDebug
+> Task :scanner:validateSigningDebug
+> Task :scanner:writeDebugAppMetadata
+> Task :scanner:writeDebugSigningConfigVersions
+
+> Task :scanner:compileDebugKotlin
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:6:17 Unresolved reference 'activity'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:7:17 Unresolved reference 'activity'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:8:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:9:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:10:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:11:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:12:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:13:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:14:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:15:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:16:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:17:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:18:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:19:17 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:20:12 Unresolved reference 'google'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:21:12 Unresolved reference 'google'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:22:12 Unresolved reference 'google'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:23:8 Unresolved reference 'kotlinx'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:24:8 Unresolved reference 'kotlinx'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:25:8 Unresolved reference 'kotlinx'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:31:22 Unresolved reference 'ComponentActivity'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:33:9 Unresolved reference 'ComponentActivity'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:33:15 Unresolved reference 'onCreate'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:34:9 Unresolved reference 'setContent'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:38:2 Unresolved reference 'Composable'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:40:18 Unresolved reference 'darkColorScheme'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:41:19 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:42:22 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:43:19 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:45:5 Unresolved reference 'MaterialTheme'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:46:9 Unresolved reference 'Surface'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:46:17 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:46:49 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:52:2 Unresolved reference 'Composable'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:54:28 Unresolved reference 'compose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:55:17 Unresolved reference 'rememberCoroutineScope'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:56:20 Unresolved reference 'remember'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:56:31 Unresolved reference 'mutableStateOf'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:57:20 Unresolved reference 'remember'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:57:31 Unresolved reference 'mutableStateOf'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:58:19 Unresolved reference 'remember'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:58:30 Unresolved reference 'mutableStateOf'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:59:21 Unresolved reference 'remember'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:59:32 Unresolved reference 'mutableStateOf'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:60:21 Unresolved reference 'remember'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:60:32 Unresolved reference 'mutableStateOf'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:62:16 Unresolved reference 'remember'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:63:5 Unresolved reference 'DisposableEffect'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:63:30 Unresolved reference 'onDispose'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:65:19 Unresolved reference 'remember'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:66:9 Unresolved reference 'GmsBarcodeScannerOptions'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:68:17 Unresolved reference 'Barcode'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:69:17 Unresolved reference 'Barcode'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:70:17 Unresolved reference 'Barcode'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:71:17 Unresolved reference 'Barcode'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:72:17 Unresolved reference 'Barcode'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:73:17 Unresolved reference 'Barcode'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:78:19 Unresolved reference 'remember'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:78:48 Unresolved reference 'GmsBarcodeScanning'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:86:26 Suspend function 'suspend fun sendToPc(code: String): Boolean' can only be called from a coroutine or another suspend function.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:100:5 Unresolved reference 'Column'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:101:9 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:103:25 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:104:31 Unresolved reference 'Alignment'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:105:31 Unresolved reference 'Arrangement'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:107:9 Unresolved reference 'Text'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:109:27 Unresolved reference 'sp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:110:29 Unresolved reference 'sp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:111:26 Unresolved reference 'FontWeight'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:112:25 Unresolved reference 'TextAlign'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:114:9 Unresolved reference 'Spacer'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:114:16 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:114:35 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:115:9 Unresolved reference 'Text'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:117:21 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:118:25 Unresolved reference 'TextAlign'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:120:9 Unresolved reference 'Spacer'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:120:16 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:120:35 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:122:9 Unresolved reference 'Card'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:123:24 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:124:22 Unresolved reference 'CardDefaults'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:124:63 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:125:21 Unresolved reference 'RoundedCornerShape'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:125:43 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:127:13 Unresolved reference 'Column'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:127:20 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:127:40 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:127:67 Unresolved reference 'Alignment'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:128:17 Unresolved reference 'Text'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:128:47 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:128:80 Unresolved reference 'sp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:129:17 Unresolved reference 'Text'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:129:53 Unresolved reference 'sp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:129:70 Unresolved reference 'FontWeight'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:130:17 Unresolved reference 'Spacer'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:130:24 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:130:43 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:131:17 Unresolved reference 'Text'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:133:29 'when' expression must be exhaustive. Add an 'else' branch.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:134:33 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:135:34 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:136:33 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:138:33 Unresolved reference 'TextAlign'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:139:34 Unresolved reference 'FontWeight'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:144:9 Unresolved reference 'Spacer'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:144:16 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:144:35 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:145:9 Unresolved reference 'Button'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:152:45 Cannot infer type for value parameter 'barcode'. Specify it explicitly.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:153:33 Unresolved reference 'rawValue'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:161:24 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:161:58 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:162:23 Unresolved reference 'not' for operator '!'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:162:35 Unresolved reference 'not' for operator '!'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:163:21 Unresolved reference 'RoundedCornerShape'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:163:43 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:165:13 Unresolved reference 'Text'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:171:31 Unresolved reference 'sp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:172:30 Unresolved reference 'FontWeight'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:176:9 Unresolved reference 'Spacer'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:176:16 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:176:35 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:177:9 Unresolved reference 'OutlinedButton'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:182:30 Suspend function 'suspend fun pingPc(): Boolean' can only be called from a coroutine or another suspend function.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:187:24 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:187:58 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:188:21 Unresolved reference 'RoundedCornerShape'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:188:43 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:190:13 Unresolved reference 'Text'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:193:9 Unresolved reference 'Spacer'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:193:16 Unresolved reference 'Modifier'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:193:35 Unresolved reference 'dp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:194:9 Unresolved reference 'Text'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:196:21 Unresolved reference 'Color'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:197:27 Unresolved reference 'sp'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:198:25 Unresolved reference 'TextAlign'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:203:41 Unresolved reference 'withContext'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:203:53 Unresolved reference 'Dispatchers'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:207:55 Unresolved reference 'withContext'.
+e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/scanner/src/main/java/com/organizador/scanner/MainActivity.kt:207:67 Unresolved reference 'Dispatchers'.
+
+> Task :scanner:compileDebugKotlin FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/apk_build-1787580674410.json
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':scanner:compileDebugKotlin' (registered by plugin 'com.android.internal.application').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+* Exception is:
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':scanner:compileDebugKotlin' (registered by plugin 'com.android.internal.application').
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:135)
+	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:288)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:133)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:121)
+	at org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskExecuter.java:41)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.DefaultNodeExecutor.executeLocalTaskNode(DefaultNodeExecutor.java:55)
+	at org.gradle.execution.plan.DefaultNodeExecutor.execute(DefaultNodeExecutor.java:34)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:355)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:343)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:84)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:339)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:328)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+Caused by: org.gradle.workers.internal.DefaultWorkerExecutor$WorkExecutionException: A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+	at org.gradle.workers.internal.DefaultWorkerExecutor$WorkItemExecution.waitForCompletion(DefaultWorkerExecutor.java:278)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$2(DefaultAsyncWorkTracker.java:132)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withoutLocksBlocking$3(DefaultWorkerLeaseService.java:390)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withoutLocksBlocking(DefaultWorkerLeaseService.java:385)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.blocking(DefaultWorkerLeaseService.java:239)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.blocking(DefaultWorkerLeaseService.java:221)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.lambda$waitForItemsAndGatherFailures$3(DefaultAsyncWorkTracker.java:128)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.resources.AbstractResourceLockRegistry.whileDisallowingLockChanges(AbstractResourceLockRegistry.java:50)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.whileDisallowingProjectLockChanges(DefaultWorkerLeaseService.java:244)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:127)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForItemsAndGatherFailures(DefaultAsyncWorkTracker.java:93)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForAll(DefaultAsyncWorkTracker.java:79)
+	at org.gradle.internal.work.DefaultAsyncWorkTracker.waitForCompletion(DefaultAsyncWorkTracker.java:67)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:267)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:30)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:27)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:48)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:244)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:227)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:210)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:176)
+	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:167)
+	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:47)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:137)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:134)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:134)
+	at org.gradle.internal.execution.steps.ExecuteStep$Mutable.execute(ExecuteStep.java:80)
+	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:51)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:29)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:67)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:39)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:42)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:24)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:28)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:76)
+	at org.gradle.internal.Either$Right.fold(Either.java:176)
+	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:74)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:49)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.executeMutable(StoreExecutionStateStep.java:46)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.executeMutable(StoreExecutionStateStep.java:35)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveMutableCachingStateStep.executeDelegate(ResolveMutableCachingStateStep.java:70)
+	at org.gradle.internal.execution.steps.ResolveMutableCachingStateStep.executeDelegate(ResolveMutableCachingStateStep.java:32)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:69)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:37)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:63)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:34)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.ValidateStep$Mutable.executeDelegate(ValidateStep.java:79)
+	at org.gradle.internal.execution.steps.ValidateStep$Mutable.executeDelegate(ValidateStep.java:65)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:99)
+	at org.gradle.internal.execution.steps.ValidateStep$Mutable.execute(ValidateStep.java:65)
+	at org.gradle.internal.execution.steps.CaptureMutableStateBeforeExecutionStep.executeMutable(CaptureMutableStateBeforeExecutionStep.java:86)
+	at org.gradle.internal.execution.steps.CaptureMutableStateBeforeExecutionStep.execute(CaptureMutableStateBeforeExecutionStep.java:65)
+	at org.gradle.internal.execution.steps.CaptureMutableStateBeforeExecutionStep.execute(CaptureMutableStateBeforeExecutionStep.java:45)
+	at org.gradle.internal.execution.steps.SkipEmptyMutableWorkStep.executeWithNonEmptySources(SkipEmptyMutableWorkStep.java:210)
+	at org.gradle.internal.execution.steps.SkipEmptyMutableWorkStep.executeMutable(SkipEmptyMutableWorkStep.java:90)
+	at org.gradle.internal.execution.steps.SkipEmptyMutableWorkStep.executeMutable(SkipEmptyMutableWorkStep.java:53)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.executeMutable(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.executeMutable(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:77)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:43)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$executeMutable$0(AssignMutableWorkspaceStep.java:34)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:305)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.executeMutable(AssignMutableWorkspaceStep.java:30)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.executeMutable(AssignMutableWorkspaceStep.java:21)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:26)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:56)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:38)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:68)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
+	... 30 more
+Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilation error. See log for more details
+	at org.jetbrains.kotlin.gradle.tasks.TasksUtilsKt.throwExceptionIfCompilationFailed(tasksUtils.kt:21)
+	at org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork.execute(BuildToolsApiCompilationWork.kt:295)
+	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:68)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:64)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:61)
+	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:102)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:61)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:58)
+	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:191)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$500(DefaultConditionalExecutionQueue.java:112)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:168)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$withLocksAcquired$0(DefaultWorkerLeaseService.java:280)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:278)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:270)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:129)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:134)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:163)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:125)
+	... 2 more
+
+
+BUILD FAILED in 26s
+28 actionable tasks: 28 executed
