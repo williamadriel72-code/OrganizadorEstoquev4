@@ -87,7 +87,6 @@ public class MainActivity extends Activity {
 
     private boolean handleUrl(String url) {
         if (url == null || url.trim().isEmpty()) return false;
-
         String lower = url.toLowerCase();
 
         if (lower.startsWith("http://") || lower.startsWith("https://")) {
@@ -107,22 +106,20 @@ public class MainActivity extends Activity {
 
         if (lower.startsWith("intent://")) {
             try {
-                Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
-                String fallback = intent.getStringExtra("browser_fallback_url");
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-            } catch (Exception e) {
+                Intent parsed = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                String fallback = parsed.getStringExtra("browser_fallback_url");
+                parsed.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 try {
-                    Intent parsed = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
-                    String fallback = parsed.getStringExtra("browser_fallback_url");
+                    startActivity(parsed);
+                } catch (ActivityNotFoundException e) {
                     if (fallback != null && !fallback.isEmpty()) {
                         webView.loadUrl(fallback);
                     } else {
                         Toast.makeText(this, "Não foi possível abrir esse link.", Toast.LENGTH_SHORT).show();
                     }
-                } catch (Exception ignored) {
-                    Toast.makeText(this, "Não foi possível abrir esse link.", Toast.LENGTH_SHORT).show();
                 }
+            } catch (Exception e) {
+                Toast.makeText(this, "Não foi possível abrir esse link.", Toast.LENGTH_SHORT).show();
             }
             return true;
         }
