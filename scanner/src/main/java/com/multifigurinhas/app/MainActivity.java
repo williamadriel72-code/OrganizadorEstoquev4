@@ -34,19 +34,15 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.WHITE);
 
         webView = new WebView(this);
-        FrameLayout.LayoutParams webParams = new FrameLayout.LayoutParams(
+        root.addView(webView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-        );
-        root.addView(webView, webParams);
+                FrameLayout.LayoutParams.MATCH_PARENT));
 
         progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setMax(100);
-        FrameLayout.LayoutParams progressParams = new FrameLayout.LayoutParams(
+        root.addView(progressBar, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                dp(4)
-        );
-        root.addView(progressBar, progressParams);
+                dp(4)));
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -89,19 +85,16 @@ public class MainActivity extends Activity {
         if (url == null || url.trim().isEmpty()) return false;
         String lower = url.toLowerCase();
 
-        if (lower.startsWith("http://") || lower.startsWith("https://")) {
-            if (lower.startsWith("https://wa.me/")
-                    || lower.startsWith("https://api.whatsapp.com/")
-                    || lower.contains("whatsapp.com/send")) {
-                openExternal(url);
-                return true;
-            }
-            return false;
-        }
-
-        if (lower.startsWith("whatsapp://")) {
+        if (lower.startsWith("https://wa.me/")
+                || lower.startsWith("https://api.whatsapp.com/")
+                || lower.contains("whatsapp.com/send")
+                || lower.startsWith("whatsapp://")) {
             openExternal(url);
             return true;
+        }
+
+        if (lower.startsWith("http://") || lower.startsWith("https://")) {
+            return false;
         }
 
         if (lower.startsWith("intent://")) {
@@ -130,8 +123,7 @@ public class MainActivity extends Activity {
 
     private void openExternal(String url) {
         try {
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            startActivity(intent);
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
         } catch (ActivityNotFoundException e) {
             Toast.makeText(this, "Nenhum aplicativo encontrado para abrir o link.", Toast.LENGTH_LONG).show();
         }
