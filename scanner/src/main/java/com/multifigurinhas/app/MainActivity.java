@@ -133,7 +133,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setSupportZoom(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " MultiFigurinhas/1.4.1");
+        settings.setUserAgentString(settings.getUserAgentString() + " MultiFigurinhas/1.4.2");
         userAgent = settings.getUserAgentString();
 
         webView.addJavascriptInterface(new StickerBridge(), "MultiFigurinhas");
@@ -243,11 +243,23 @@ public class MainActivity extends Activity {
                 });
                 return;
             }
-            executor.execute(() -> downloadAndPrepare(sourceUrl));
+
+            runOnUiThread(() -> {
+                String referer = webView != null ? webView.getUrl() : START_URL;
+                String cookie = null;
+                try {
+                    cookie = CookieManager.getInstance().getCookie(sourceUrl);
+                } catch (Exception ignored) {
+                }
+                final String safeReferer = referer;
+                final String safeCookie = cookie;
+                final String safeUserAgent = userAgent;
+                executor.execute(() -> downloadAndPrepare(sourceUrl, safeReferer, safeCookie, safeUserAgent));
+            });
         }
     }
 
-    private void downloadAndPrepare(String sourceUrl) {
+    private void downloadAndPrepare(String sourceUrl, String referer, String cookie, String requestUserAgent) {
         try {
             runOnUiThread(() -> statusText.setText("Baixando figurinha selecionada..."));
 
@@ -265,11 +277,15 @@ public class MainActivity extends Activity {
                 connection.setInstanceFollowRedirects(true);
                 connection.setConnectTimeout(15000);
                 connection.setReadTimeout(20000);
-                connection.setRequestProperty("User-Agent", userAgent);
-                String current = webView.getUrl();
-                if (current != null) connection.setRequestProperty("Referer", current);
-                String cookie = CookieManager.getInstance().getCookie(sourceUrl);
-                if (cookie != null && !cookie.isEmpty()) connection.setRequestProperty("Cookie", cookie);
+                if (requestUserAgent != null && !requestUserAgent.isEmpty()) {
+                    connection.setRequestProperty("User-Agent", requestUserAgent);
+                }
+                if (referer != null && !referer.isEmpty()) {
+                    connection.setRequestProperty("Referer", referer);
+                }
+                if (cookie != null && !cookie.isEmpty()) {
+                    connection.setRequestProperty("Cookie", cookie);
+                }
                 connection.connect();
 
                 int code = connection.getResponseCode();
@@ -278,7 +294,9 @@ public class MainActivity extends Activity {
                 }
 
                 mime = connection.getContentType();
-                if (mime != null && mime.contains(";")) mime = mime.substring(0, mime.indexOf(';')).trim();
+                if (mime != null && mime.contains(";")) {
+                    mime = mime.substring(0, mime.indexOf(';')).trim();
+                }
 
                 try (InputStream in = connection.getInputStream();
                      ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -328,7 +346,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 statusText.setText("Falha ao preparar ×100");
                 actionButton.setEnabled(true);
-                Toast.makeText(this, "Erro: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Erro: " + e.getClass().getSimpleName() + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
             });
         }
     }
