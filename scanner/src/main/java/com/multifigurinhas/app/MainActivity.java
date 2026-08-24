@@ -5,12 +5,15 @@ import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -19,7 +22,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -61,27 +63,50 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.WHITE);
 
-        LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(Gravity.CENTER_VERTICAL);
-        top.setPadding(dp(10), dp(8), dp(10), dp(8));
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top;
+            int bottom;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                top = bars.top;
+                bottom = bars.bottom;
+            } else {
+                top = insets.getSystemWindowInsetTop();
+                bottom = insets.getSystemWindowInsetBottom();
+            }
+            v.setPadding(0, top, 0, bottom);
+            return insets;
+        });
+
+        LinearLayout actionArea = new LinearLayout(this);
+        actionArea.setOrientation(LinearLayout.VERTICAL);
+        actionArea.setPadding(dp(10), dp(8), dp(10), dp(8));
 
         statusText = new TextView(this);
-        statusText.setText("Abra uma figurinha do catálogo");
+        statusText.setText("Abra uma figurinha e toque no botão abaixo");
         statusText.setTextSize(14);
         statusText.setTextColor(Color.DKGRAY);
-        LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        top.addView(statusText, statusParams);
-
-        actionButton = new Button(this);
-        actionButton.setText("×100 → WHATSAPP");
-        actionButton.setEnabled(false);
-        actionButton.setOnClickListener(v -> captureCurrentSticker());
-        top.addView(actionButton, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
+        statusText.setGravity(Gravity.CENTER);
+        actionArea.addView(statusText, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        root.addView(top, new LinearLayout.LayoutParams(
+        actionButton = new Button(this);
+        actionButton.setText("BAIXAR ×100 → WHATSAPP");
+        actionButton.setTextColor(Color.WHITE);
+        actionButton.setTextSize(15);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            actionButton.setBackgroundTintList(ColorStateList.valueOf(Color.rgb(37, 211, 102)));
+        }
+        actionButton.setEnabled(true);
+        actionButton.setOnClickListener(v -> captureCurrentSticker());
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonParams.setMargins(0, dp(6), 0, 0);
+        actionArea.addView(actionButton, buttonParams);
+
+        root.addView(actionArea, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
 
@@ -108,7 +133,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setSupportZoom(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " MultiFigurinhas/1.4");
+        settings.setUserAgentString(settings.getUserAgentString() + " MultiFigurinhas/1.4.1");
         userAgent = settings.getUserAgentString();
 
         webView.addJavascriptInterface(new StickerBridge(), "MultiFigurinhas");
@@ -136,15 +161,13 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                boolean stickerPage = url != null && url.contains("/sticker/");
-                actionButton.setEnabled(stickerPage);
-                statusText.setText(stickerPage
-                        ? "Figurinha aberta • pronta para ×100"
-                        : "Abra uma figurinha do catálogo");
+                actionButton.setEnabled(true);
+                statusText.setText("Abra uma figurinha e toque em BAIXAR ×100 → WHATSAPP");
             }
         });
 
         setContentView(root);
+        root.requestApplyInsets();
     }
 
     private boolean handleUrl(String url) {
@@ -195,15 +218,13 @@ public class MainActivity extends Activity {
 
     private void captureCurrentSticker() {
         actionButton.setEnabled(false);
-        statusText.setText("Capturando figurinha...");
+        statusText.setText("Identificando a figurinha aberta...");
 
         String js = "(function(){"
-                + "var imgs=Array.from(document.images).filter(function(i){return i.src;});"
-                + "var cand=imgs.filter(function(i){var a=(i.alt||'').toLowerCase();var s=(i.currentSrc||i.src||'').toLowerCase();return a.indexOf('figurinha')>=0||a.indexOf('sticker')>=0||s.indexOf('sticker')>=0||s.indexOf('.webp')>=0;});"
-                + "var list=cand.length?cand:imgs;"
-                + "list.sort(function(a,b){return (b.naturalWidth*b.naturalHeight)-(a.naturalWidth*a.naturalHeight);});"
-                + "var img=list[0];"
-                + "if(!img){MultiFigurinhas.onStickerUrl('');return;}"
+                + "var imgs=Array.from(document.images).filter(function(i){if(!i.src)return false;var r=i.getBoundingClientRect();var s=getComputedStyle(i);return r.width>80&&r.height>80&&r.bottom>0&&r.right>0&&r.top<innerHeight&&r.left<innerWidth&&s.display!='none'&&s.visibility!='hidden'&&parseFloat(s.opacity||'1')>0;});"
+                + "if(!imgs.length){MultiFigurinhas.onStickerUrl('');return;}"
+                + "imgs.sort(function(a,b){var ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();var aa=ra.width*ra.height,ab=rb.width*rb.height;return ab-aa;});"
+                + "var img=imgs[0];"
                 + "MultiFigurinhas.onStickerUrl(img.currentSrc||img.src||'');"
                 + "})();";
         webView.evaluateJavascript(js, null);
@@ -214,9 +235,11 @@ public class MainActivity extends Activity {
         public void onStickerUrl(String sourceUrl) {
             if (sourceUrl == null || sourceUrl.trim().isEmpty()) {
                 runOnUiThread(() -> {
-                    statusText.setText("Não consegui identificar a figurinha");
+                    statusText.setText("Nenhuma figurinha grande foi encontrada");
                     actionButton.setEnabled(true);
-                    Toast.makeText(MainActivity.this, "Abra a página da figurinha e tente novamente.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this,
+                            "Abra a figurinha grande como no seu print e toque no botão novamente.",
+                            Toast.LENGTH_LONG).show();
                 });
                 return;
             }
@@ -226,7 +249,7 @@ public class MainActivity extends Activity {
 
     private void downloadAndPrepare(String sourceUrl) {
         try {
-            runOnUiThread(() -> statusText.setText("Baixando figurinha..."));
+            runOnUiThread(() -> statusText.setText("Baixando figurinha selecionada..."));
 
             byte[] data;
             String mime;
@@ -243,7 +266,8 @@ public class MainActivity extends Activity {
                 connection.setConnectTimeout(15000);
                 connection.setReadTimeout(20000);
                 connection.setRequestProperty("User-Agent", userAgent);
-                connection.setRequestProperty("Referer", webView.getUrl());
+                String current = webView.getUrl();
+                if (current != null) connection.setRequestProperty("Referer", current);
                 String cookie = CookieManager.getInstance().getCookie(sourceUrl);
                 if (cookie != null && !cookie.isEmpty()) connection.setRequestProperty("Cookie", cookie);
                 connection.connect();
@@ -277,15 +301,13 @@ public class MainActivity extends Activity {
             if (data.length == 0) throw new IllegalStateException("Arquivo vazio");
             if (data.length > MAX_SOURCE_BYTES) throw new IllegalStateException("Figurinha maior que 1 MB");
 
-            if (mime == null || !mime.startsWith("image/")) {
-                mime = inferMime(sourceUrl);
-            }
+            if (mime == null || !mime.startsWith("image/")) mime = inferMime(sourceUrl);
             String ext = extensionForMime(mime);
 
             File dir = ShareContentProvider.getShareDirectory(this);
             clearDirectory(dir);
 
-            runOnUiThread(() -> statusText.setText("Criando 100 cópias..."));
+            runOnUiThread(() -> statusText.setText("Multiplicando por 100..."));
             for (int i = 1; i <= COPY_COUNT; i++) {
                 String name = String.format(Locale.US, "sticker_%03d.%s", i, ext);
                 try (FileOutputStream fos = new FileOutputStream(new File(dir, name))) {
@@ -299,7 +321,7 @@ public class MainActivity extends Activity {
             String finalMime = mime;
             String finalExt = ext;
             runOnUiThread(() -> {
-                statusText.setText("100 cópias prontas");
+                statusText.setText("100 cópias prontas • escolha o WhatsApp");
                 showWhatsAppChoice(finalMime, finalExt);
             });
         } catch (Exception e) {
@@ -323,10 +345,9 @@ public class MainActivity extends Activity {
 
         if (normal && business) {
             new AlertDialog.Builder(this)
-                    .setTitle("Direcionar 100 cópias para")
-                    .setItems(new String[]{"WhatsApp", "WhatsApp Business"}, (dialog, which) -> {
-                        shareToWhatsApp(which == 0 ? "com.whatsapp" : "com.whatsapp.w4b", mime, ext);
-                    })
+                    .setTitle("Enviar 100 cópias para")
+                    .setItems(new String[]{"WhatsApp", "WhatsApp Business"}, (dialog, which) ->
+                            shareToWhatsApp(which == 0 ? "com.whatsapp" : "com.whatsapp.w4b", mime, ext))
                     .setNegativeButton("Cancelar", (dialog, which) -> actionButton.setEnabled(true))
                     .show();
         } else {
@@ -343,11 +364,8 @@ public class MainActivity extends Activity {
             Uri uri = Uri.parse("content://" + ShareContentProvider.AUTHORITY + "/sticker/" + name);
             streams.add(uri);
             grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            if (clipData == null) {
-                clipData = ClipData.newUri(getContentResolver(), "figurinha", uri);
-            } else {
-                clipData.addItem(new ClipData.Item(uri));
-            }
+            if (clipData == null) clipData = ClipData.newUri(getContentResolver(), "figurinha", uri);
+            else clipData.addItem(new ClipData.Item(uri));
         }
 
         Intent send = new Intent(Intent.ACTION_SEND_MULTIPLE);
@@ -359,11 +377,11 @@ public class MainActivity extends Activity {
 
         try {
             startActivity(send);
-            statusText.setText("Escolha a conversa no WhatsApp");
+            statusText.setText("Escolha a conversa/grupo no WhatsApp");
         } catch (Exception e) {
             actionButton.setEnabled(true);
             Toast.makeText(this,
-                    "O WhatsApp não aceitou 100 anexos de uma vez. Posso dividir em lotes na próxima versão.",
+                    "O WhatsApp não aceitou 100 anexos de uma vez.",
                     Toast.LENGTH_LONG).show();
         }
     }
@@ -388,9 +406,7 @@ public class MainActivity extends Activity {
     private void clearDirectory(File dir) {
         File[] files = dir.listFiles();
         if (files == null) return;
-        for (File file : files) {
-            if (file.isFile()) file.delete();
-        }
+        for (File file : files) if (file.isFile()) file.delete();
     }
 
     private void openExternal(String url) {
@@ -403,11 +419,8 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+        if (webView != null && webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
     }
 
     @Override
