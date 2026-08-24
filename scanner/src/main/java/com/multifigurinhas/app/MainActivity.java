@@ -6,10 +6,7 @@ import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,49 +17,47 @@ import android.widget.Button;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
     private static final int PICK_IMAGES = 1001;
-    private static final int MIN_STICKERS = 3;
-    private static final int MAX_STICKERS = 30;
-    private static final long MAX_STICKER_BYTES = 100L * 1024L;
+    private static final int MAX_SOURCES = 30;
+    private static final int MAX_QUEUE = 100;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final ArrayList<Uri> selectedUris = new ArrayList<>();
+    private final ArrayList<Uri> sources = new ArrayList<>();
+    private final ArrayList<Uri> queue = new ArrayList<>();
 
-    private TextView status;
-    private TextView selectionCount;
-    private LinearLayout previewRow;
-    private Button selectButton;
-    private Button clearButton;
-    private Button prepareButton;
-    private Button addButton;
-    private ProgressBar progress;
+    private int activeIndex = -1;
+    private int sentCount = 0;
+
+    private TextView sourceCount;
+    private TextView activeLabel;
+    private TextView queueCount;
+    private TextView progressLabel;
+    private LinearLayout sourcesRow;
+    private LinearLayout queueRow;
+    private ImageView nextImage;
+    private Button undoButton;
+    private Button clearQueueButton;
+    private Button nextButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         buildUi();
-        refreshState();
-        updateSelectionControls();
+        updateAll();
     }
 
     private void buildUi() {
-        int pad = dp(20);
+        int pad = dp(18);
         ScrollView scroll = new ScrollView(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -70,94 +65,150 @@ public class MainActivity extends Activity {
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         scroll.addView(root);
 
-        TextView title = new TextView(this);
-        title.setText("Multi Figurinhas");
-        title.setTextSize(28);
-        title.setTextColor(Color.rgb(7, 94, 84));
+        TextView title = text("Multi Figurinhas — Fila 100", 26, Color.rgb(7, 94, 84));
         title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(12), 0, dp(8));
+        title.setPadding(0, dp(8), 0, dp(8));
         root.addView(title, fullWidth());
 
-        TextView description = new TextView(this);
-        description.setText("Adicione de 3 a 30 imagens. Se o seletor do seu celular permitir apenas uma por vez, volte e toque em Adicionar imagens novamente. As fotos escolhidas ficam visíveis abaixo.");
-        description.setTextSize(16);
-        description.setTextColor(Color.DKGRAY);
+        TextView description = text(
+                "Monte uma sequência de até 100 posições sem tocar figurinha por figurinha. " +
+                "Importe algumas imagens-base, escolha uma como ATIVA e use os multiplicadores. " +
+                "O app não dispara mensagens sozinho: ele prepara e acompanha a sequência enquanto você usa o WhatsApp.",
+                15, Color.DKGRAY);
         description.setGravity(Gravity.CENTER);
-        description.setPadding(0, 0, 0, dp(18));
+        description.setPadding(0, 0, 0, dp(14));
         root.addView(description, fullWidth());
 
-        selectButton = new Button(this);
-        selectButton.setText("1. ADICIONAR IMAGENS");
-        selectButton.setOnClickListener(v -> openPicker());
-        root.addView(selectButton, buttonParams());
+        Button addImages = new Button(this);
+        addImages.setText("1. ADICIONAR FIGURINHAS-BASE");
+        addImages.setOnClickListener(v -> openPicker());
+        root.addView(addImages, buttonParams());
 
-        selectionCount = new TextView(this);
-        selectionCount.setTextSize(15);
-        selectionCount.setTextColor(Color.DKGRAY);
-        selectionCount.setGravity(Gravity.CENTER);
-        selectionCount.setPadding(0, dp(10), 0, dp(8));
-        root.addView(selectionCount, fullWidth());
+        sourceCount = text("", 15, Color.DKGRAY);
+        sourceCount.setGravity(Gravity.CENTER);
+        sourceCount.setPadding(0, dp(8), 0, dp(6));
+        root.addView(sourceCount, fullWidth());
 
-        HorizontalScrollView previewScroll = new HorizontalScrollView(this);
-        previewScroll.setHorizontalScrollBarEnabled(true);
-        previewRow = new LinearLayout(this);
-        previewRow.setOrientation(LinearLayout.HORIZONTAL);
-        previewRow.setGravity(Gravity.CENTER_VERTICAL);
-        previewRow.setPadding(0, dp(4), 0, dp(4));
-        previewScroll.addView(previewRow);
-        LinearLayout.LayoutParams previewParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(104));
-        previewParams.setMargins(0, 0, 0, dp(6));
-        root.addView(previewScroll, previewParams);
+        HorizontalScrollView sourceScroll = new HorizontalScrollView(this);
+        sourcesRow = new LinearLayout(this);
+        sourcesRow.setOrientation(LinearLayout.HORIZONTAL);
+        sourcesRow.setGravity(Gravity.CENTER_VERTICAL);
+        sourceScroll.addView(sourcesRow);
+        LinearLayout.LayoutParams sourceScrollParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(126));
+        root.addView(sourceScroll, sourceScrollParams);
 
-        clearButton = new Button(this);
-        clearButton.setText("LIMPAR SELEÇÃO");
-        clearButton.setOnClickListener(v -> clearSelection());
-        root.addView(clearButton, buttonParams());
+        activeLabel = text("Nenhuma figurinha ativa", 16, Color.rgb(7, 94, 84));
+        activeLabel.setGravity(Gravity.CENTER);
+        activeLabel.setPadding(0, dp(8), 0, dp(6));
+        root.addView(activeLabel, fullWidth());
 
-        prepareButton = new Button(this);
-        prepareButton.setText("2. PREPARAR PACOTE");
-        prepareButton.setOnClickListener(v -> {
-            if (selectedUris.size() < MIN_STICKERS) {
-                Toast.makeText(this, "Adicione pelo menos 3 imagens.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            preparePack(new ArrayList<>(selectedUris));
-        });
-        root.addView(prepareButton, buttonParams());
+        TextView repeatTitle = text("Adicionar a figurinha ATIVA à fila:", 15, Color.DKGRAY);
+        repeatTitle.setGravity(Gravity.CENTER);
+        root.addView(repeatTitle, fullWidth());
 
-        progress = new ProgressBar(this);
-        progress.setIndeterminate(true);
-        progress.setVisibility(View.GONE);
-        LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(dp(48), dp(48));
-        pp.setMargins(0, dp(16), 0, dp(8));
-        root.addView(progress, pp);
+        LinearLayout repeat1 = horizontalRow();
+        repeat1.addView(multiplierButton("×1", 1), smallButtonParams());
+        repeat1.addView(multiplierButton("×2", 2), smallButtonParams());
+        repeat1.addView(multiplierButton("×5", 5), smallButtonParams());
+        repeat1.addView(multiplierButton("×10", 10), smallButtonParams());
+        root.addView(repeat1, fullWidth());
 
-        status = new TextView(this);
-        status.setTextSize(15);
-        status.setTextColor(Color.DKGRAY);
-        status.setGravity(Gravity.CENTER);
-        status.setPadding(0, dp(14), 0, dp(20));
-        root.addView(status, fullWidth());
+        LinearLayout repeat2 = horizontalRow();
+        repeat2.addView(multiplierButton("×25", 25), smallButtonParams());
+        repeat2.addView(multiplierButton("×50", 50), smallButtonParams());
+        repeat2.addView(multiplierButton("×100", 100), smallButtonParams());
+        root.addView(repeat2, fullWidth());
 
-        addButton = new Button(this);
-        addButton.setText("3. ADICIONAR AO WHATSAPP");
-        addButton.setOnClickListener(v -> addPackToWhatsApp());
-        root.addView(addButton, buttonParams());
+        TextView autoTitle = text("Ou preencha a fila usando todas as figurinhas-base em sequência:", 15, Color.DKGRAY);
+        autoTitle.setGravity(Gravity.CENTER);
+        autoTitle.setPadding(0, dp(12), 0, dp(4));
+        root.addView(autoTitle, fullWidth());
 
-        TextView note = new TextView(this);
-        note.setText("Depois de adicionar o pacote, abra uma conversa no WhatsApp e use as figurinhas normalmente pelo seletor de stickers.");
-        note.setTextSize(14);
-        note.setTextColor(Color.GRAY);
-        note.setPadding(0, dp(24), 0, dp(10));
+        LinearLayout fill1 = horizontalRow();
+        fill1.addView(fillButton("10", 10), smallButtonParams());
+        fill1.addView(fillButton("25", 25), smallButtonParams());
+        fill1.addView(fillButton("50", 50), smallButtonParams());
+        fill1.addView(fillButton("100", 100), smallButtonParams());
+        root.addView(fill1, fullWidth());
+
+        queueCount = text("", 18, Color.rgb(7, 94, 84));
+        queueCount.setGravity(Gravity.CENTER);
+        queueCount.setPadding(0, dp(14), 0, dp(6));
+        root.addView(queueCount, fullWidth());
+
+        HorizontalScrollView queueScroll = new HorizontalScrollView(this);
+        queueRow = new LinearLayout(this);
+        queueRow.setOrientation(LinearLayout.HORIZONTAL);
+        queueRow.setGravity(Gravity.CENTER_VERTICAL);
+        queueScroll.addView(queueRow);
+        LinearLayout.LayoutParams queueParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(88));
+        root.addView(queueScroll, queueParams);
+
+        LinearLayout manageRow = horizontalRow();
+        undoButton = new Button(this);
+        undoButton.setText("DESFAZER");
+        undoButton.setOnClickListener(v -> undoLast());
+        manageRow.addView(undoButton, smallButtonParams());
+        clearQueueButton = new Button(this);
+        clearQueueButton.setText("LIMPAR FILA");
+        clearQueueButton.setOnClickListener(v -> clearQueue());
+        manageRow.addView(clearQueueButton, smallButtonParams());
+        root.addView(manageRow, fullWidth());
+
+        TextView nextTitle = text("Próxima da sequência", 16, Color.DKGRAY);
+        nextTitle.setGravity(Gravity.CENTER);
+        nextTitle.setPadding(0, dp(16), 0, dp(6));
+        root.addView(nextTitle, fullWidth());
+
+        nextImage = new ImageView(this);
+        nextImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        nextImage.setBackgroundColor(Color.rgb(235, 235, 235));
+        root.addView(nextImage, new LinearLayout.LayoutParams(dp(180), dp(180)));
+
+        progressLabel = text("", 16, Color.DKGRAY);
+        progressLabel.setGravity(Gravity.CENTER);
+        progressLabel.setPadding(0, dp(8), 0, dp(8));
+        root.addView(progressLabel, fullWidth());
+
+        nextButton = new Button(this);
+        nextButton.setText("MARCAR COMO ENVIADA / PRÓXIMA");
+        nextButton.setOnClickListener(v -> markNext());
+        root.addView(nextButton, buttonParams());
+
+        Button openWhatsApp = new Button(this);
+        openWhatsApp.setText("2. ABRIR WHATSAPP");
+        openWhatsApp.setOnClickListener(v -> openWhatsApp());
+        root.addView(openWhatsApp, buttonParams());
+
+        TextView note = text(
+                "Exemplo: importe 1 figurinha, toque nela para ficar ATIVA e depois toque ×100. " +
+                "A fila ficará 100/100 com a mesma figurinha repetida. Se importar várias, use 10/25/50/100 para preencher alternando entre elas.",
+                14, Color.GRAY);
+        note.setPadding(0, dp(16), 0, dp(16));
         root.addView(note, fullWidth());
 
         setContentView(scroll);
     }
 
+    private Button multiplierButton(String label, int amount) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setOnClickListener(v -> appendActive(amount));
+        return b;
+    }
+
+    private Button fillButton(String label, int target) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setOnClickListener(v -> fillTo(target));
+        return b;
+    }
+
     private void openPicker() {
-        if (selectedUris.size() >= MAX_STICKERS) {
-            Toast.makeText(this, "Você já selecionou 30 imagens.", Toast.LENGTH_SHORT).show();
+        if (sources.size() >= MAX_SOURCES) {
+            Toast.makeText(this, "Máximo de 30 figurinhas-base.", Toast.LENGTH_SHORT).show();
             return;
         }
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -176,105 +227,206 @@ public class MainActivity extends Activity {
         ArrayList<Uri> returned = new ArrayList<>();
         ClipData clip = data.getClipData();
         if (clip != null) {
-            for (int i = 0; i < clip.getItemCount(); i++) {
-                returned.add(clip.getItemAt(i).getUri());
-            }
+            for (int i = 0; i < clip.getItemCount(); i++) returned.add(clip.getItemAt(i).getUri());
         } else if (data.getData() != null) {
             returned.add(data.getData());
         }
 
         int added = 0;
         for (Uri uri : returned) {
-            if (selectedUris.size() >= MAX_STICKERS) break;
-            if (uri == null || selectedUris.contains(uri)) continue;
+            if (sources.size() >= MAX_SOURCES) break;
+            if (uri == null || sources.contains(uri)) continue;
             persistReadPermission(uri, data);
-            selectedUris.add(uri);
+            sources.add(uri);
             added++;
         }
-
-        renderPreviews();
-        updateSelectionControls();
-
-        if (added == 0) {
-            Toast.makeText(this, "Nenhuma imagem nova foi adicionada.", Toast.LENGTH_SHORT).show();
-        } else if (selectedUris.size() < MIN_STICKERS) {
-            Toast.makeText(this,
-                    added + " imagem(ns) adicionada(s). Adicione mais " + (MIN_STICKERS - selectedUris.size()) + ".",
-                    Toast.LENGTH_LONG).show();
-        } else {
-            Toast.makeText(this,
-                    selectedUris.size() + " imagens selecionadas. Você já pode preparar o pacote.",
-                    Toast.LENGTH_SHORT).show();
-        }
+        if (activeIndex < 0 && !sources.isEmpty()) activeIndex = 0;
+        updateAll();
+        Toast.makeText(this, added + " figurinha(s)-base adicionada(s).", Toast.LENGTH_SHORT).show();
     }
 
     private void persistReadPermission(Uri uri, Intent data) {
         try {
-            int takeFlags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
-            if (takeFlags != 0) {
-                getContentResolver().takePersistableUriPermission(uri, takeFlags);
-            }
+            int flags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
+            if (flags != 0) getContentResolver().takePersistableUriPermission(uri, flags);
         } catch (Exception ignored) {
         }
     }
 
-    private void clearSelection() {
-        selectedUris.clear();
-        previewRow.removeAllViews();
-        updateSelectionControls();
-        setStatus("Seleção limpa. Adicione de 3 a 30 imagens.");
+    private void appendActive(int amount) {
+        if (activeIndex < 0 || activeIndex >= sources.size()) {
+            Toast.makeText(this, "Escolha uma figurinha-base primeiro.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        int capacity = MAX_QUEUE - queue.size();
+        if (capacity <= 0) {
+            Toast.makeText(this, "A fila já está em 100/100.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        int actual = Math.min(amount, capacity);
+        Uri active = sources.get(activeIndex);
+        for (int i = 0; i < actual; i++) queue.add(active);
+        updateAll();
+        if (actual < amount) Toast.makeText(this, "Fila completada em 100/100.", Toast.LENGTH_SHORT).show();
     }
 
-    private void updateSelectionControls() {
-        int count = selectedUris.size();
-        selectButton.setEnabled(count < MAX_STICKERS && progress.getVisibility() != View.VISIBLE);
-        clearButton.setEnabled(count > 0 && progress.getVisibility() != View.VISIBLE);
-        prepareButton.setEnabled(count >= MIN_STICKERS && progress.getVisibility() != View.VISIBLE);
-        selectionCount.setText("Selecionadas: " + count + " / " + MAX_STICKERS
-                + (count < MIN_STICKERS ? "  •  faltam " + (MIN_STICKERS - count) : "  •  prontas para preparar"));
+    private void fillTo(int target) {
+        if (sources.isEmpty()) {
+            Toast.makeText(this, "Adicione pelo menos uma figurinha-base.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        target = Math.min(target, MAX_QUEUE);
+        while (queue.size() < target) {
+            queue.add(sources.get(queue.size() % sources.size()));
+        }
+        updateAll();
     }
 
-    private void renderPreviews() {
-        previewRow.removeAllViews();
-        for (Uri uri : selectedUris) {
+    private void undoLast() {
+        if (queue.isEmpty()) return;
+        queue.remove(queue.size() - 1);
+        if (sentCount > queue.size()) sentCount = queue.size();
+        updateAll();
+    }
+
+    private void clearQueue() {
+        queue.clear();
+        sentCount = 0;
+        updateAll();
+    }
+
+    private void markNext() {
+        if (queue.isEmpty()) {
+            Toast.makeText(this, "A fila está vazia.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (sentCount >= queue.size()) {
+            Toast.makeText(this, "Sequência concluída.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        sentCount++;
+        updateAll();
+    }
+
+    private void openWhatsApp() {
+        Intent launch = getPackageManager().getLaunchIntentForPackage("com.whatsapp");
+        if (launch != null) {
+            startActivity(launch);
+            return;
+        }
+        launch = getPackageManager().getLaunchIntentForPackage("com.whatsapp.w4b");
+        if (launch != null) {
+            startActivity(launch);
+            return;
+        }
+        Toast.makeText(this, "WhatsApp não encontrado.", Toast.LENGTH_LONG).show();
+    }
+
+    private void updateAll() {
+        sourceCount.setText("Figurinhas-base: " + sources.size() + " / " + MAX_SOURCES);
+        activeLabel.setText(activeIndex >= 0 && activeIndex < sources.size()
+                ? "ATIVA: figurinha #" + (activeIndex + 1) + " — toque em outra miniatura para trocar"
+                : "Nenhuma figurinha ativa");
+        queueCount.setText("FILA: " + queue.size() + " / " + MAX_QUEUE);
+        progressLabel.setText(queue.isEmpty()
+                ? "Monte a fila para começar."
+                : "Progresso manual: " + sentCount + " / " + queue.size());
+        undoButton.setEnabled(!queue.isEmpty());
+        clearQueueButton.setEnabled(!queue.isEmpty());
+        nextButton.setEnabled(!queue.isEmpty() && sentCount < queue.size());
+        renderSources();
+        renderQueue();
+        renderNext();
+    }
+
+    private void renderSources() {
+        sourcesRow.removeAllViews();
+        for (int i = 0; i < sources.size(); i++) {
+            final int index = i;
+            Uri uri = sources.get(i);
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setGravity(Gravity.CENTER);
+            card.setPadding(dp(3), dp(3), dp(3), dp(3));
+
             ImageView image = new ImageView(this);
             image.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            image.setBackgroundColor(Color.rgb(230, 230, 230));
+            image.setBackgroundColor(index == activeIndex ? Color.rgb(180, 230, 220) : Color.rgb(230, 230, 230));
             image.setTag(uri.toString());
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(88), dp(88));
-            params.setMargins(0, 0, dp(8), 0);
-            previewRow.addView(image, params);
-
-            executor.execute(() -> {
-                Bitmap thumb = loadPreviewBitmap(uri);
-                if (thumb == null) return;
-                runOnUiThread(() -> {
-                    if (uri.toString().equals(image.getTag())) {
-                        image.setImageBitmap(thumb);
-                    } else {
-                        thumb.recycle();
-                    }
-                });
+            image.setOnClickListener(v -> {
+                activeIndex = index;
+                updateAll();
             });
+            card.addView(image, new LinearLayout.LayoutParams(dp(84), dp(84)));
+
+            TextView label = text(index == activeIndex ? "ATIVA #" + (index + 1) : "#" + (index + 1), 12,
+                    index == activeIndex ? Color.rgb(7, 94, 84) : Color.DKGRAY);
+            label.setGravity(Gravity.CENTER);
+            card.addView(label, new LinearLayout.LayoutParams(dp(92), dp(28)));
+
+            LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(dp(96), dp(118));
+            cp.setMargins(0, 0, dp(6), 0);
+            sourcesRow.addView(card, cp);
+            loadInto(image, uri, 220);
         }
     }
 
-    private Bitmap loadPreviewBitmap(Uri uri) {
+    private void renderQueue() {
+        queueRow.removeAllViews();
+        int visible = Math.min(queue.size(), 30);
+        for (int i = 0; i < visible; i++) {
+            Uri uri = queue.get(i);
+            ImageView image = new ImageView(this);
+            image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setBackgroundColor(i < sentCount ? Color.LTGRAY : Color.rgb(235, 235, 235));
+            image.setTag(uri.toString() + ":" + i);
+            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(dp(70), dp(70));
+            p.setMargins(0, 0, dp(5), 0);
+            queueRow.addView(image, p);
+            loadInto(image, uri, 160);
+        }
+        if (queue.size() > visible) {
+            TextView more = text("+" + (queue.size() - visible) + "\nmais", 14, Color.DKGRAY);
+            more.setGravity(Gravity.CENTER);
+            queueRow.addView(more, new LinearLayout.LayoutParams(dp(72), dp(70)));
+        }
+    }
+
+    private void renderNext() {
+        nextImage.setImageDrawable(null);
+        if (queue.isEmpty() || sentCount >= queue.size()) {
+            nextImage.setBackgroundColor(Color.rgb(235, 235, 235));
+            return;
+        }
+        nextImage.setBackgroundColor(Color.rgb(235, 235, 235));
+        loadInto(nextImage, queue.get(sentCount), 420);
+    }
+
+    private void loadInto(ImageView view, Uri uri, int size) {
+        final String tag = uri.toString() + ":" + System.identityHashCode(view);
+        view.setTag(tag);
+        executor.execute(() -> {
+            Bitmap bmp = loadPreviewBitmap(uri, size);
+            if (bmp == null) return;
+            runOnUiThread(() -> {
+                if (tag.equals(view.getTag())) view.setImageBitmap(bmp);
+                else bmp.recycle();
+            });
+        });
+    }
+
+    private Bitmap loadPreviewBitmap(Uri uri, int size) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                return getContentResolver().loadThumbnail(uri, new Size(240, 240), null);
+                return getContentResolver().loadThumbnail(uri, new Size(size, size), null);
             }
-
             BitmapFactory.Options bounds = new BitmapFactory.Options();
             bounds.inJustDecodeBounds = true;
             try (InputStream in = getContentResolver().openInputStream(uri)) {
                 BitmapFactory.decodeStream(in, null, bounds);
             }
-
             int sample = 1;
-            while (bounds.outWidth / sample > 320 || bounds.outHeight / sample > 320) {
-                sample *= 2;
-            }
+            while (bounds.outWidth / sample > size || bounds.outHeight / sample > size) sample *= 2;
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inSampleSize = Math.max(1, sample);
             try (InputStream in = getContentResolver().openInputStream(uri)) {
@@ -285,146 +437,19 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void preparePack(List<Uri> uris) {
-        selectButton.setEnabled(false);
-        clearButton.setEnabled(false);
-        prepareButton.setEnabled(false);
-        addButton.setEnabled(false);
-        progress.setVisibility(View.VISIBLE);
-        setStatus("Preparando " + uris.size() + " figurinhas...");
-
-        executor.execute(() -> {
-            try {
-                File packDir = PackStorage.getPackDirectory(this);
-                PackStorage.clearDirectory(packDir);
-                int success = 0;
-                Bitmap firstSticker = null;
-
-                for (Uri uri : uris) {
-                    Bitmap source = decodeBitmap(uri);
-                    if (source == null) continue;
-                    Bitmap sticker = fitIntoStickerCanvas(source);
-                    source.recycle();
-
-                    String name = String.format(Locale.US, "sticker_%02d.webp", success + 1);
-                    File out = new File(packDir, name);
-                    if (writeWebPWithinLimit(sticker, out)) {
-                        if (firstSticker == null) firstSticker = sticker.copy(Bitmap.Config.ARGB_8888, false);
-                        success++;
-                    }
-                    sticker.recycle();
-                }
-
-                if (success < MIN_STICKERS) {
-                    PackStorage.clearDirectory(packDir);
-                    throw new IllegalStateException("Não foi possível criar pelo menos 3 figurinhas válidas.");
-                }
-
-                if (firstSticker != null) {
-                    writeTrayIcon(firstSticker, new File(packDir, PackStorage.TRAY_FILE));
-                    firstSticker.recycle();
-                }
-
-                long version = System.currentTimeMillis();
-                getSharedPreferences(PackStorage.PREFS, MODE_PRIVATE).edit()
-                        .putLong(PackStorage.KEY_VERSION, version).apply();
-                getContentResolver().notifyChange(Uri.parse("content://" + StickerContentProvider.AUTHORITY + "/metadata"), null);
-
-                int finalSuccess = success;
-                runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
-                    updateSelectionControls();
-                    addButton.setEnabled(true);
-                    setStatus("Pacote pronto com " + finalSuccess + " figurinhas. Toque em Adicionar ao WhatsApp.");
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
-                    updateSelectionControls();
-                    addButton.setEnabled(false);
-                    setStatus("Erro: " + e.getMessage());
-                    Toast.makeText(this, "Falha ao preparar as figurinhas.", Toast.LENGTH_LONG).show();
-                });
-            }
-        });
+    private TextView text(String value, int sizeSp, int color) {
+        TextView t = new TextView(this);
+        t.setText(value);
+        t.setTextSize(sizeSp);
+        t.setTextColor(color);
+        return t;
     }
 
-    private Bitmap decodeBitmap(Uri uri) {
-        try (InputStream in = getContentResolver().openInputStream(uri)) {
-            return BitmapFactory.decodeStream(in);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private Bitmap fitIntoStickerCanvas(Bitmap source) {
-        int size = 512;
-        Bitmap result = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(result);
-        canvas.drawColor(Color.TRANSPARENT);
-        float scale = Math.min((float) size / source.getWidth(), (float) size / source.getHeight());
-        float w = source.getWidth() * scale;
-        float h = source.getHeight() * scale;
-        float left = (size - w) / 2f;
-        float top = (size - h) / 2f;
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        canvas.drawBitmap(source, null, new RectF(left, top, left + w, top + h), paint);
-        return result;
-    }
-
-    private boolean writeWebPWithinLimit(Bitmap bitmap, File out) throws Exception {
-        for (int quality = 88; quality >= 18; quality -= 7) {
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            Bitmap.CompressFormat format = Build.VERSION.SDK_INT >= 30
-                    ? Bitmap.CompressFormat.WEBP_LOSSY : Bitmap.CompressFormat.WEBP;
-            bitmap.compress(format, quality, buffer);
-            byte[] data = buffer.toByteArray();
-            if (data.length <= MAX_STICKER_BYTES) {
-                try (FileOutputStream fos = new FileOutputStream(out)) {
-                    fos.write(data);
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void writeTrayIcon(Bitmap source, File out) throws Exception {
-        Bitmap tray = Bitmap.createScaledBitmap(source, 96, 96, true);
-        try (FileOutputStream fos = new FileOutputStream(out)) {
-            tray.compress(Bitmap.CompressFormat.PNG, 100, fos);
-        }
-        tray.recycle();
-    }
-
-    private void addPackToWhatsApp() {
-        if (PackStorage.getStickerFiles(this).size() < MIN_STICKERS) {
-            Toast.makeText(this, "Prepare um pacote primeiro.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Intent intent = new Intent("com.whatsapp.intent.action.ENABLE_STICKER_PACK");
-        intent.putExtra("sticker_pack_id", PackStorage.PACK_ID);
-        intent.putExtra("sticker_pack_authority", StickerContentProvider.AUTHORITY);
-        intent.putExtra("sticker_pack_name", "Minhas Figurinhas");
-
-        try {
-            intent.setPackage("com.whatsapp");
-            startActivity(intent);
-        } catch (ActivityNotFoundException first) {
-            try {
-                intent.setPackage("com.whatsapp.w4b");
-                startActivity(intent);
-            } catch (ActivityNotFoundException second) {
-                Toast.makeText(this, "WhatsApp não encontrado ou não aceitou a integração.", Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-    private void refreshState() {
-        int count = PackStorage.getStickerFiles(this).size();
-        boolean ready = count >= MIN_STICKERS && new File(PackStorage.getPackDirectory(this), PackStorage.TRAY_FILE).exists();
-        addButton.setEnabled(ready);
-        setStatus(ready ? "Pacote salvo com " + count + " figurinhas." : "Adicione de 3 a 30 imagens para começar.");
+    private LinearLayout horizontalRow() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER);
+        return row;
     }
 
     private LinearLayout.LayoutParams fullWidth() {
@@ -433,15 +458,17 @@ public class MainActivity extends Activity {
 
     private LinearLayout.LayoutParams buttonParams() {
         LinearLayout.LayoutParams p = fullWidth();
-        p.setMargins(0, dp(6), 0, dp(6));
+        p.setMargins(0, dp(5), 0, dp(5));
+        return p;
+    }
+
+    private LinearLayout.LayoutParams smallButtonParams() {
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        p.setMargins(dp(2), dp(2), dp(2), dp(2));
         return p;
     }
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
-    }
-
-    private void setStatus(String text) {
-        if (status != null) status.setText(text);
     }
 }
