@@ -9,6 +9,8 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
@@ -32,18 +34,18 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
     private static final String START_URL = "https://zapsticker.com/catalog";
-    private static final int COPY_COUNT = 100;
-    private static final int BATCH_SIZE = 50;
+    private static final int QUEUE_TOTAL = 100;
+    private static final long NEXT_DELAY_MS = 3000L;
     private static final int MAX_SOURCE_BYTES = 1024 * 1024;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -54,7 +56,22 @@ public class MainActivity extends Activity {
     private String preparedMime;
     private String preparedExt;
     private String selectedWhatsAppPackage;
-    private boolean secondBatchPending = false;
+    private boolean queueActive = false;
+    private boolean waitingForWhatsAppReturn = false;
+    private boolean schedulingNext = false;
+    private int openedCount = 0;
+
+    private final Runnable nextIn2 = () -> {
+        if (queueActive && schedulingNext) statusText.setText("Próxima figurinha em 2 segundos • " + openedCount + "/" + QUEUE_TOTAL);
+    };
+    private final Runnable nextIn1 = () -> {
+        if (queueActive && schedulingNext) statusText.setText("Próxima figurinha em 1 segundo • " + openedCount + "/" + QUEUE_TOTAL);
+    };
+    private final Runnable launchNext = () -> {
+        if (!queueActive || !schedulingNext) return;
+        schedulingNext = false;
+        shareNextSingle();
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,19 +114,14 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.WRAP_CONTENT));
 
         actionButton = new Button(this);
-        actionButton.setText("BAIXAR ×100 → WHATSAPP");
+        actionButton.setText("PREPARAR ×100 → WHATSAPP");
         actionButton.setTextColor(Color.WHITE);
         actionButton.setTextSize(15);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            actionButton.setBackgroundTintList(ColorStateList.valueOf(Color.rgb(37, 211, 102)));
-        }
+        setActionButtonGreen();
         actionButton.setEnabled(true);
         actionButton.setOnClickListener(v -> {
-            if (secondBatchPending) {
-                sendSecondBatch();
-            } else {
-                captureCurrentSticker();
-            }
+            if (queueActive) cancelQueue();
+            else captureCurrentSticker();
         });
 
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
@@ -145,7 +157,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setSupportZoom(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " MultiFigurinhas/1.4.3");
+        settings.setUserAgentString(settings.getUserAgentString() + " MultiFigurinhas/1.5");
         userAgent = settings.getUserAgentString();
 
         webView.addJavascriptInterface(new StickerBridge(), "MultiFigurinhas");
@@ -173,10 +185,11 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if (!secondBatchPending) {
+                if (!queueActive) {
                     actionButton.setEnabled(true);
-                    actionButton.setText("BAIXAR ×100 → WHATSAPP");
-                    statusText.setText("Abra uma figurinha e toque em BAIXAR ×100 → WHATSAPP");
+                    actionButton.setText("PREPARAR ×100 → WHATSAPP");
+                    setActionButtonGreen();
+                    statusText.setText("Abra uma figurinha e toque em PREPARAR ×100 → WHATSAPP");
                 }
             }
         });
@@ -205,11 +218,8 @@ public class MainActivity extends Activity {
                 try {
                     startActivity(parsed);
                 } catch (ActivityNotFoundException e) {
-                    if (fallback != null && !fallback.isEmpty()) {
-                        webView.loadUrl(fallback);
-                    } else {
-                        Toast.makeText(this, "Não foi possível abrir esse link.", Toast.LENGTH_SHORT).show();
-                    }
+                    if (fallback != null && !fallback.isEmpty()) webView.loadUrl(fallback);
+                    else Toast.makeText(this, "Não foi possível abrir esse link.", Toast.LENGTH_SHORT).show();
                 }
             } catch (Exception e) {
                 Toast.makeText(this, "Não foi possível abrir esse link.", Toast.LENGTH_SHORT).show();
@@ -220,9 +230,7 @@ public class MainActivity extends Activity {
         if (lower.startsWith("http://") || lower.startsWith("https://")) {
             Uri uri = Uri.parse(url);
             String host = uri.getHost();
-            if (host != null && (host.equals("zapsticker.com") || host.endsWith(".zapsticker.com"))) {
-                return false;
-            }
+            if (host != null && (host.equals("zapsticker.com") || host.endsWith(".zapsticker.com"))) return false;
             openExternal(url);
             return true;
         }
@@ -238,9 +246,8 @@ public class MainActivity extends Activity {
         String js = "(function(){"
                 + "var imgs=Array.from(document.images).filter(function(i){if(!i.src)return false;var r=i.getBoundingClientRect();var s=getComputedStyle(i);return r.width>80&&r.height>80&&r.bottom>0&&r.right>0&&r.top<innerHeight&&r.left<innerWidth&&s.display!='none'&&s.visibility!='hidden'&&parseFloat(s.opacity||'1')>0;});"
                 + "if(!imgs.length){MultiFigurinhas.onStickerUrl('');return;}"
-                + "imgs.sort(function(a,b){var ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();var aa=ra.width*ra.height,ab=rb.width*rb.height;return ab-aa;});"
-                + "var img=imgs[0];"
-                + "MultiFigurinhas.onStickerUrl(img.currentSrc||img.src||'');"
+                + "imgs.sort(function(a,b){var ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();return (rb.width*rb.height)-(ra.width*ra.height);});"
+                + "var img=imgs[0];MultiFigurinhas.onStickerUrl(img.currentSrc||img.src||'');"
                 + "})();";
         webView.evaluateJavascript(js, null);
     }
@@ -252,9 +259,7 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     statusText.setText("Nenhuma figurinha grande foi encontrada");
                     actionButton.setEnabled(true);
-                    Toast.makeText(MainActivity.this,
-                            "Abra a figurinha grande e toque no botão novamente.",
-                            Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, "Abra a figurinha grande e tente novamente.", Toast.LENGTH_LONG).show();
                 });
                 return;
             }
@@ -262,10 +267,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 String referer = webView != null ? webView.getUrl() : START_URL;
                 String cookie = null;
-                try {
-                    cookie = CookieManager.getInstance().getCookie(sourceUrl);
-                } catch (Exception ignored) {
-                }
+                try { cookie = CookieManager.getInstance().getCookie(sourceUrl); } catch (Exception ignored) {}
                 final String safeReferer = referer;
                 final String safeCookie = cookie;
                 final String safeUserAgent = userAgent;
@@ -292,37 +294,24 @@ public class MainActivity extends Activity {
                 connection.setInstanceFollowRedirects(true);
                 connection.setConnectTimeout(15000);
                 connection.setReadTimeout(20000);
-                if (requestUserAgent != null && !requestUserAgent.isEmpty()) {
-                    connection.setRequestProperty("User-Agent", requestUserAgent);
-                }
-                if (referer != null && !referer.isEmpty()) {
-                    connection.setRequestProperty("Referer", referer);
-                }
-                if (cookie != null && !cookie.isEmpty()) {
-                    connection.setRequestProperty("Cookie", cookie);
-                }
+                if (requestUserAgent != null && !requestUserAgent.isEmpty()) connection.setRequestProperty("User-Agent", requestUserAgent);
+                if (referer != null && !referer.isEmpty()) connection.setRequestProperty("Referer", referer);
+                if (cookie != null && !cookie.isEmpty()) connection.setRequestProperty("Cookie", cookie);
                 connection.connect();
 
                 int code = connection.getResponseCode();
-                if (code < 200 || code >= 300) {
-                    throw new IllegalStateException("Falha ao baixar: HTTP " + code);
-                }
+                if (code < 200 || code >= 300) throw new IllegalStateException("Falha ao baixar: HTTP " + code);
 
                 mime = connection.getContentType();
-                if (mime != null && mime.contains(";")) {
-                    mime = mime.substring(0, mime.indexOf(';')).trim();
-                }
+                if (mime != null && mime.contains(";")) mime = mime.substring(0, mime.indexOf(';')).trim();
 
-                try (InputStream in = connection.getInputStream();
-                     ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                try (InputStream in = connection.getInputStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                     byte[] buffer = new byte[8192];
                     int read;
                     int total = 0;
                     while ((read = in.read(buffer)) != -1) {
                         total += read;
-                        if (total > MAX_SOURCE_BYTES) {
-                            throw new IllegalStateException("Figurinha maior que 1 MB");
-                        }
+                        if (total > MAX_SOURCE_BYTES) throw new IllegalStateException("Figurinha maior que 1 MB");
                         out.write(buffer, 0, read);
                     }
                     data = out.toByteArray();
@@ -333,19 +322,14 @@ public class MainActivity extends Activity {
 
             if (data.length == 0) throw new IllegalStateException("Arquivo vazio");
             if (data.length > MAX_SOURCE_BYTES) throw new IllegalStateException("Figurinha maior que 1 MB");
-
             if (mime == null || !mime.startsWith("image/")) mime = inferMime(sourceUrl);
-            String ext = extensionForMime(mime);
 
+            String ext = extensionForMime(mime);
             File dir = ShareContentProvider.getShareDirectory(this);
             clearDirectory(dir);
-
-            runOnUiThread(() -> statusText.setText("Multiplicando por 100..."));
-            for (int i = 1; i <= COPY_COUNT; i++) {
-                String name = String.format(Locale.US, "sticker_%03d.%s", i, ext);
-                try (FileOutputStream fos = new FileOutputStream(new File(dir, name))) {
-                    fos.write(data);
-                }
+            String name = "sticker_001." + ext;
+            try (FileOutputStream fos = new FileOutputStream(new File(dir, name))) {
+                fos.write(data);
             }
 
             getSharedPreferences(ShareContentProvider.PREFS, MODE_PRIVATE)
@@ -353,18 +337,15 @@ public class MainActivity extends Activity {
 
             preparedMime = mime;
             preparedExt = ext;
-
             runOnUiThread(() -> {
-                statusText.setText("100 cópias prontas • serão enviadas em 2 lotes de 50");
+                statusText.setText("Figurinha pronta • fila de 100 envios separados");
                 showWhatsAppChoice();
             });
         } catch (Exception e) {
             runOnUiThread(() -> {
-                statusText.setText("Falha ao preparar ×100");
+                statusText.setText("Falha ao preparar a figurinha");
                 actionButton.setEnabled(true);
-                Toast.makeText(this,
-                        "Erro: " + e.getClass().getSimpleName() + ": " + e.getMessage(),
-                        Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Erro: " + e.getClass().getSimpleName() + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
             });
         }
     }
@@ -381,69 +362,127 @@ public class MainActivity extends Activity {
 
         if (normal && business) {
             new AlertDialog.Builder(this)
-                    .setTitle("Enviar 100 cópias em 2 lotes de 50")
+                    .setTitle("Iniciar fila de 100 envios separados")
+                    .setMessage("Cada retorno ao app inicia automaticamente a próxima figurinha após 3 segundos. O envio continua dependendo da sua confirmação no WhatsApp.")
                     .setItems(new String[]{"WhatsApp", "WhatsApp Business"}, (dialog, which) -> {
                         selectedWhatsAppPackage = which == 0 ? "com.whatsapp" : "com.whatsapp.w4b";
-                        sendFirstBatch();
+                        startQueue();
                     })
                     .setNegativeButton("Cancelar", (dialog, which) -> actionButton.setEnabled(true))
                     .show();
         } else {
             selectedWhatsAppPackage = normal ? "com.whatsapp" : "com.whatsapp.w4b";
-            sendFirstBatch();
+            startQueue();
         }
     }
 
-    private void sendFirstBatch() {
-        secondBatchPending = true;
+    private void startQueue() {
+        queueActive = true;
+        waitingForWhatsAppReturn = false;
+        schedulingNext = false;
+        openedCount = 0;
         actionButton.setEnabled(true);
-        actionButton.setText("ENVIAR RESTANTES 50 → WHATSAPP");
-        statusText.setText("1º lote: escolha a conversa/grupo. Depois volte ao app para os outros 50.");
-        shareBatch(1, BATCH_SIZE);
+        actionButton.setText("CANCELAR FILA 0/100");
+        setActionButtonCancel();
+        statusText.setText("Iniciando 1/100...");
+        shareNextSingle();
     }
 
-    private void sendSecondBatch() {
-        if (selectedWhatsAppPackage == null || preparedMime == null || preparedExt == null) {
-            secondBatchPending = false;
-            actionButton.setText("BAIXAR ×100 → WHATSAPP");
-            statusText.setText("Abra uma figurinha e tente novamente");
+    private void shareNextSingle() {
+        if (!queueActive) return;
+        if (openedCount >= QUEUE_TOTAL) {
+            finishQueue();
+            return;
+        }
+        if (selectedWhatsAppPackage == null || preparedExt == null) {
+            cancelQueue();
             return;
         }
 
-        statusText.setText("2º lote: escolha a MESMA conversa/grupo no WhatsApp");
-        shareBatch(BATCH_SIZE + 1, COPY_COUNT);
+        int nextNumber = openedCount + 1;
+        String name = "sticker_001." + preparedExt;
+        Uri uri = Uri.parse("content://" + ShareContentProvider.AUTHORITY + "/sticker/" + name + "?copy=" + nextNumber);
+        grantUriPermission(selectedWhatsAppPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-        secondBatchPending = false;
-        actionButton.setText("BAIXAR ×100 → WHATSAPP");
-        actionButton.setEnabled(true);
-        selectedWhatsAppPackage = null;
-        preparedMime = null;
-        preparedExt = null;
-    }
-
-    private void shareBatch(int start, int end) {
-        ArrayList<Uri> streams = new ArrayList<>(end - start + 1);
-
-        for (int i = start; i <= end; i++) {
-            String name = String.format(Locale.US, "sticker_%03d.%s", i, preparedExt);
-            Uri uri = Uri.parse("content://" + ShareContentProvider.AUTHORITY + "/sticker/" + name);
-            streams.add(uri);
-            grantUriPermission(selectedWhatsAppPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        }
-
-        Intent send = new Intent(Intent.ACTION_SEND_MULTIPLE);
+        Intent send = new Intent(Intent.ACTION_SEND);
         send.setPackage(selectedWhatsAppPackage);
         send.setType(preparedMime != null ? preparedMime : "image/webp");
-        send.putParcelableArrayListExtra(Intent.EXTRA_STREAM, streams);
+        send.putExtra(Intent.EXTRA_STREAM, uri);
         send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
         try {
+            openedCount = nextNumber;
+            waitingForWhatsAppReturn = true;
+            actionButton.setText("CANCELAR FILA " + openedCount + "/" + QUEUE_TOTAL);
+            statusText.setText("Figurinha " + openedCount + "/" + QUEUE_TOTAL + " aberta no WhatsApp • confirme o envio");
             startActivity(send);
         } catch (Exception e) {
-            actionButton.setEnabled(true);
-            Toast.makeText(this,
-                    "O WhatsApp não aceitou este lote de 50 mídias.",
-                    Toast.LENGTH_LONG).show();
+            waitingForWhatsAppReturn = false;
+            Toast.makeText(this, "Não foi possível abrir a figurinha no WhatsApp.", Toast.LENGTH_LONG).show();
+            cancelQueue();
+        }
+    }
+
+    private void scheduleNext() {
+        if (!queueActive || schedulingNext) return;
+        if (openedCount >= QUEUE_TOTAL) {
+            finishQueue();
+            return;
+        }
+        schedulingNext = true;
+        statusText.setText("Próxima figurinha em 3 segundos • " + openedCount + "/" + QUEUE_TOTAL);
+        handler.postDelayed(nextIn2, 1000L);
+        handler.postDelayed(nextIn1, 2000L);
+        handler.postDelayed(launchNext, NEXT_DELAY_MS);
+    }
+
+    private void cancelQueue() {
+        queueActive = false;
+        waitingForWhatsAppReturn = false;
+        schedulingNext = false;
+        handler.removeCallbacks(nextIn2);
+        handler.removeCallbacks(nextIn1);
+        handler.removeCallbacks(launchNext);
+        actionButton.setText("PREPARAR ×100 → WHATSAPP");
+        setActionButtonGreen();
+        actionButton.setEnabled(true);
+        statusText.setText("Fila cancelada em " + openedCount + "/" + QUEUE_TOTAL);
+        selectedWhatsAppPackage = null;
+        openedCount = 0;
+    }
+
+    private void finishQueue() {
+        queueActive = false;
+        waitingForWhatsAppReturn = false;
+        schedulingNext = false;
+        handler.removeCallbacks(nextIn2);
+        handler.removeCallbacks(nextIn1);
+        handler.removeCallbacks(launchNext);
+        actionButton.setText("PREPARAR ×100 → WHATSAPP");
+        setActionButtonGreen();
+        actionButton.setEnabled(true);
+        statusText.setText("Fila 100/100 concluída");
+        selectedWhatsAppPackage = null;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (queueActive && waitingForWhatsAppReturn) {
+            waitingForWhatsAppReturn = false;
+            scheduleNext();
+        }
+    }
+
+    private void setActionButtonGreen() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            actionButton.setBackgroundTintList(ColorStateList.valueOf(Color.rgb(37, 211, 102)));
+        }
+    }
+
+    private void setActionButtonCancel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            actionButton.setBackgroundTintList(ColorStateList.valueOf(Color.rgb(190, 45, 45)));
         }
     }
 
@@ -467,9 +506,7 @@ public class MainActivity extends Activity {
     private void clearDirectory(File dir) {
         File[] files = dir.listFiles();
         if (files == null) return;
-        for (File file : files) {
-            if (file.isFile()) file.delete();
-        }
+        for (File file : files) if (file.isFile()) file.delete();
     }
 
     private void openExternal(String url) {
@@ -482,7 +519,14 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
+        if (queueActive) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Cancelar fila?")
+                    .setMessage("A fila está em " + openedCount + "/" + QUEUE_TOTAL + ".")
+                    .setPositiveButton("Cancelar fila", (d, w) -> cancelQueue())
+                    .setNegativeButton("Continuar", null)
+                    .show();
+        } else if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
             super.onBackPressed();
@@ -491,6 +535,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        handler.removeCallbacksAndMessages(null);
         executor.shutdownNow();
         if (webView != null) {
             webView.removeJavascriptInterface("MultiFigurinhas");
