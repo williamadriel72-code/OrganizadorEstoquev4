@@ -13,9 +13,12 @@ import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Size;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
@@ -39,8 +42,14 @@ public class MainActivity extends Activity {
     private static final long MAX_STICKER_BYTES = 100L * 1024L;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ArrayList<Uri> selectedUris = new ArrayList<>();
+
     private TextView status;
+    private TextView selectionCount;
+    private LinearLayout previewRow;
     private Button selectButton;
+    private Button clearButton;
+    private Button prepareButton;
     private Button addButton;
     private ProgressBar progress;
 
@@ -49,6 +58,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         buildUi();
         refreshState();
+        updateSelectionControls();
     }
 
     private void buildUi() {
@@ -69,17 +79,52 @@ public class MainActivity extends Activity {
         root.addView(title, fullWidth());
 
         TextView description = new TextView(this);
-        description.setText("Selecione de 3 a 30 imagens. O app converte para figurinhas e prepara um pacote para adicionar ao WhatsApp. Não envia mensagens automaticamente.");
+        description.setText("Adicione de 3 a 30 imagens. Se o seletor do seu celular permitir apenas uma por vez, volte e toque em Adicionar imagens novamente. As fotos escolhidas ficam visíveis abaixo.");
         description.setTextSize(16);
         description.setTextColor(Color.DKGRAY);
         description.setGravity(Gravity.CENTER);
-        description.setPadding(0, 0, 0, dp(24));
+        description.setPadding(0, 0, 0, dp(18));
         root.addView(description, fullWidth());
 
         selectButton = new Button(this);
-        selectButton.setText("1. SELECIONAR FIGURINHAS");
+        selectButton.setText("1. ADICIONAR IMAGENS");
         selectButton.setOnClickListener(v -> openPicker());
         root.addView(selectButton, buttonParams());
+
+        selectionCount = new TextView(this);
+        selectionCount.setTextSize(15);
+        selectionCount.setTextColor(Color.DKGRAY);
+        selectionCount.setGravity(Gravity.CENTER);
+        selectionCount.setPadding(0, dp(10), 0, dp(8));
+        root.addView(selectionCount, fullWidth());
+
+        HorizontalScrollView previewScroll = new HorizontalScrollView(this);
+        previewScroll.setHorizontalScrollBarEnabled(true);
+        previewRow = new LinearLayout(this);
+        previewRow.setOrientation(LinearLayout.HORIZONTAL);
+        previewRow.setGravity(Gravity.CENTER_VERTICAL);
+        previewRow.setPadding(0, dp(4), 0, dp(4));
+        previewScroll.addView(previewRow);
+        LinearLayout.LayoutParams previewParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(104));
+        previewParams.setMargins(0, 0, 0, dp(6));
+        root.addView(previewScroll, previewParams);
+
+        clearButton = new Button(this);
+        clearButton.setText("LIMPAR SELEÇÃO");
+        clearButton.setOnClickListener(v -> clearSelection());
+        root.addView(clearButton, buttonParams());
+
+        prepareButton = new Button(this);
+        prepareButton.setText("2. PREPARAR PACOTE");
+        prepareButton.setOnClickListener(v -> {
+            if (selectedUris.size() < MIN_STICKERS) {
+                Toast.makeText(this, "Adicione pelo menos 3 imagens.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            preparePack(new ArrayList<>(selectedUris));
+        });
+        root.addView(prepareButton, buttonParams());
 
         progress = new ProgressBar(this);
         progress.setIndeterminate(true);
@@ -96,7 +141,7 @@ public class MainActivity extends Activity {
         root.addView(status, fullWidth());
 
         addButton = new Button(this);
-        addButton.setText("2. ADICIONAR AO WHATSAPP");
+        addButton.setText("3. ADICIONAR AO WHATSAPP");
         addButton.setOnClickListener(v -> addPackToWhatsApp());
         root.addView(addButton, buttonParams());
 
@@ -111,10 +156,15 @@ public class MainActivity extends Activity {
     }
 
     private void openPicker() {
+        if (selectedUris.size() >= MAX_STICKERS) {
+            Toast.makeText(this, "Você já selecionou 30 imagens.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("image/*");
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         startActivityForResult(intent, PICK_IMAGES);
     }
 
@@ -123,25 +173,122 @@ public class MainActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != PICK_IMAGES || resultCode != RESULT_OK || data == null) return;
 
-        ArrayList<Uri> uris = new ArrayList<>();
+        ArrayList<Uri> returned = new ArrayList<>();
         ClipData clip = data.getClipData();
         if (clip != null) {
-            for (int i = 0; i < clip.getItemCount() && uris.size() < MAX_STICKERS; i++) {
-                uris.add(clip.getItemAt(i).getUri());
+            for (int i = 0; i < clip.getItemCount(); i++) {
+                returned.add(clip.getItemAt(i).getUri());
             }
         } else if (data.getData() != null) {
-            uris.add(data.getData());
+            returned.add(data.getData());
         }
 
-        if (uris.size() < MIN_STICKERS) {
-            Toast.makeText(this, "Selecione pelo menos 3 imagens de uma vez.", Toast.LENGTH_LONG).show();
-            return;
+        int added = 0;
+        for (Uri uri : returned) {
+            if (selectedUris.size() >= MAX_STICKERS) break;
+            if (uri == null || selectedUris.contains(uri)) continue;
+            persistReadPermission(uri, data);
+            selectedUris.add(uri);
+            added++;
         }
-        preparePack(uris);
+
+        renderPreviews();
+        updateSelectionControls();
+
+        if (added == 0) {
+            Toast.makeText(this, "Nenhuma imagem nova foi adicionada.", Toast.LENGTH_SHORT).show();
+        } else if (selectedUris.size() < MIN_STICKERS) {
+            Toast.makeText(this,
+                    added + " imagem(ns) adicionada(s). Adicione mais " + (MIN_STICKERS - selectedUris.size()) + ".",
+                    Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(this,
+                    selectedUris.size() + " imagens selecionadas. Você já pode preparar o pacote.",
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void persistReadPermission(Uri uri, Intent data) {
+        try {
+            int takeFlags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
+            if (takeFlags != 0) {
+                getContentResolver().takePersistableUriPermission(uri, takeFlags);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void clearSelection() {
+        selectedUris.clear();
+        previewRow.removeAllViews();
+        updateSelectionControls();
+        setStatus("Seleção limpa. Adicione de 3 a 30 imagens.");
+    }
+
+    private void updateSelectionControls() {
+        int count = selectedUris.size();
+        selectButton.setEnabled(count < MAX_STICKERS && progress.getVisibility() != View.VISIBLE);
+        clearButton.setEnabled(count > 0 && progress.getVisibility() != View.VISIBLE);
+        prepareButton.setEnabled(count >= MIN_STICKERS && progress.getVisibility() != View.VISIBLE);
+        selectionCount.setText("Selecionadas: " + count + " / " + MAX_STICKERS
+                + (count < MIN_STICKERS ? "  •  faltam " + (MIN_STICKERS - count) : "  •  prontas para preparar"));
+    }
+
+    private void renderPreviews() {
+        previewRow.removeAllViews();
+        for (Uri uri : selectedUris) {
+            ImageView image = new ImageView(this);
+            image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            image.setBackgroundColor(Color.rgb(230, 230, 230));
+            image.setTag(uri.toString());
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(88), dp(88));
+            params.setMargins(0, 0, dp(8), 0);
+            previewRow.addView(image, params);
+
+            executor.execute(() -> {
+                Bitmap thumb = loadPreviewBitmap(uri);
+                if (thumb == null) return;
+                runOnUiThread(() -> {
+                    if (uri.toString().equals(image.getTag())) {
+                        image.setImageBitmap(thumb);
+                    } else {
+                        thumb.recycle();
+                    }
+                });
+            });
+        }
+    }
+
+    private Bitmap loadPreviewBitmap(Uri uri) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                return getContentResolver().loadThumbnail(uri, new Size(240, 240), null);
+            }
+
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            try (InputStream in = getContentResolver().openInputStream(uri)) {
+                BitmapFactory.decodeStream(in, null, bounds);
+            }
+
+            int sample = 1;
+            while (bounds.outWidth / sample > 320 || bounds.outHeight / sample > 320) {
+                sample *= 2;
+            }
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = Math.max(1, sample);
+            try (InputStream in = getContentResolver().openInputStream(uri)) {
+                return BitmapFactory.decodeStream(in, null, options);
+            }
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void preparePack(List<Uri> uris) {
         selectButton.setEnabled(false);
+        clearButton.setEnabled(false);
+        prepareButton.setEnabled(false);
         addButton.setEnabled(false);
         progress.setVisibility(View.VISIBLE);
         setStatus("Preparando " + uris.size() + " figurinhas...");
@@ -186,14 +333,14 @@ public class MainActivity extends Activity {
                 int finalSuccess = success;
                 runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
-                    selectButton.setEnabled(true);
+                    updateSelectionControls();
                     addButton.setEnabled(true);
                     setStatus("Pacote pronto com " + finalSuccess + " figurinhas. Toque em Adicionar ao WhatsApp.");
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
-                    selectButton.setEnabled(true);
+                    updateSelectionControls();
                     addButton.setEnabled(false);
                     setStatus("Erro: " + e.getMessage());
                     Toast.makeText(this, "Falha ao preparar as figurinhas.", Toast.LENGTH_LONG).show();
@@ -277,7 +424,7 @@ public class MainActivity extends Activity {
         int count = PackStorage.getStickerFiles(this).size();
         boolean ready = count >= MIN_STICKERS && new File(PackStorage.getPackDirectory(this), PackStorage.TRAY_FILE).exists();
         addButton.setEnabled(ready);
-        setStatus(ready ? "Pacote salvo com " + count + " figurinhas." : "Selecione de 3 a 30 imagens para começar.");
+        setStatus(ready ? "Pacote salvo com " + count + " figurinhas." : "Adicione de 3 a 30 imagens para começar.");
     }
 
     private LinearLayout.LayoutParams fullWidth() {
