@@ -3,7 +3,6 @@ package com.multifigurinhas.app;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
-import android.content.ClipData;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -41,6 +40,7 @@ import java.util.concurrent.Executors;
 public class MainActivity extends Activity {
     private static final String START_URL = "https://zapsticker.com/catalog";
     private static final int COPY_COUNT = 100;
+    private static final int BATCH_SIZE = 50;
     private static final int MAX_SOURCE_BYTES = 1024 * 1024;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -50,6 +50,11 @@ public class MainActivity extends Activity {
     private Button actionButton;
     private TextView statusText;
     private String userAgent;
+
+    private String preparedMime;
+    private String preparedExt;
+    private String selectedWhatsAppPackage;
+    private boolean secondBatchPending = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,7 +104,14 @@ public class MainActivity extends Activity {
             actionButton.setBackgroundTintList(ColorStateList.valueOf(Color.rgb(37, 211, 102)));
         }
         actionButton.setEnabled(true);
-        actionButton.setOnClickListener(v -> captureCurrentSticker());
+        actionButton.setOnClickListener(v -> {
+            if (secondBatchPending) {
+                sendSecondBatch();
+            } else {
+                captureCurrentSticker();
+            }
+        });
+
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -133,7 +145,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setSupportZoom(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " MultiFigurinhas/1.4.2");
+        settings.setUserAgentString(settings.getUserAgentString() + " MultiFigurinhas/1.4.3");
         userAgent = settings.getUserAgentString();
 
         webView.addJavascriptInterface(new StickerBridge(), "MultiFigurinhas");
@@ -161,8 +173,11 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                actionButton.setEnabled(true);
-                statusText.setText("Abra uma figurinha e toque em BAIXAR ×100 → WHATSAPP");
+                if (!secondBatchPending) {
+                    actionButton.setEnabled(true);
+                    actionButton.setText("BAIXAR ×100 → WHATSAPP");
+                    statusText.setText("Abra uma figurinha e toque em BAIXAR ×100 → WHATSAPP");
+                }
             }
         });
 
@@ -238,7 +253,7 @@ public class MainActivity extends Activity {
                     statusText.setText("Nenhuma figurinha grande foi encontrada");
                     actionButton.setEnabled(true);
                     Toast.makeText(MainActivity.this,
-                            "Abra a figurinha grande como no seu print e toque no botão novamente.",
+                            "Abra a figurinha grande e toque no botão novamente.",
                             Toast.LENGTH_LONG).show();
                 });
                 return;
@@ -336,22 +351,25 @@ public class MainActivity extends Activity {
             getSharedPreferences(ShareContentProvider.PREFS, MODE_PRIVATE)
                     .edit().putString(ShareContentProvider.KEY_MIME, mime).apply();
 
-            String finalMime = mime;
-            String finalExt = ext;
+            preparedMime = mime;
+            preparedExt = ext;
+
             runOnUiThread(() -> {
-                statusText.setText("100 cópias prontas • escolha o WhatsApp");
-                showWhatsAppChoice(finalMime, finalExt);
+                statusText.setText("100 cópias prontas • serão enviadas em 2 lotes de 50");
+                showWhatsAppChoice();
             });
         } catch (Exception e) {
             runOnUiThread(() -> {
                 statusText.setText("Falha ao preparar ×100");
                 actionButton.setEnabled(true);
-                Toast.makeText(this, "Erro: " + e.getClass().getSimpleName() + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this,
+                        "Erro: " + e.getClass().getSimpleName() + ": " + e.getMessage(),
+                        Toast.LENGTH_LONG).show();
             });
         }
     }
 
-    private void showWhatsAppChoice(String mime, String ext) {
+    private void showWhatsAppChoice() {
         boolean normal = getPackageManager().getLaunchIntentForPackage("com.whatsapp") != null;
         boolean business = getPackageManager().getLaunchIntentForPackage("com.whatsapp.w4b") != null;
 
@@ -363,43 +381,68 @@ public class MainActivity extends Activity {
 
         if (normal && business) {
             new AlertDialog.Builder(this)
-                    .setTitle("Enviar 100 cópias para")
-                    .setItems(new String[]{"WhatsApp", "WhatsApp Business"}, (dialog, which) ->
-                            shareToWhatsApp(which == 0 ? "com.whatsapp" : "com.whatsapp.w4b", mime, ext))
+                    .setTitle("Enviar 100 cópias em 2 lotes de 50")
+                    .setItems(new String[]{"WhatsApp", "WhatsApp Business"}, (dialog, which) -> {
+                        selectedWhatsAppPackage = which == 0 ? "com.whatsapp" : "com.whatsapp.w4b";
+                        sendFirstBatch();
+                    })
                     .setNegativeButton("Cancelar", (dialog, which) -> actionButton.setEnabled(true))
                     .show();
         } else {
-            shareToWhatsApp(normal ? "com.whatsapp" : "com.whatsapp.w4b", mime, ext);
+            selectedWhatsAppPackage = normal ? "com.whatsapp" : "com.whatsapp.w4b";
+            sendFirstBatch();
         }
     }
 
-    private void shareToWhatsApp(String packageName, String mime, String ext) {
-        ArrayList<Uri> streams = new ArrayList<>(COPY_COUNT);
-        ClipData clipData = null;
+    private void sendFirstBatch() {
+        secondBatchPending = true;
+        actionButton.setEnabled(true);
+        actionButton.setText("ENVIAR RESTANTES 50 → WHATSAPP");
+        statusText.setText("1º lote: escolha a conversa/grupo. Depois volte ao app para os outros 50.");
+        shareBatch(1, BATCH_SIZE);
+    }
 
-        for (int i = 1; i <= COPY_COUNT; i++) {
-            String name = String.format(Locale.US, "sticker_%03d.%s", i, ext);
+    private void sendSecondBatch() {
+        if (selectedWhatsAppPackage == null || preparedMime == null || preparedExt == null) {
+            secondBatchPending = false;
+            actionButton.setText("BAIXAR ×100 → WHATSAPP");
+            statusText.setText("Abra uma figurinha e tente novamente");
+            return;
+        }
+
+        statusText.setText("2º lote: escolha a MESMA conversa/grupo no WhatsApp");
+        shareBatch(BATCH_SIZE + 1, COPY_COUNT);
+
+        secondBatchPending = false;
+        actionButton.setText("BAIXAR ×100 → WHATSAPP");
+        actionButton.setEnabled(true);
+        selectedWhatsAppPackage = null;
+        preparedMime = null;
+        preparedExt = null;
+    }
+
+    private void shareBatch(int start, int end) {
+        ArrayList<Uri> streams = new ArrayList<>(end - start + 1);
+
+        for (int i = start; i <= end; i++) {
+            String name = String.format(Locale.US, "sticker_%03d.%s", i, preparedExt);
             Uri uri = Uri.parse("content://" + ShareContentProvider.AUTHORITY + "/sticker/" + name);
             streams.add(uri);
-            grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            if (clipData == null) clipData = ClipData.newUri(getContentResolver(), "figurinha", uri);
-            else clipData.addItem(new ClipData.Item(uri));
+            grantUriPermission(selectedWhatsAppPackage, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
         }
 
         Intent send = new Intent(Intent.ACTION_SEND_MULTIPLE);
-        send.setPackage(packageName);
-        send.setType(mime != null ? mime : "image/webp");
+        send.setPackage(selectedWhatsAppPackage);
+        send.setType(preparedMime != null ? preparedMime : "image/webp");
         send.putParcelableArrayListExtra(Intent.EXTRA_STREAM, streams);
-        send.setClipData(clipData);
         send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
         try {
             startActivity(send);
-            statusText.setText("Escolha a conversa/grupo no WhatsApp");
         } catch (Exception e) {
             actionButton.setEnabled(true);
             Toast.makeText(this,
-                    "O WhatsApp não aceitou 100 anexos de uma vez.",
+                    "O WhatsApp não aceitou este lote de 50 mídias.",
                     Toast.LENGTH_LONG).show();
         }
     }
@@ -424,7 +467,9 @@ public class MainActivity extends Activity {
     private void clearDirectory(File dir) {
         File[] files = dir.listFiles();
         if (files == null) return;
-        for (File file : files) if (file.isFile()) file.delete();
+        for (File file : files) {
+            if (file.isFile()) file.delete();
+        }
     }
 
     private void openExternal(String url) {
@@ -437,8 +482,11 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) webView.goBack();
-        else super.onBackPressed();
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     @Override
