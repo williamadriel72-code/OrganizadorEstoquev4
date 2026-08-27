@@ -34,7 +34,7 @@ public class MainActivity extends Activity {
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(28), dp(24), dp(24));
+        root.setPadding(dp(24), dp(20), dp(24), dp(20));
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         root.setBackgroundColor(Color.rgb(245, 247, 250));
 
@@ -44,37 +44,37 @@ public class MainActivity extends Activity {
         title.setTextColor(Color.rgb(18, 24, 33));
         title.setGravity(Gravity.CENTER);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
-        root.addView(title, fullWidth(dp(56)));
+        root.addView(title, fullWidth(dp(52)));
 
         TextView description = new TextView(this);
         description.setText("Ative a Acessibilidade. Depois use o controle flutuante: MARCAR PONTO → toque no local → INICIAR.");
         description.setTextSize(15);
         description.setTextColor(Color.DKGRAY);
         description.setGravity(Gravity.CENTER);
-        root.addView(description, fullWidth(dp(85)));
+        root.addView(description, fullWidth(dp(72)));
 
         accessibilityStatus = new TextView(this);
         accessibilityStatus.setTextSize(16);
         accessibilityStatus.setGravity(Gravity.CENTER);
         accessibilityStatus.setTypeface(null, android.graphics.Typeface.BOLD);
-        root.addView(accessibilityStatus, fullWidth(dp(45)));
+        root.addView(accessibilityStatus, fullWidth(dp(40)));
 
         TextView qLabel = label("Quantidade de cliques (1 a 100)");
-        root.addView(qLabel, fullWidth(dp(34)));
+        root.addView(qLabel, fullWidth(dp(30)));
 
         quantityInput = numberInput(String.valueOf(prefs.getInt(KEY_QTY, 100)));
-        root.addView(quantityInput, fullWidth(dp(52)));
+        root.addView(quantityInput, fullWidth(dp(48)));
 
         TextView iLabel = label("Intervalo em milissegundos (mínimo 10 ms)");
-        root.addView(iLabel, fullWidth(dp(34)));
+        root.addView(iLabel, fullWidth(dp(30)));
 
         intervalInput = numberInput(String.valueOf(prefs.getInt(KEY_INTERVAL, 100)));
-        root.addView(intervalInput, fullWidth(dp(52)));
+        root.addView(intervalInput, fullWidth(dp(48)));
 
         Button save = new Button(this);
         save.setText("SALVAR CONFIGURAÇÕES");
         save.setOnClickListener(v -> saveSettings());
-        root.addView(save, fullWidth(dp(58)));
+        root.addView(save, fullWidth(dp(54)));
 
         Button accessibility = new Button(this);
         accessibility.setText("ATIVAR ACESSIBILIDADE");
@@ -83,14 +83,28 @@ public class MainActivity extends Activity {
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
             Toast.makeText(this, "Procure por AutoClicker Android e ative o serviço.", Toast.LENGTH_LONG).show();
         });
-        root.addView(accessibility, fullWidth(dp(62)));
+        root.addView(accessibility, fullWidth(dp(58)));
+
+        Button floating = new Button(this);
+        floating.setText("MINIMIZAR E DEIXAR FLUTUANDO");
+        floating.setOnClickListener(v -> {
+            saveSettings();
+            if (!isServiceEnabled(this, AutoClickService.class)) {
+                Toast.makeText(this, "Ative a Acessibilidade primeiro.", Toast.LENGTH_LONG).show();
+                startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                return;
+            }
+            Toast.makeText(this, "Painel flutuante ativo.", Toast.LENGTH_SHORT).show();
+            moveTaskToBack(true);
+        });
+        root.addView(floating, fullWidth(dp(58)));
 
         TextView help = new TextView(this);
-        help.setText("Depois de ativado, aparecerá um pequeno painel flutuante sobre a tela. Ele continua funcionando mesmo quando você abre outro aplicativo.");
+        help.setText("Com o modo flutuante, a tela principal some e o painel continua por cima dos outros aplicativos. Para voltar, abra o AutoClicker novamente pelo ícone.");
         help.setTextSize(13);
         help.setTextColor(Color.GRAY);
         help.setGravity(Gravity.CENTER);
-        root.addView(help, fullWidth(dp(90)));
+        root.addView(help, fullWidth(dp(76)));
 
         setContentView(root);
     }
@@ -164,7 +178,7 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 height
         );
-        lp.setMargins(0, dp(5), 0, dp(5));
+        lp.setMargins(0, dp(4), 0, dp(4));
         return lp;
     }
 
