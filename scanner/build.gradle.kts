@@ -10,19 +10,19 @@ android {
         applicationId = "com.autoclicker.ninja"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
     }
 }
 
-val configureStraightLine by tasks.registering {
+val configureDualHorizontal by tasks.registering {
     doLast {
         val activity = file("src/main/java/com/autoclicker/android/MainActivity.java")
         var activityText = activity.readText()
 
         activityText = activityText.replace(
             "private static final String[] PATTERNS = {\n            \"TELA TODA\", \"CÍRCULO\", \"ZIGUE-ZAGUE\"\n    };",
-            "private static final String[] PATTERNS = {\n            \"LINHA RETA • CANTO A CANTO\"\n    };"
+            "private static final String[] PATTERNS = {\n            \"2 DESLIZES HORIZONTAIS\"\n    };"
         )
         activityText = activityText.replace(
             "patternSpinner.setSelection(clamp(prefs.getInt(KEY_PATTERN, 0), 0, 2));",
@@ -30,11 +30,15 @@ val configureStraightLine by tasks.registering {
         )
         activityText = activityText.replace(
             "Faz arrastos contínuos pela tela, como cortes de Fruit Ninja. O botão PARAR fica flutuando enquanto estiver rodando.",
-            "Faz uma linha reta de um canto ao outro da tela e volta pela mesma linha continuamente."
+            "Faz 2 deslizes horizontais ao mesmo tempo: um vai para a direita e o outro para a esquerda."
         )
         activityText = activityText.replace(
             "int pattern = patternSpinner.getSelectedItemPosition();",
             "int pattern = 0;"
+        )
+        activityText = activityText.replace(
+            "Sugestão: comece com 380 ms e pausa de 20 ms. Se ficar rápido demais, aumente o valor de velocidade. Durante a execução, toque no botão vermelho PARAR para interromper.",
+            "Os dois deslizes são horizontais e acontecem juntos em sentidos opostos. Comece com 380 ms e pausa de 20 ms."
         )
         activity.writeText(activityText)
 
@@ -46,32 +50,39 @@ val configureStraightLine by tasks.registering {
             "pattern = 0;"
         )
 
+        serviceText = serviceText.replace(
+            """            Path path = buildNinjaPath();
+            GestureDescription gesture = new GestureDescription.Builder()
+                    .addStroke(new GestureDescription.StrokeDescription(path, 0, gestureMs))
+                    .build();""",
+            """            GestureDescription gesture = buildHorizontalGesture();"""
+        )
+
         val methodRegex = Regex(
             "(?s)    private Path buildNinjaPath\\(\\) \\{.*?\\n    \\}\\n\\n    private void showStopBubble"
         )
-        val newMethod = """    private Path buildNinjaPath() {
+        val newMethod = """    private GestureDescription buildHorizontalGesture() {
         DisplayMetrics dm = getResources().getDisplayMetrics();
         float width = dm.widthPixels;
         float height = dm.heightPixels;
 
-        // Linha reta diagonal de canto a canto. Alterna o sentido a cada ciclo.
-        float marginX = width * 0.035f;
-        float marginY = height * 0.055f;
-        float x1 = marginX;
-        float y1 = marginY;
-        float x2 = width - marginX;
-        float y2 = height - marginY;
-        boolean reverse = (cycle % 2L) == 1L;
+        float left = width * 0.05f;
+        float right = width * 0.95f;
+        float yTop = height * 0.42f;
+        float yBottom = height * 0.58f;
 
-        Path path = new Path();
-        if (reverse) {
-            path.moveTo(x2, y2);
-            path.lineTo(x1, y1);
-        } else {
-            path.moveTo(x1, y1);
-            path.lineTo(x2, y2);
-        }
-        return path;
+        Path toRight = new Path();
+        toRight.moveTo(left, yTop);
+        toRight.lineTo(right, yTop);
+
+        Path toLeft = new Path();
+        toLeft.moveTo(right, yBottom);
+        toLeft.lineTo(left, yBottom);
+
+        return new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(toRight, 0, gestureMs))
+                .addStroke(new GestureDescription.StrokeDescription(toLeft, 0, gestureMs))
+                .build();
     }
 
     private void showStopBubble"""
@@ -83,7 +94,7 @@ val configureStraightLine by tasks.registering {
         serviceText = serviceText.replace(
             patternRegex,
             """    private String patternName() {
-        return "LINHA RETA";
+        return "2 HORIZONTAIS";
     }
 
     private Button button"""
@@ -94,5 +105,5 @@ val configureStraightLine by tasks.registering {
 }
 
 tasks.matching { it.name == "preBuild" }.configureEach {
-    dependsOn(configureStraightLine)
+    dependsOn(configureDualHorizontal)
 }
