@@ -24,7 +24,9 @@ public class AutoClickService extends AccessibilityService {
     private WindowManager windowManager;
     private LinearLayout panel;
     private View captureOverlay;
+    private View targetMarker;
     private WindowManager.LayoutParams panelParams;
+    private WindowManager.LayoutParams markerParams;
     private TextView status;
     private Button markButton;
     private Button startButton;
@@ -148,6 +150,7 @@ public class AutoClickService extends AccessibilityService {
                 targetY = Math.round(event.getRawY());
                 hasTarget = true;
                 endPointCapture();
+                showTargetMarker();
                 status.setText("Ponto: X=" + targetX + "  Y=" + targetY);
                 startButton.setEnabled(true);
                 Toast.makeText(this, "Ponto marcado", Toast.LENGTH_SHORT).show();
@@ -168,6 +171,61 @@ public class AutoClickService extends AccessibilityService {
         params.gravity = Gravity.TOP | Gravity.START;
         windowManager.addView(captureOverlay, params);
         Toast.makeText(this, "Toque uma vez exatamente no ponto desejado", Toast.LENGTH_LONG).show();
+    }
+
+    private void showTargetMarker() {
+        if (windowManager == null || !hasTarget) return;
+
+        final int markerSize = dp(28);
+
+        if (targetMarker == null) {
+            targetMarker = new View(this);
+
+            GradientDrawable marker = new GradientDrawable();
+            marker.setShape(GradientDrawable.OVAL);
+            marker.setColor(Color.argb(150, 255, 45, 45));
+            marker.setStroke(dp(2), Color.WHITE);
+            targetMarker.setBackground(marker);
+
+            markerParams = new WindowManager.LayoutParams(
+                    markerSize,
+                    markerSize,
+                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+                            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    PixelFormat.TRANSLUCENT
+            );
+            markerParams.gravity = Gravity.TOP | Gravity.START;
+            markerParams.x = targetX - markerSize / 2;
+            markerParams.y = targetY - markerSize / 2;
+
+            try {
+                windowManager.addView(targetMarker, markerParams);
+            } catch (Exception ignored) {
+                targetMarker = null;
+                markerParams = null;
+            }
+        } else {
+            markerParams.x = targetX - markerSize / 2;
+            markerParams.y = targetY - markerSize / 2;
+            try {
+                windowManager.updateViewLayout(targetMarker, markerParams);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void removeTargetMarker() {
+        if (targetMarker != null && windowManager != null) {
+            try {
+                windowManager.removeView(targetMarker);
+            } catch (Exception ignored) {
+            }
+        }
+        targetMarker = null;
+        markerParams = null;
     }
 
     private void endPointCapture() {
@@ -301,6 +359,7 @@ public class AutoClickService extends AccessibilityService {
     public void onDestroy() {
         stopClicks("Encerrado");
         endPointCapture();
+        removeTargetMarker();
         if (panel != null && windowManager != null) {
             try {
                 windowManager.removeView(panel);
