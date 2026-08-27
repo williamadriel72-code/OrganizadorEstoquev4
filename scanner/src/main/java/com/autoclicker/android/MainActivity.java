@@ -10,9 +10,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -24,31 +22,27 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
-    public static final String PREFS = "autoclicker_prefs";
-    public static final String KEY_QTY = "quantity";
-    public static final String KEY_INTERVAL = "interval_ms";
+    public static final String PREFS = "fruit_ninja_prefs";
+    public static final String KEY_PATTERN = "pattern";
+    public static final String KEY_GESTURE_MS = "gesture_ms";
+    public static final String KEY_PAUSE_MS = "pause_ms";
+    public static final String KEY_RUN_SECONDS = "run_seconds";
     public static final String KEY_UNLIMITED = "unlimited";
-    public static final String KEY_MODE = "action_mode";
-    public static final String KEY_DIRECTION = "swipe_direction";
-    public static final String KEY_SWIPE_DURATION = "swipe_duration_ms";
 
-    private EditText quantityInput;
-    private EditText intervalInput;
-    private EditText swipeDurationInput;
+    private static final String[] PATTERNS = {
+            "TELA TODA", "CÍRCULO", "ZIGUE-ZAGUE"
+    };
+
+    private Spinner patternSpinner;
+    private EditText gestureInput;
+    private EditText pauseInput;
+    private EditText secondsInput;
     private CheckBox unlimitedCheck;
-    private Spinner modeSpinner;
-    private Spinner directionSpinner;
-    private TextView directionLabel;
-    private TextView durationLabel;
     private TextView accessibilityStatus;
-
-    private static final String[] MODES = {"CLIQUE", "DESLIZAR"};
-    private static final String[] DIRECTIONS = {"CIMA", "BAIXO", "ESQUERDA", "DIREITA"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
 
         ScrollView scroll = new ScrollView(this);
@@ -56,94 +50,82 @@ public class MainActivity extends Activity {
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(18), dp(24), dp(24));
+        root.setPadding(dp(24), dp(20), dp(24), dp(28));
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setBackgroundColor(Color.rgb(245, 247, 250));
+        root.setBackgroundColor(Color.rgb(246, 247, 250));
         scroll.addView(root, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
+                ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView title = new TextView(this);
-        title.setText("AUTOCLICKER ANDROID");
+        title.setText("FRUIT NINJA AUTO SWIPE");
         title.setTextSize(25);
-        title.setTextColor(Color.rgb(18, 24, 33));
+        title.setTextColor(Color.rgb(20, 25, 35));
         title.setGravity(Gravity.CENTER);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
-        root.addView(title, fullWidth(dp(52)));
+        root.addView(title, fullWidth(dp(56)));
 
-        TextView description = new TextView(this);
-        description.setText("Escolha CLIQUE ou DESLIZAR. No modo DESLIZAR você pode passar vídeos/telas automaticamente para cima, baixo, esquerda ou direita.");
-        description.setTextSize(14);
-        description.setTextColor(Color.DKGRAY);
-        description.setGravity(Gravity.CENTER);
-        root.addView(description, fullWidth(dp(88)));
+        TextView desc = new TextView(this);
+        desc.setText("Faz arrastos contínuos pela tela, como cortes de Fruit Ninja. O botão PARAR fica flutuando enquanto estiver rodando.");
+        desc.setTextSize(14);
+        desc.setTextColor(Color.DKGRAY);
+        desc.setGravity(Gravity.CENTER);
+        root.addView(desc, fullWidth(dp(82)));
 
         accessibilityStatus = new TextView(this);
         accessibilityStatus.setTextSize(16);
         accessibilityStatus.setGravity(Gravity.CENTER);
         accessibilityStatus.setTypeface(null, android.graphics.Typeface.BOLD);
-        root.addView(accessibilityStatus, fullWidth(dp(40)));
+        root.addView(accessibilityStatus, fullWidth(dp(42)));
 
-        root.addView(label("Modo"), fullWidth(dp(28)));
-        modeSpinner = spinner(MODES);
-        String savedMode = prefs.getString(KEY_MODE, "click");
-        modeSpinner.setSelection("swipe".equals(savedMode) ? 1 : 0);
-        root.addView(modeSpinner, fullWidth(dp(52)));
+        root.addView(label("Movimento"), fullWidth(dp(28)));
+        patternSpinner = new Spinner(this);
+        ArrayAdapter<String> patternAdapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, PATTERNS);
+        patternAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        patternSpinner.setAdapter(patternAdapter);
+        patternSpinner.setSelection(clamp(prefs.getInt(KEY_PATTERN, 0), 0, 2));
+        root.addView(patternSpinner, fullWidth(dp(52)));
 
-        directionLabel = label("Direção do deslize");
-        root.addView(directionLabel, fullWidth(dp(28)));
-        directionSpinner = spinner(DIRECTIONS);
-        directionSpinner.setSelection(directionIndex(prefs.getString(KEY_DIRECTION, "up")));
-        root.addView(directionSpinner, fullWidth(dp(52)));
+        root.addView(label("Velocidade do movimento (ms) — menor = mais rápido"), fullWidth(dp(34)));
+        gestureInput = numberInput(String.valueOf(prefs.getInt(KEY_GESTURE_MS, 380)));
+        root.addView(gestureInput, fullWidth(dp(48)));
 
-        root.addView(label("Quantidade de ações (1 a 100)"), fullWidth(dp(28)));
-        quantityInput = numberInput(String.valueOf(prefs.getInt(KEY_QTY, 100)));
-        root.addView(quantityInput, fullWidth(dp(48)));
+        root.addView(label("Pausa entre movimentos (ms)"), fullWidth(dp(30)));
+        pauseInput = numberInput(String.valueOf(prefs.getInt(KEY_PAUSE_MS, 20)));
+        root.addView(pauseInput, fullWidth(dp(48)));
+
+        root.addView(label("Tempo total rodando (segundos)"), fullWidth(dp(30)));
+        secondsInput = numberInput(String.valueOf(prefs.getInt(KEY_RUN_SECONDS, 30)));
+        root.addView(secondsInput, fullWidth(dp(48)));
 
         unlimitedCheck = new CheckBox(this);
         unlimitedCheck.setText("ILIMITADO — só para quando tocar em PARAR");
         unlimitedCheck.setTextSize(14);
-        unlimitedCheck.setTextColor(Color.rgb(25, 30, 40));
         unlimitedCheck.setChecked(prefs.getBoolean(KEY_UNLIMITED, false));
         unlimitedCheck.setOnCheckedChangeListener((buttonView, isChecked) ->
-                quantityInput.setEnabled(!isChecked));
-        quantityInput.setEnabled(!unlimitedCheck.isChecked());
-        root.addView(unlimitedCheck, fullWidth(dp(54)));
-
-        root.addView(label("Tempo entre ações (ms) — 1000 ms = 1 segundo"), fullWidth(dp(34)));
-        intervalInput = numberInput(String.valueOf(prefs.getInt(KEY_INTERVAL, 1000)));
-        root.addView(intervalInput, fullWidth(dp(48)));
-
-        durationLabel = label("Duração de cada deslize (ms) — ex.: 250 ms");
-        root.addView(durationLabel, fullWidth(dp(34)));
-        swipeDurationInput = numberInput(String.valueOf(prefs.getInt(KEY_SWIPE_DURATION, 250)));
-        root.addView(swipeDurationInput, fullWidth(dp(48)));
-
-        modeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                updateModeControls();
-            }
-            @Override public void onNothingSelected(AdapterView<?> parent) { }
-        });
-        updateModeControls();
+                secondsInput.setEnabled(!isChecked));
+        secondsInput.setEnabled(!unlimitedCheck.isChecked());
+        root.addView(unlimitedCheck, fullWidth(dp(56)));
 
         Button save = new Button(this);
         save.setText("SALVAR CONFIGURAÇÕES");
         save.setOnClickListener(v -> saveSettings());
-        root.addView(save, fullWidth(dp(54)));
+        root.addView(save, fullWidth(dp(56)));
 
         Button accessibility = new Button(this);
         accessibility.setText("ATIVAR ACESSIBILIDADE");
         accessibility.setOnClickListener(v -> {
             saveSettings();
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-            Toast.makeText(this, "Procure por AutoClicker Android e ative o serviço.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this,
+                    "Procure por Fruit Ninja Auto Swipe e ative o serviço.",
+                    Toast.LENGTH_LONG).show();
         });
-        root.addView(accessibility, fullWidth(dp(58)));
+        root.addView(accessibility, fullWidth(dp(60)));
 
         Button floating = new Button(this);
-        floating.setText("MINIMIZAR E DEIXAR FLUTUANDO");
+        floating.setText("ABRIR PAINEL FLUTUANTE");
         floating.setOnClickListener(v -> {
             saveSettings();
             if (!isServiceEnabled(this, AutoClickService.class)) {
@@ -151,17 +133,17 @@ public class MainActivity extends Activity {
                 startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
                 return;
             }
-            Toast.makeText(this, "Painel flutuante ativo.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Painel flutuante pronto.", Toast.LENGTH_SHORT).show();
             moveTaskToBack(true);
         });
-        root.addView(floating, fullWidth(dp(58)));
+        root.addView(floating, fullWidth(dp(60)));
 
         TextView help = new TextView(this);
-        help.setText("No modo DESLIZAR, a direção indica para onde o dedo virtual vai. CIMA costuma avançar para o próximo vídeo em feeds verticais. O intervalo define quanto tempo esperar antes da próxima passada.");
+        help.setText("Sugestão: comece com 380 ms e pausa de 20 ms. Se ficar rápido demais, aumente o valor de velocidade. Durante a execução, toque no botão vermelho PARAR para interromper.");
         help.setTextSize(13);
         help.setTextColor(Color.GRAY);
         help.setGravity(Gravity.CENTER);
-        root.addView(help, fullWidth(dp(104)));
+        root.addView(help, fullWidth(dp(110)));
 
         setContentView(scroll);
     }
@@ -172,52 +154,40 @@ public class MainActivity extends Activity {
         updateAccessibilityStatus();
     }
 
-    private void updateModeControls() {
-        boolean swipe = modeSpinner != null && modeSpinner.getSelectedItemPosition() == 1;
-        if (directionSpinner != null) directionSpinner.setEnabled(swipe);
-        if (swipeDurationInput != null) swipeDurationInput.setEnabled(swipe);
-        if (directionLabel != null) directionLabel.setTextColor(swipe ? Color.rgb(40,45,55) : Color.GRAY);
-        if (durationLabel != null) durationLabel.setTextColor(swipe ? Color.rgb(40,45,55) : Color.GRAY);
-    }
-
     private void saveSettings() {
-        int qty = clamp(parse(quantityInput.getText().toString(), 100), 1, 100);
-        int interval = clamp(parse(intervalInput.getText().toString(), 1000), 10, 600000);
-        int swipeDuration = clamp(parse(swipeDurationInput.getText().toString(), 250), 50, 5000);
+        int pattern = patternSpinner.getSelectedItemPosition();
+        int gestureMs = clamp(parse(gestureInput.getText().toString(), 380), 120, 5000);
+        int pauseMs = clamp(parse(pauseInput.getText().toString(), 20), 0, 10000);
+        int runSeconds = clamp(parse(secondsInput.getText().toString(), 30), 1, 3600);
         boolean unlimited = unlimitedCheck.isChecked();
-        String mode = modeSpinner.getSelectedItemPosition() == 1 ? "swipe" : "click";
-        String direction = directionValue(directionSpinner.getSelectedItemPosition());
 
-        quantityInput.setText(String.valueOf(qty));
-        intervalInput.setText(String.valueOf(interval));
-        swipeDurationInput.setText(String.valueOf(swipeDuration));
+        gestureInput.setText(String.valueOf(gestureMs));
+        pauseInput.setText(String.valueOf(pauseMs));
+        secondsInput.setText(String.valueOf(runSeconds));
 
-        getSharedPreferences(PREFS, MODE_PRIVATE)
-                .edit()
-                .putInt(KEY_QTY, qty)
-                .putInt(KEY_INTERVAL, interval)
-                .putInt(KEY_SWIPE_DURATION, swipeDuration)
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                .putInt(KEY_PATTERN, pattern)
+                .putInt(KEY_GESTURE_MS, gestureMs)
+                .putInt(KEY_PAUSE_MS, pauseMs)
+                .putInt(KEY_RUN_SECONDS, runSeconds)
                 .putBoolean(KEY_UNLIMITED, unlimited)
-                .putString(KEY_MODE, mode)
-                .putString(KEY_DIRECTION, direction)
                 .apply();
 
-        Toast.makeText(this,
-                "swipe".equals(mode) ? "Modo DESLIZAR salvo." : "Modo CLIQUE salvo.",
-                Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Configurações salvas.", Toast.LENGTH_SHORT).show();
     }
 
     private void updateAccessibilityStatus() {
         boolean enabled = isServiceEnabled(this, AutoClickService.class);
         accessibilityStatus.setText(enabled ? "ACESSIBILIDADE ATIVA ✓" : "ACESSIBILIDADE DESATIVADA");
-        accessibilityStatus.setTextColor(enabled ? Color.rgb(0, 140, 70) : Color.rgb(190, 45, 45));
+        accessibilityStatus.setTextColor(enabled
+                ? Color.rgb(0, 145, 70)
+                : Color.rgb(190, 45, 45));
     }
 
     private static boolean isServiceEnabled(Context context, Class<?> serviceClass) {
         String enabledServices = Settings.Secure.getString(
                 context.getContentResolver(),
-                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        );
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
         if (enabledServices == null) return false;
         ComponentName expected = new ComponentName(context, serviceClass);
         for (String entry : enabledServices.split(":")) {
@@ -225,15 +195,6 @@ public class MainActivity extends Activity {
             if (expected.equals(current)) return true;
         }
         return false;
-    }
-
-    private Spinner spinner(String[] values) {
-        Spinner spinner = new Spinner(this);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, values);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
-        return spinner;
     }
 
     private TextView label(String text) {
@@ -259,20 +220,6 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, height);
         lp.setMargins(0, dp(3), 0, dp(3));
         return lp;
-    }
-
-    private int directionIndex(String direction) {
-        if ("down".equals(direction)) return 1;
-        if ("left".equals(direction)) return 2;
-        if ("right".equals(direction)) return 3;
-        return 0;
-    }
-
-    private String directionValue(int index) {
-        if (index == 1) return "down";
-        if (index == 2) return "left";
-        if (index == 3) return "right";
-        return "up";
     }
 
     private int dp(int value) {
