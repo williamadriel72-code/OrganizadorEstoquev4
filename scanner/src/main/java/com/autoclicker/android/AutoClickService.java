@@ -26,18 +26,21 @@ public class AutoClickService extends AccessibilityService {
     private LinearLayout panel;
     private View captureOverlay;
     private View targetMarker;
+    private TextView miniButton;
     private WindowManager.LayoutParams panelParams;
     private WindowManager.LayoutParams markerParams;
+    private WindowManager.LayoutParams miniParams;
     private TextView status;
     private Button markButton;
     private Button startButton;
     private Button stopButton;
-    private Button disableButton;
+    private Button minimizeButton;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean running = false;
     private boolean hasTarget = false;
     private boolean unlimited = false;
+    private boolean panelMinimized = false;
     private int targetX;
     private int targetY;
     private long current = 0;
@@ -53,6 +56,12 @@ public class AutoClickService extends AccessibilityService {
     private float markerDragStartRawY;
     private int markerDragStartTargetX;
     private int markerDragStartTargetY;
+
+    private float miniDragStartRawX;
+    private float miniDragStartRawY;
+    private int miniDragStartX;
+    private int miniDragStartY;
+    private boolean miniMoved;
 
     @Override
     protected void onServiceConnected() {
@@ -110,9 +119,9 @@ public class AutoClickService extends AccessibilityService {
         stopButton.setOnClickListener(v -> stopClicks("Parado"));
         panel.addView(stopButton, buttonParams());
 
-        disableButton = makeButton("DESATIVAR");
-        disableButton.setOnClickListener(v -> deactivateService());
-        panel.addView(disableButton, buttonParams());
+        minimizeButton = makeButton("MINIMIZAR");
+        minimizeButton.setOnClickListener(v -> minimizePanel());
+        panel.addView(minimizeButton, buttonParams());
 
         panelParams = new WindowManager.LayoutParams(
                 dp(210),
@@ -148,6 +157,100 @@ public class AutoClickService extends AccessibilityService {
             default:
                 return true;
         }
+    }
+
+    private void minimizePanel() {
+        if (panel == null || panelMinimized) return;
+        panelMinimized = true;
+        panel.setVisibility(View.GONE);
+        showMiniButton();
+    }
+
+    private void restorePanel() {
+        panelMinimized = false;
+        removeMiniButton();
+        if (panel != null) panel.setVisibility(View.VISIBLE);
+    }
+
+    private void showMiniButton() {
+        if (windowManager == null || miniButton != null) return;
+
+        miniButton = new TextView(this);
+        miniButton.setText("≡");
+        miniButton.setTextColor(Color.WHITE);
+        miniButton.setTextSize(26);
+        miniButton.setGravity(Gravity.CENTER);
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setShape(GradientDrawable.OVAL);
+        bg.setColor(Color.argb(235, 35, 105, 220));
+        bg.setStroke(dp(2), Color.WHITE);
+        miniButton.setBackground(bg);
+        miniButton.setOnTouchListener((v, event) -> handleMiniButtonTouch(event));
+
+        miniParams = new WindowManager.LayoutParams(
+                dp(54),
+                dp(54),
+                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
+                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                PixelFormat.TRANSLUCENT
+        );
+        miniParams.gravity = Gravity.TOP | Gravity.START;
+        miniParams.x = panelParams != null ? panelParams.x : dp(12);
+        miniParams.y = panelParams != null ? panelParams.y : dp(110);
+
+        try {
+            windowManager.addView(miniButton, miniParams);
+        } catch (Exception ignored) {
+            miniButton = null;
+            miniParams = null;
+        }
+    }
+
+    private boolean handleMiniButtonTouch(MotionEvent event) {
+        if (miniParams == null) return true;
+
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                miniDragStartRawX = event.getRawX();
+                miniDragStartRawY = event.getRawY();
+                miniDragStartX = miniParams.x;
+                miniDragStartY = miniParams.y;
+                miniMoved = false;
+                return true;
+
+            case MotionEvent.ACTION_MOVE:
+                float dx = event.getRawX() - miniDragStartRawX;
+                float dy = event.getRawY() - miniDragStartRawY;
+                if (Math.abs(dx) > dp(5) || Math.abs(dy) > dp(5)) miniMoved = true;
+                miniParams.x = miniDragStartX + Math.round(dx);
+                miniParams.y = miniDragStartY + Math.round(dy);
+                try {
+                    windowManager.updateViewLayout(miniButton, miniParams);
+                } catch (Exception ignored) {
+                }
+                return true;
+
+            case MotionEvent.ACTION_UP:
+                if (!miniMoved) restorePanel();
+                return true;
+
+            default:
+                return true;
+        }
+    }
+
+    private void removeMiniButton() {
+        if (miniButton != null && windowManager != null) {
+            try {
+                windowManager.removeView(miniButton);
+            } catch (Exception ignored) {
+            }
+        }
+        miniButton = null;
+        miniParams = null;
     }
 
     private void beginPointCapture() {
@@ -304,7 +407,7 @@ public class AutoClickService extends AccessibilityService {
             }
             captureOverlay = null;
         }
-        if (panel != null) panel.setVisibility(View.VISIBLE);
+        if (panel != null && !panelMinimized) panel.setVisibility(View.VISIBLE);
     }
 
     private void startClicks() {
@@ -404,14 +507,6 @@ public class AutoClickService extends AccessibilityService {
         }
     }
 
-    private void deactivateService() {
-        stopClicks("Desativado");
-        endPointCapture();
-        removeTargetMarker();
-        Toast.makeText(this, "AutoClicker desativado", Toast.LENGTH_SHORT).show();
-        disableSelf();
-    }
-
     private Button makeButton(String text) {
         Button b = new Button(this);
         b.setText(text);
@@ -450,6 +545,7 @@ public class AutoClickService extends AccessibilityService {
         stopClicks("Encerrado");
         endPointCapture();
         removeTargetMarker();
+        removeMiniButton();
         if (panel != null && windowManager != null) {
             try {
                 windowManager.removeView(panel);
