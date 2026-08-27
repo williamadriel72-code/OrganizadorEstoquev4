@@ -3,12 +3,12 @@
 
     <application
         android:allowBackup="false"
-        android:label="AutoClicker Android"
+        android:label="Fruit Ninja Auto Swipe"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.autoclicker.android.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -17,7 +17,8 @@
         </activity>
 
         <service
-            android:name=".AutoClickService"
+            android:name="com.autoclicker.android.AutoClickService"
+            android:label="Fruit Ninja Auto Swipe"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
             <intent-filter>
