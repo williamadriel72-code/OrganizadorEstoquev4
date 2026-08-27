@@ -9,6 +9,7 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -31,6 +32,7 @@ public class AutoClickService extends AccessibilityService {
     private Button markButton;
     private Button startButton;
     private Button stopButton;
+    private Button disableButton;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean running = false;
@@ -46,6 +48,11 @@ public class AutoClickService extends AccessibilityService {
     private float dragStartRawY;
     private int dragStartX;
     private int dragStartY;
+
+    private float markerDragStartRawX;
+    private float markerDragStartRawY;
+    private int markerDragStartTargetX;
+    private int markerDragStartTargetY;
 
     @Override
     protected void onServiceConnected() {
@@ -103,6 +110,10 @@ public class AutoClickService extends AccessibilityService {
         stopButton.setOnClickListener(v -> stopClicks("Parado"));
         panel.addView(stopButton, buttonParams());
 
+        disableButton = makeButton("DESATIVAR");
+        disableButton.setOnClickListener(v -> deactivateService());
+        panel.addView(disableButton, buttonParams());
+
         panelParams = new WindowManager.LayoutParams(
                 dp(210),
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -143,6 +154,8 @@ public class AutoClickService extends AccessibilityService {
         if (running || captureOverlay != null) return;
 
         panel.setVisibility(View.GONE);
+        if (targetMarker != null) targetMarker.setVisibility(View.GONE);
+
         captureOverlay = new View(this);
         captureOverlay.setBackgroundColor(Color.argb(1, 0, 0, 0));
         captureOverlay.setOnTouchListener((v, event) -> {
@@ -154,7 +167,7 @@ public class AutoClickService extends AccessibilityService {
                 showTargetMarker();
                 status.setText("Ponto: X=" + targetX + "  Y=" + targetY);
                 startButton.setEnabled(true);
-                Toast.makeText(this, "Ponto marcado", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Ponto marcado — arraste a bolinha para ajustar", Toast.LENGTH_SHORT).show();
                 return true;
             }
             return true;
@@ -177,23 +190,23 @@ public class AutoClickService extends AccessibilityService {
     private void showTargetMarker() {
         if (windowManager == null || !hasTarget) return;
 
-        final int markerSize = dp(28);
+        final int markerSize = dp(38);
 
         if (targetMarker == null) {
             targetMarker = new View(this);
 
             GradientDrawable marker = new GradientDrawable();
             marker.setShape(GradientDrawable.OVAL);
-            marker.setColor(Color.argb(150, 255, 45, 45));
-            marker.setStroke(dp(2), Color.WHITE);
+            marker.setColor(Color.argb(175, 255, 45, 45));
+            marker.setStroke(dp(3), Color.WHITE);
             targetMarker.setBackground(marker);
+            targetMarker.setOnTouchListener((v, event) -> handleMarkerDrag(event));
 
             markerParams = new WindowManager.LayoutParams(
                     markerSize,
                     markerSize,
                     WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
                             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
                             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT
@@ -207,14 +220,68 @@ public class AutoClickService extends AccessibilityService {
             } catch (Exception ignored) {
                 targetMarker = null;
                 markerParams = null;
+                return;
             }
         } else {
-            markerParams.x = targetX - markerSize / 2;
-            markerParams.y = targetY - markerSize / 2;
-            try {
-                windowManager.updateViewLayout(targetMarker, markerParams);
-            } catch (Exception ignored) {
-            }
+            targetMarker.setVisibility(View.VISIBLE);
+            moveMarkerToTarget();
+        }
+
+        setMarkerTouchable(!running);
+    }
+
+    private boolean handleMarkerDrag(MotionEvent event) {
+        if (running || markerParams == null) return true;
+
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                markerDragStartRawX = event.getRawX();
+                markerDragStartRawY = event.getRawY();
+                markerDragStartTargetX = targetX;
+                markerDragStartTargetY = targetY;
+                return true;
+
+            case MotionEvent.ACTION_MOVE:
+            case MotionEvent.ACTION_UP:
+                DisplayMetrics dm = getResources().getDisplayMetrics();
+                int newX = markerDragStartTargetX + Math.round(event.getRawX() - markerDragStartRawX);
+                int newY = markerDragStartTargetY + Math.round(event.getRawY() - markerDragStartRawY);
+                targetX = clamp(newX, 0, Math.max(0, dm.widthPixels - 1));
+                targetY = clamp(newY, 0, Math.max(0, dm.heightPixels - 1));
+                moveMarkerToTarget();
+                if (status != null) {
+                    status.setText("Ponto: X=" + targetX + "  Y=" + targetY);
+                }
+                if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+                    Toast.makeText(this, "Ponto reposicionado", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+
+            default:
+                return true;
+        }
+    }
+
+    private void moveMarkerToTarget() {
+        if (targetMarker == null || markerParams == null || windowManager == null) return;
+        markerParams.x = targetX - markerParams.width / 2;
+        markerParams.y = targetY - markerParams.height / 2;
+        try {
+            windowManager.updateViewLayout(targetMarker, markerParams);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void setMarkerTouchable(boolean touchable) {
+        if (targetMarker == null || markerParams == null || windowManager == null) return;
+        if (touchable) {
+            markerParams.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+        } else {
+            markerParams.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+        }
+        try {
+            windowManager.updateViewLayout(targetMarker, markerParams);
+        } catch (Exception ignored) {
         }
     }
 
@@ -250,6 +317,7 @@ public class AutoClickService extends AccessibilityService {
 
         current = 0;
         running = true;
+        setMarkerTouchable(false);
         markButton.setEnabled(false);
         startButton.setEnabled(false);
         stopButton.setEnabled(true);
@@ -312,6 +380,7 @@ public class AutoClickService extends AccessibilityService {
     private void finishRun() {
         running = false;
         handler.removeCallbacks(clickRunnable);
+        setMarkerTouchable(true);
         markButton.setEnabled(true);
         startButton.setEnabled(hasTarget);
         stopButton.setEnabled(false);
@@ -322,6 +391,7 @@ public class AutoClickService extends AccessibilityService {
     private void stopClicks(String text) {
         running = false;
         handler.removeCallbacks(clickRunnable);
+        setMarkerTouchable(true);
         if (markButton != null) markButton.setEnabled(true);
         if (startButton != null) startButton.setEnabled(hasTarget);
         if (stopButton != null) stopButton.setEnabled(false);
@@ -332,6 +402,14 @@ public class AutoClickService extends AccessibilityService {
                 status.setText(text + " em " + current + "/" + total);
             }
         }
+    }
+
+    private void deactivateService() {
+        stopClicks("Desativado");
+        endPointCapture();
+        removeTargetMarker();
+        Toast.makeText(this, "AutoClicker desativado", Toast.LENGTH_SHORT).show();
+        disableSelf();
     }
 
     private Button makeButton(String text) {
