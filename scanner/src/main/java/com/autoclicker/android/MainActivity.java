@@ -12,8 +12,10 @@ import android.text.InputType;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,9 +23,11 @@ public class MainActivity extends Activity {
     public static final String PREFS = "autoclicker_prefs";
     public static final String KEY_QTY = "quantity";
     public static final String KEY_INTERVAL = "interval_ms";
+    public static final String KEY_UNLIMITED = "unlimited";
 
     private EditText quantityInput;
     private EditText intervalInput;
+    private CheckBox unlimitedCheck;
     private TextView accessibilityStatus;
 
     @Override
@@ -32,11 +36,18 @@ public class MainActivity extends Activity {
 
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
 
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(24), dp(20), dp(24), dp(20));
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         root.setBackgroundColor(Color.rgb(245, 247, 250));
+        scroll.addView(root, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
 
         TextView title = new TextView(this);
         title.setText("AUTOCLICKER ANDROID");
@@ -64,6 +75,15 @@ public class MainActivity extends Activity {
 
         quantityInput = numberInput(String.valueOf(prefs.getInt(KEY_QTY, 100)));
         root.addView(quantityInput, fullWidth(dp(48)));
+
+        unlimitedCheck = new CheckBox(this);
+        unlimitedCheck.setText("CLIQUE ILIMITADO — só para quando tocar em PARAR");
+        unlimitedCheck.setTextSize(14);
+        unlimitedCheck.setTextColor(Color.rgb(25, 30, 40));
+        unlimitedCheck.setChecked(prefs.getBoolean(KEY_UNLIMITED, false));
+        unlimitedCheck.setOnCheckedChangeListener((buttonView, isChecked) -> quantityInput.setEnabled(!isChecked));
+        quantityInput.setEnabled(!unlimitedCheck.isChecked());
+        root.addView(unlimitedCheck, fullWidth(dp(54)));
 
         TextView iLabel = label("Intervalo em milissegundos (mínimo 10 ms)");
         root.addView(iLabel, fullWidth(dp(30)));
@@ -100,13 +120,13 @@ public class MainActivity extends Activity {
         root.addView(floating, fullWidth(dp(58)));
 
         TextView help = new TextView(this);
-        help.setText("Com o modo flutuante, a tela principal some e o painel continua por cima dos outros aplicativos. Para voltar, abra o AutoClicker novamente pelo ícone.");
+        help.setText("No modo ILIMITADO, o AutoClicker continua até você tocar em PARAR. O painel e o marcador do ponto continuam flutuando sobre os outros aplicativos.");
         help.setTextSize(13);
         help.setTextColor(Color.GRAY);
         help.setGravity(Gravity.CENTER);
-        root.addView(help, fullWidth(dp(76)));
+        root.addView(help, fullWidth(dp(84)));
 
-        setContentView(root);
+        setContentView(scroll);
     }
 
     @Override
@@ -118,6 +138,8 @@ public class MainActivity extends Activity {
     private void saveSettings() {
         int qty = parse(quantityInput.getText().toString(), 100);
         int interval = parse(intervalInput.getText().toString(), 100);
+        boolean unlimited = unlimitedCheck.isChecked();
+
         qty = Math.max(1, Math.min(100, qty));
         interval = Math.max(10, Math.min(60000, interval));
 
@@ -128,9 +150,10 @@ public class MainActivity extends Activity {
                 .edit()
                 .putInt(KEY_QTY, qty)
                 .putInt(KEY_INTERVAL, interval)
+                .putBoolean(KEY_UNLIMITED, unlimited)
                 .apply();
 
-        Toast.makeText(this, "Configurações salvas.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, unlimited ? "Modo ilimitado salvo." : "Configurações salvas.", Toast.LENGTH_SHORT).show();
     }
 
     private void updateAccessibilityStatus() {
