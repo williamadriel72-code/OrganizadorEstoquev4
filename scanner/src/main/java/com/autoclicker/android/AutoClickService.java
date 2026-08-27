@@ -35,9 +35,10 @@ public class AutoClickService extends AccessibilityService {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean running = false;
     private boolean hasTarget = false;
+    private boolean unlimited = false;
     private int targetX;
     private int targetY;
-    private int current = 0;
+    private long current = 0;
     private int total = 100;
     private int intervalMs = 100;
 
@@ -245,13 +246,16 @@ public class AutoClickService extends AccessibilityService {
         SharedPreferences prefs = getSharedPreferences(MainActivity.PREFS, MODE_PRIVATE);
         total = clamp(prefs.getInt(MainActivity.KEY_QTY, 100), 1, 100);
         intervalMs = clamp(prefs.getInt(MainActivity.KEY_INTERVAL, 100), 10, 60000);
+        unlimited = prefs.getBoolean(MainActivity.KEY_UNLIMITED, false);
 
         current = 0;
         running = true;
         markButton.setEnabled(false);
         startButton.setEnabled(false);
         stopButton.setEnabled(true);
-        status.setText("Executando 0/" + total + " • " + intervalMs + " ms");
+        status.setText(unlimited
+                ? "Executando 0/∞ • " + intervalMs + " ms"
+                : "Executando 0/" + total + " • " + intervalMs + " ms");
         handler.post(clickRunnable);
     }
 
@@ -259,7 +263,7 @@ public class AutoClickService extends AccessibilityService {
         @Override
         public void run() {
             if (!running) return;
-            if (current >= total) {
+            if (!unlimited && current >= total) {
                 finishRun();
                 return;
             }
@@ -280,8 +284,10 @@ public class AutoClickService extends AccessibilityService {
                             super.onCompleted(gestureDescription);
                             if (!running) return;
                             current++;
-                            status.setText("Cliques " + current + "/" + total + " • " + intervalMs + " ms");
-                            if (current >= total) {
+                            status.setText(unlimited
+                                    ? "Cliques " + current + "/∞ • " + intervalMs + " ms"
+                                    : "Cliques " + current + "/" + total + " • " + intervalMs + " ms");
+                            if (!unlimited && current >= total) {
                                 finishRun();
                             } else {
                                 handler.postDelayed(clickRunnable, intervalMs);
@@ -319,7 +325,13 @@ public class AutoClickService extends AccessibilityService {
         if (markButton != null) markButton.setEnabled(true);
         if (startButton != null) startButton.setEnabled(hasTarget);
         if (stopButton != null) stopButton.setEnabled(false);
-        if (status != null) status.setText(text + " em " + current + "/" + total);
+        if (status != null) {
+            if (unlimited) {
+                status.setText(text + " em " + current + " cliques");
+            } else {
+                status.setText(text + " em " + current + "/" + total);
+            }
+        }
     }
 
     private Button makeButton(String text) {
