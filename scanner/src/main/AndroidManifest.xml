@@ -9,6 +9,8 @@
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
 
     <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
@@ -20,7 +22,7 @@
 
     <application
         android:allowBackup="false"
-        android:label="Voice Control Master"
+        android:label="Master Tools"
         android:icon="@drawable/ic_voice_control"
         android:roundIcon="@drawable/ic_voice_control"
         android:supportsRtl="true"
@@ -37,7 +39,7 @@
 
         <service
             android:name="com.autoclicker.android.AutoClickService"
-            android:label="Voice Control Master - Acessibilidade"
+            android:label="Master Tools - Acessibilidade"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
             <intent-filter>
