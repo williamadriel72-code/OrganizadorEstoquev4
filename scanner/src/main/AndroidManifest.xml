@@ -20,7 +20,9 @@
 
     <application
         android:allowBackup="false"
-        android:label="Controle por Voz"
+        android:label="Voice Control Master"
+        android:icon="@drawable/ic_voice_control"
+        android:roundIcon="@drawable/ic_voice_control"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
@@ -35,7 +37,7 @@
 
         <service
             android:name="com.autoclicker.android.AutoClickService"
-            android:label="Controle por Voz - Acessibilidade"
+            android:label="Voice Control Master - Acessibilidade"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
             <intent-filter>
