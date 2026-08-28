@@ -83,14 +83,10 @@ public class AutoClickService extends AccessibilityService {
                 listening = true;
                 updateListeningUi("Ouvindo...");
             }
-            @Override public void onBeginningOfSpeech() {
-                updateListeningUi("Pode falar...");
-            }
+            @Override public void onBeginningOfSpeech() { updateListeningUi("Pode falar..."); }
             @Override public void onRmsChanged(float rmsdB) { }
             @Override public void onBufferReceived(byte[] buffer) { }
-            @Override public void onEndOfSpeech() {
-                updateListeningUi("Processando...");
-            }
+            @Override public void onEndOfSpeech() { updateListeningUi("Processando..."); }
             @Override public void onError(int error) {
                 listening = false;
                 updateListeningUi("Toque no microfone e fale");
@@ -123,31 +119,31 @@ public class AutoClickService extends AccessibilityService {
         panel.setPadding(dp(10), dp(8), dp(10), dp(10));
 
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.argb(242, 25, 30, 38));
-        bg.setCornerRadius(dp(16));
+        bg.setColor(Color.argb(244, 7, 18, 37));
+        bg.setCornerRadius(dp(18));
         panel.setBackground(bg);
 
         TextView title = new TextView(this);
-        title.setText("CONTROLE POR VOZ • ARRASTE AQUI");
+        title.setText("VOICE CONTROL MASTER • ARRASTE");
         title.setTextColor(Color.WHITE);
         title.setTextSize(13);
         title.setGravity(Gravity.CENTER);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         title.setOnTouchListener((v, e) -> dragPanel(e));
-        panel.addView(title, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(40)));
+        panel.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)));
 
         status = new TextView(this);
         status.setText("Toque em OUVIR e fale um comando");
-        status.setTextColor(Color.rgb(225, 230, 238));
+        status.setTextColor(Color.rgb(225, 235, 248));
         status.setTextSize(12);
         status.setGravity(Gravity.CENTER);
         status.setPadding(dp(5), dp(4), dp(5), dp(4));
-        panel.addView(status, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(58)));
+        panel.addView(status, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(60)));
 
         listenButton = button("🎤 OUVIR AGORA");
-        listenButton.setOnClickListener(v -> startListening());
+        listenButton.setOnClickListener(v -> {
+            if (listening) stopListening(); else startListening();
+        });
         panel.addView(listenButton, buttonParams());
 
         continuousButton = button("CONTÍNUO: DESLIGADO");
@@ -168,7 +164,7 @@ public class AutoClickService extends AccessibilityService {
         panel.addView(close, buttonParams());
 
         panelParams = new WindowManager.LayoutParams(
-                dp(250), WindowManager.LayoutParams.WRAP_CONTENT,
+                dp(260), WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
@@ -211,15 +207,21 @@ public class AutoClickService extends AccessibilityService {
         miniBubble.setText("🎤");
         miniBubble.setTextSize(24);
         miniBubble.setGravity(Gravity.CENTER);
+        miniBubble.setTextColor(Color.WHITE);
+
         GradientDrawable bg = new GradientDrawable();
         bg.setShape(GradientDrawable.OVAL);
-        bg.setColor(Color.argb(242, 35, 105, 220));
-        bg.setStroke(dp(2), Color.WHITE);
+        bg.setColor(Color.argb(245, 10, 132, 255));
+        bg.setStroke(dp(3), Color.rgb(123, 44, 255));
         miniBubble.setBackground(bg);
         miniBubble.setOnTouchListener((v, e) -> handleMiniTouch(e));
+        miniBubble.setOnLongClickListener(v -> {
+            restorePanel();
+            return true;
+        });
 
         miniParams = new WindowManager.LayoutParams(
-                dp(58), dp(58),
+                dp(60), dp(60),
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
@@ -228,8 +230,13 @@ public class AutoClickService extends AccessibilityService {
         miniParams.gravity = Gravity.TOP | Gravity.START;
         miniParams.x = panelParams != null ? panelParams.x : dp(12);
         miniParams.y = panelParams != null ? panelParams.y : dp(100);
-        try { windowManager.addView(miniBubble, miniParams); }
-        catch (Exception ignored) { miniBubble = null; miniParams = null; }
+        try {
+            windowManager.addView(miniBubble, miniParams);
+            Toast.makeText(this, "Toque para ouvir • segure para abrir o painel", Toast.LENGTH_SHORT).show();
+        } catch (Exception ignored) {
+            miniBubble = null;
+            miniParams = null;
+        }
     }
 
     private boolean handleMiniTouch(MotionEvent event) {
@@ -241,23 +248,32 @@ public class AutoClickService extends AccessibilityService {
                 miniStartX = miniParams.x;
                 miniStartY = miniParams.y;
                 miniMoved = false;
-                return true;
+                return false;
             case MotionEvent.ACTION_MOVE:
                 float dx = event.getRawX() - miniDownX;
                 float dy = event.getRawY() - miniDownY;
-                if (Math.abs(dx) > dp(5) || Math.abs(dy) > dp(5)) miniMoved = true;
-                miniParams.x = miniStartX + Math.round(dx);
-                miniParams.y = miniStartY + Math.round(dy);
-                try { windowManager.updateViewLayout(miniBubble, miniParams); } catch (Exception ignored) { }
-                return true;
+                if (Math.abs(dx) > dp(6) || Math.abs(dy) > dp(6)) miniMoved = true;
+                if (miniMoved) {
+                    miniParams.x = miniStartX + Math.round(dx);
+                    miniParams.y = miniStartY + Math.round(dy);
+                    try { windowManager.updateViewLayout(miniBubble, miniParams); } catch (Exception ignored) { }
+                    return true;
+                }
+                return false;
             case MotionEvent.ACTION_UP:
                 if (!miniMoved) {
                     if (listening) stopListening(); else startListening();
+                    return true;
                 }
                 return true;
             default:
-                return true;
+                return false;
         }
+    }
+
+    private void restorePanel() {
+        removeMiniBubble();
+        if (panel != null) panel.setVisibility(View.VISIBLE);
     }
 
     private void removeMiniBubble() {
@@ -287,7 +303,7 @@ public class AutoClickService extends AccessibilityService {
             updateListeningUi("Ouvindo...");
         } catch (Exception e) {
             listening = false;
-            Toast.makeText(this, "Não foi possível iniciar o microfone.", Toast.LENGTH_SHORT).show();
+            feedback("Não foi possível iniciar o microfone");
         }
     }
 
@@ -318,96 +334,71 @@ public class AutoClickService extends AccessibilityService {
         String cmd = normalize(raw);
 
         if (equalsAny(cmd, "voltar", "volte")) {
-            performGlobalAction(GLOBAL_ACTION_BACK);
-            feedback("Voltar");
-            return;
+            performGlobalAction(GLOBAL_ACTION_BACK); feedback("Voltar"); return;
         }
         if (equalsAny(cmd, "inicio", "ir para inicio", "tela inicial", "home")) {
-            performGlobalAction(GLOBAL_ACTION_HOME);
-            feedback("Início");
-            return;
+            performGlobalAction(GLOBAL_ACTION_HOME); feedback("Início"); return;
         }
         if (containsAny(cmd, "recentes", "aplicativos recentes")) {
-            performGlobalAction(GLOBAL_ACTION_RECENTS);
-            feedback("Recentes");
-            return;
+            performGlobalAction(GLOBAL_ACTION_RECENTS); feedback("Recentes"); return;
         }
         if (containsAny(cmd, "notificacoes", "abrir notificacoes")) {
-            performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS);
-            feedback("Notificações");
-            return;
+            performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS); feedback("Notificações"); return;
         }
         if (containsAny(cmd, "configuracoes rapidas", "painel rapido")) {
-            performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS);
-            feedback("Configurações rápidas");
-            return;
+            performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS); feedback("Configurações rápidas"); return;
         }
         if (containsAny(cmd, "captura de tela", "tirar print", "print da tela")) {
-            if (Build.VERSION.SDK_INT >= 28) performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT);
-            else feedback("Captura de tela exige Android 9 ou superior");
+            if (Build.VERSION.SDK_INT >= 28) {
+                performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT); feedback("Captura de tela");
+            } else feedback("Captura de tela exige Android 9 ou superior");
             return;
         }
         if (containsAny(cmd, "bloquear tela", "travar tela")) {
-            if (Build.VERSION.SDK_INT >= 28) performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
-            else feedback("Bloquear tela exige Android 9 ou superior");
+            if (Build.VERSION.SDK_INT >= 28) {
+                performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN); feedback("Tela bloqueada");
+            } else feedback("Bloquear tela exige Android 9 ou superior");
             return;
         }
         if (containsAny(cmd, "menu desligar", "menu de energia", "botao desligar")) {
-            performGlobalAction(GLOBAL_ACTION_POWER_DIALOG);
-            feedback("Menu de energia");
-            return;
+            performGlobalAction(GLOBAL_ACTION_POWER_DIALOG); feedback("Menu de energia"); return;
         }
 
         if (containsAny(cmd, "aumentar volume", "volume mais alto", "aumenta o volume")) {
-            adjustVolume(AudioManager.ADJUST_RAISE);
-            feedback("Volume aumentado");
-            return;
+            adjustVolume(AudioManager.ADJUST_RAISE); feedback("Volume aumentado"); return;
         }
         if (containsAny(cmd, "diminuir volume", "volume mais baixo", "abaixar volume")) {
-            adjustVolume(AudioManager.ADJUST_LOWER);
-            feedback("Volume diminuído");
-            return;
+            adjustVolume(AudioManager.ADJUST_LOWER); feedback("Volume diminuído"); return;
         }
         if (containsAny(cmd, "silenciar", "mudo", "tirar o som")) {
-            adjustVolume(AudioManager.ADJUST_MUTE);
-            feedback("Som silenciado");
-            return;
+            adjustVolume(AudioManager.ADJUST_MUTE); feedback("Som silenciado"); return;
         }
         if (containsAny(cmd, "ativar som", "desmutar", "ligar som")) {
-            adjustVolume(AudioManager.ADJUST_UNMUTE);
-            feedback("Som ativado");
-            return;
+            adjustVolume(AudioManager.ADJUST_UNMUTE); feedback("Som ativado"); return;
         }
 
-        if (containsAny(cmd, "ligar lanterna", "acender lanterna")) {
-            setTorch(true);
-            return;
-        }
-        if (containsAny(cmd, "desligar lanterna", "apagar lanterna")) {
-            setTorch(false);
-            return;
-        }
+        if (containsAny(cmd, "ligar lanterna", "acender lanterna")) { setTorch(true); return; }
+        if (containsAny(cmd, "desligar lanterna", "apagar lanterna")) { setTorch(false); return; }
 
         if (containsAny(cmd, "rolar para baixo", "descer tela", "descer a tela")) {
-            swipeVertical(false);
-            feedback("Rolando para baixo");
-            return;
+            swipeVertical(false); feedback("Rolando para baixo"); return;
         }
         if (containsAny(cmd, "rolar para cima", "subir tela", "subir a tela")) {
-            swipeVertical(true);
-            feedback("Rolando para cima");
-            return;
+            swipeVertical(true); feedback("Rolando para cima"); return;
         }
         if (containsAny(cmd, "deslizar para esquerda", "arrastar para esquerda")) {
-            swipeHorizontal(true);
-            feedback("Deslizando para esquerda");
-            return;
+            swipeHorizontal(true); feedback("Deslizando para esquerda"); return;
         }
         if (containsAny(cmd, "deslizar para direita", "arrastar para direita")) {
-            swipeHorizontal(false);
-            feedback("Deslizando para direita");
-            return;
+            swipeHorizontal(false); feedback("Deslizando para direita"); return;
         }
+
+        if (equalsAny(cmd, "apagar texto", "limpar texto", "limpar campo")) { clearFocusedText(); return; }
+        if (equalsAny(cmd, "apagar ultima palavra", "excluir ultima palavra")) { deleteLastWord(); return; }
+        if (equalsAny(cmd, "selecionar tudo", "seleciona tudo")) { selectAllFocused(); return; }
+        if (equalsAny(cmd, "copiar", "copiar texto")) { copyFocused(); return; }
+        if (equalsAny(cmd, "colar", "colar texto")) { pasteFocused(); return; }
+        if (equalsAny(cmd, "enviar", "mandar", "enviar mensagem")) { clickAnyLabel("Enviar", "Send", "Mandar"); return; }
 
         if (cmd.startsWith("tocar em ") || cmd.startsWith("clicar em ")) {
             String text = raw.replaceFirst("(?i)^(tocar|clicar)\\s+em\\s+", "").trim();
@@ -430,27 +421,25 @@ public class AutoClickService extends AccessibilityService {
             return;
         }
 
-        if (containsAny(cmd, "abrir wifi", "configuracao wifi", "configuracoes wifi")) {
-            startSystemIntent(new Intent(Settings.ACTION_WIFI_SETTINGS));
-            feedback("Wi-Fi");
-            return;
+        if (containsAny(cmd, "abrir wifi", "configuracao wifi", "configuracoes wifi", "ligar wifi", "desligar wifi")) {
+            startSystemIntent(new Intent(Settings.ACTION_WIFI_SETTINGS)); feedback("Abrindo Wi-Fi"); return;
         }
-        if (containsAny(cmd, "abrir bluetooth", "configuracao bluetooth", "configuracoes bluetooth")) {
-            startSystemIntent(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
-            feedback("Bluetooth");
-            return;
+        if (containsAny(cmd, "abrir bluetooth", "configuracao bluetooth", "configuracoes bluetooth", "ligar bluetooth", "desligar bluetooth")) {
+            startSystemIntent(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS)); feedback("Abrindo Bluetooth"); return;
+        }
+        if (containsAny(cmd, "modo aviao", "abrir modo aviao")) {
+            startSystemIntent(new Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS)); feedback("Abrindo modo avião"); return;
+        }
+        if (containsAny(cmd, "aumentar brilho", "diminuir brilho", "configurar brilho")) {
+            startSystemIntent(new Intent(Settings.ACTION_DISPLAY_SETTINGS)); feedback("Abrindo brilho da tela"); return;
         }
         if (containsAny(cmd, "abrir configuracoes", "configuracoes do celular")) {
-            startSystemIntent(new Intent(Settings.ACTION_SETTINGS));
-            feedback("Configurações");
-            return;
+            startSystemIntent(new Intent(Settings.ACTION_SETTINGS)); feedback("Configurações"); return;
         }
         if (containsAny(cmd, "abrir camera", "camera")) {
             Intent camera = new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA);
             camera.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startSystemIntent(camera);
-            feedback("Câmera");
-            return;
+            startSystemIntent(camera); feedback("Câmera"); return;
         }
         if (cmd.startsWith("abrir ")) {
             String app = raw.replaceFirst("(?i)^abrir\\s+", "").trim();
@@ -461,9 +450,7 @@ public class AutoClickService extends AccessibilityService {
         if (equalsAny(cmd, "parar escuta", "parar de ouvir", "desligar escuta continua")) {
             continuous = false;
             if (continuousButton != null) continuousButton.setText("CONTÍNUO: DESLIGADO");
-            stopListening();
-            feedback("Escuta contínua desligada");
-            return;
+            stopListening(); feedback("Escuta contínua desligada"); return;
         }
 
         feedback("Comando não reconhecido: " + raw);
@@ -529,41 +516,133 @@ public class AutoClickService extends AccessibilityService {
 
     private void clickText(String text) {
         AccessibilityNodeInfo root = getRootInActiveWindow();
-        if (root == null) {
-            feedback("Não encontrei elementos na tela");
-            return;
-        }
+        if (root == null) { feedback("Não encontrei elementos na tela"); return; }
         List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByText(text);
-        if (nodes == null || nodes.isEmpty()) {
-            feedback("Não encontrei: " + text);
-            return;
-        }
-        for (AccessibilityNodeInfo node : nodes) {
-            AccessibilityNodeInfo clickable = node;
-            while (clickable != null && !clickable.isClickable()) clickable = clickable.getParent();
-            if (clickable != null && clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                feedback("Toquei em " + text);
-                return;
+        if (nodes != null) {
+            for (AccessibilityNodeInfo node : nodes) {
+                if (clickNodeOrParent(node)) { feedback("Toquei em " + text); return; }
             }
         }
-        feedback("Encontrei " + text + ", mas não consegui tocar");
+        AccessibilityNodeInfo byDescription = findByDescription(root, normalize(text));
+        if (byDescription != null && clickNodeOrParent(byDescription)) {
+            feedback("Toquei em " + text); return;
+        }
+        feedback("Não encontrei: " + text);
+    }
+
+    private boolean clickNodeOrParent(AccessibilityNodeInfo node) {
+        AccessibilityNodeInfo current = node;
+        int depth = 0;
+        while (current != null && depth < 8) {
+            if (current.isClickable() && current.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true;
+            current = current.getParent();
+            depth++;
+        }
+        return false;
+    }
+
+    private AccessibilityNodeInfo findByDescription(AccessibilityNodeInfo node, String wanted) {
+        if (node == null) return null;
+        CharSequence desc = node.getContentDescription();
+        if (desc != null && normalize(desc.toString()).contains(wanted)) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo found = findByDescription(node.getChild(i), wanted);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private AccessibilityNodeInfo focusedEditable() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return null;
+        AccessibilityNodeInfo focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (focused != null && focused.isEditable()) return focused;
+        return findEditableRecursive(root);
+    }
+
+    private AccessibilityNodeInfo findEditableRecursive(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if (node.isEditable() && (node.isFocused() || node.isAccessibilityFocused())) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo found = findEditableRecursive(node.getChild(i));
+            if (found != null) return found;
+        }
+        return null;
     }
 
     private void setFocusedText(String text) {
-        AccessibilityNodeInfo root = getRootInActiveWindow();
-        if (root == null) {
-            feedback("Nenhum campo de texto encontrado");
-            return;
-        }
-        AccessibilityNodeInfo focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-        if (focused == null || !focused.isEditable()) {
-            feedback("Toque primeiro em um campo de texto");
-            return;
-        }
+        AccessibilityNodeInfo focused = focusedEditable();
+        if (focused == null) { feedback("Toque primeiro em um campo de texto"); return; }
         Bundle args = new Bundle();
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
         boolean ok = focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
         feedback(ok ? "Texto escrito" : "Não consegui escrever nesse campo");
+    }
+
+    private void clearFocusedText() { setFocusedText(""); }
+
+    private void deleteLastWord() {
+        AccessibilityNodeInfo focused = focusedEditable();
+        if (focused == null) { feedback("Toque primeiro em um campo de texto"); return; }
+        CharSequence currentSequence = focused.getText();
+        String current = currentSequence == null ? "" : currentSequence.toString();
+        String trimmed = current.replaceFirst("\\s+$", "");
+        int idx = trimmed.lastIndexOf(' ');
+        String next = idx >= 0 ? trimmed.substring(0, idx + 1) : "";
+        Bundle args = new Bundle();
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, next);
+        boolean ok = focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+        feedback(ok ? "Última palavra apagada" : "Não consegui apagar");
+    }
+
+    private void selectAllFocused() {
+        AccessibilityNodeInfo focused = focusedEditable();
+        if (focused == null) { feedback("Toque primeiro em um campo de texto"); return; }
+        CharSequence text = focused.getText();
+        int length = text == null ? 0 : text.length();
+        Bundle args = new Bundle();
+        args.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0);
+        args.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, length);
+        boolean ok = focused.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args);
+        feedback(ok ? "Texto selecionado" : "Não consegui selecionar");
+    }
+
+    private void copyFocused() {
+        AccessibilityNodeInfo focused = focusedEditable();
+        if (focused == null) { feedback("Toque primeiro em um campo de texto"); return; }
+        CharSequence text = focused.getText();
+        int length = text == null ? 0 : text.length();
+        if (length > 0) {
+            Bundle args = new Bundle();
+            args.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0);
+            args.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, length);
+            focused.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args);
+        }
+        boolean ok = focused.performAction(AccessibilityNodeInfo.ACTION_COPY);
+        feedback(ok ? "Texto copiado" : "Não consegui copiar");
+    }
+
+    private void pasteFocused() {
+        AccessibilityNodeInfo focused = focusedEditable();
+        if (focused == null) { feedback("Toque primeiro em um campo de texto"); return; }
+        boolean ok = focused.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+        feedback(ok ? "Texto colado" : "Não consegui colar");
+    }
+
+    private void clickAnyLabel(String... labels) {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) { feedback("Não encontrei botão na tela"); return; }
+        for (String label : labels) {
+            List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByText(label);
+            if (nodes != null) {
+                for (AccessibilityNodeInfo node : nodes) {
+                    if (clickNodeOrParent(node)) { feedback("Executado: " + label); return; }
+                }
+            }
+            AccessibilityNodeInfo byDesc = findByDescription(root, normalize(label));
+            if (byDesc != null && clickNodeOrParent(byDesc)) { feedback("Executado: " + label); return; }
+        }
+        feedback("Não encontrei o botão para enviar");
     }
 
     private void webSearch(String query) {
@@ -576,10 +655,7 @@ public class AutoClickService extends AccessibilityService {
 
     private void dial(String target) {
         String digits = target.replaceAll("[^0-9+]", "");
-        if (digits.isEmpty()) {
-            feedback("Fale um número para ligar");
-            return;
-        }
+        if (digits.isEmpty()) { feedback("Fale um número para ligar"); return; }
         Intent intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + digits));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startSystemIntent(intent);
@@ -598,24 +674,15 @@ public class AutoClickService extends AccessibilityService {
             CharSequence labelSequence = info.loadLabel(pm);
             String label = labelSequence == null ? "" : labelSequence.toString();
             String normalizedLabel = normalize(label);
-            if (normalizedLabel.equals(wanted)) {
-                best = info;
-                break;
-            }
-            if (best == null && (normalizedLabel.contains(wanted) || wanted.contains(normalizedLabel))) {
+            if (normalizedLabel.equals(wanted)) { best = info; break; }
+            if (best == null && !normalizedLabel.isEmpty() && (normalizedLabel.contains(wanted) || wanted.contains(normalizedLabel))) {
                 best = info;
             }
         }
 
-        if (best == null) {
-            feedback("Não encontrei o app " + target);
-            return;
-        }
+        if (best == null) { feedback("Não encontrei o app " + target); return; }
         Intent launch = pm.getLaunchIntentForPackage(best.activityInfo.packageName);
-        if (launch == null) {
-            feedback("Não consegui abrir " + target);
-            return;
-        }
+        if (launch == null) { feedback("Não consegui abrir " + target); return; }
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(launch);
         feedback("Abrindo " + target);
@@ -659,8 +726,7 @@ public class AutoClickService extends AccessibilityService {
     }
 
     private LinearLayout.LayoutParams buttonParams() {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
         lp.setMargins(0, dp(2), 0, dp(2));
         return lp;
     }
@@ -671,9 +737,7 @@ public class AutoClickService extends AccessibilityService {
 
     @Override public void onAccessibilityEvent(AccessibilityEvent event) { }
 
-    @Override public void onInterrupt() {
-        stopListening();
-    }
+    @Override public void onInterrupt() { stopListening(); }
 
     @Override
     public void onDestroy() {
