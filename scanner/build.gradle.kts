@@ -10,8 +10,8 @@ android {
         applicationId = "com.voicecontrol.master"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.1.0"
     }
 }
 
@@ -56,33 +56,6 @@ val configureReliableVoice by tasks.registering {
             )
 
             text = text.replace(
-                """            @Override public void onError(int error) {
-                listening = false;
-                updateListeningUi("Toque no microfone e fale");
-                if (continuous && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
-                    scheduleContinuousRestart(700);
-                }
-            }""",
-                """            @Override public void onError(int error) {
-                listening = false;
-                updateListeningUi("Falha de voz (" + error + "). Tentando novamente...");
-                if (speechRecognizer != null && error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
-                    try { speechRecognizer.cancel(); } catch (Exception ignored) { }
-                }
-                if (continuous && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
-                    scheduleContinuousRestart(error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ? 1200 : 600);
-                }
-            }"""
-            )
-
-            text = text.replace(
-                "intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);",
-                """intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
-        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 650L);
-        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 450L);"""
-            )
-
-            text = text.replace(
                 "String cmd = normalize(raw);",
                 """String cmd = normalize(raw);
         if (cmd.startsWith("por favor ")) cmd = cmd.substring(10).trim();
@@ -98,22 +71,6 @@ val configureReliableVoice by tasks.registering {
                 "equalsAny(cmd, \"inicio\", \"ir para inicio\", \"tela inicial\", \"home\")",
                 "equalsAny(cmd, \"inicio\", \"ir para inicio\", \"tela inicial\", \"home\", \"va para inicio\", \"vai para inicio\", \"voltar para inicio\")"
             )
-            text = text.replace(
-                "containsAny(cmd, \"aumentar volume\", \"volume mais alto\", \"aumenta o volume\")",
-                "containsAny(cmd, \"aumentar volume\", \"volume mais alto\", \"aumenta o volume\", \"aumente o volume\", \"sobe o volume\")"
-            )
-            text = text.replace(
-                "containsAny(cmd, \"diminuir volume\", \"volume mais baixo\", \"abaixar volume\")",
-                "containsAny(cmd, \"diminuir volume\", \"volume mais baixo\", \"abaixar volume\", \"abaixe o volume\", \"baixa o volume\")"
-            )
-            text = text.replace(
-                "containsAny(cmd, \"ligar lanterna\", \"acender lanterna\")",
-                "containsAny(cmd, \"ligar lanterna\", \"acender lanterna\", \"liga lanterna\", \"acende a lanterna\", \"acenda a lanterna\")"
-            )
-            text = text.replace(
-                "containsAny(cmd, \"desligar lanterna\", \"apagar lanterna\")",
-                "containsAny(cmd, \"desligar lanterna\", \"apagar lanterna\", \"desliga lanterna\", \"apaga a lanterna\", \"apague a lanterna\")"
-            )
 
             text = text.replace(
                 """if (cmd.startsWith("tocar em ") || cmd.startsWith("clicar em ")) {
@@ -128,27 +85,10 @@ val configureReliableVoice by tasks.registering {
             String text = raw.replaceFirst("(?i)^(escrever|digitar|escreva|digite)\\\\s+", "").trim();"""
             )
             text = text.replace(
-                """if (cmd.startsWith("pesquisar ") || cmd.startsWith("buscar ")) {
-            String query = raw.replaceFirst("(?i)^(pesquisar|buscar)\\\\s+", "").trim();""",
-                """if (cmd.startsWith("pesquisar ") || cmd.startsWith("buscar ") || cmd.startsWith("pesquise ") || cmd.startsWith("busque ")) {
-            String query = raw.replaceFirst("(?i)^(pesquisar|buscar|pesquise|busque)\\\\s+", "").trim();"""
-            )
-            text = text.replace(
-                """if (cmd.startsWith("ligar para ") || cmd.startsWith("telefonar para ")) {
-            String target = raw.replaceFirst("(?i)^(ligar|telefonar)\\\\s+para\\\\s+", "").trim();""",
-                """if (cmd.startsWith("ligar para ") || cmd.startsWith("telefonar para ") || cmd.startsWith("ligue para ")) {
-            String target = raw.replaceFirst("(?i)^(ligar|telefonar|ligue)\\\\s+para\\\\s+", "").trim();"""
-            )
-            text = text.replace(
                 """if (cmd.startsWith("abrir ")) {
             String app = raw.replaceFirst("(?i)^abrir\\\\s+", "").trim();""",
                 """if (cmd.startsWith("abrir ") || cmd.startsWith("abra ") || cmd.startsWith("abre ")) {
             String app = raw.replaceFirst("(?i)^(abrir|abra|abre)\\\\s+", "").trim();"""
-            )
-
-            text = text.replace(
-                "return n.replaceAll(\"\\\\p{M}+\", \"\").trim().replaceAll(\"\\\\s+\", \" \" );",
-                "return n.replaceAll(\"\\\\p{M}+\", \"\").replaceAll(\"[^a-z0-9+ ]\", \" \" ).trim().replaceAll(\"\\\\s+\", \" \" );"
             )
 
             text = text.replace(
@@ -161,6 +101,253 @@ val configureReliableVoice by tasks.registering {
     }
 }
 
-tasks.matching { it.name == "preBuild" }.configureEach {
+val configureHandsMode by tasks.registering {
     dependsOn(configureReliableVoice)
+    doLast {
+        val service = file("src/main/java/com/autoclicker/android/AutoClickService.java")
+        var text = service.readText()
+
+        if (!text.contains("HANDS_MODE_WHATSAPP_V110")) {
+            text = text.replace(
+                "import android.graphics.Path;",
+                "import android.graphics.Path;\nimport android.graphics.Rect;"
+            )
+
+            text = text.replace(
+                "private boolean miniMoved;",
+                """private boolean miniMoved;
+
+    // HANDS_MODE_WHATSAPP_V110
+    private String pendingWhatsAppContact = "";
+    private String pendingWhatsAppMessage = "";
+    private int whatsAppStep = 0;
+    private int whatsAppRetries = 0;"""
+            )
+
+            text = text.replace(
+                """        if (equalsAny(cmd, "apagar texto", "limpar texto", "limpar campo")) { clearFocusedText(); return; }""",
+                """        java.util.regex.Matcher whats = java.util.regex.Pattern.compile(
+                "(?i)^(?:mandar|manda|mande|enviar|envie)\\\\s+(?:uma\\\\s+)?(?:mensagem\\\\s+)?(?:no\\\\s+whatsapp\\\\s+)?(?:para|pra)\\\\s+(.+?)\\\\s+(?:dizendo|falando|escrevendo|com\\\\s+a\\\\s+mensagem)\\\\s+(.+)$"
+        ).matcher(raw.trim());
+        if (whats.find()) {
+            sendWhatsAppMessage(whats.group(1).trim(), whats.group(2).trim());
+            return;
+        }
+
+        if (equalsAny(cmd, "apagar texto", "limpar texto", "limpar campo")) { clearFocusedText(); return; }"""
+            )
+
+            text = text.replace(
+                """    private void adjustVolume(int direction) {""",
+                """    private void sendWhatsAppMessage(String contact, String message) {
+        pendingWhatsAppContact = contact;
+        pendingWhatsAppMessage = message;
+        whatsAppStep = 0;
+        whatsAppRetries = 0;
+
+        PackageManager pm = getPackageManager();
+        Intent launch = pm.getLaunchIntentForPackage("com.whatsapp");
+        if (launch == null) launch = pm.getLaunchIntentForPackage("com.whatsapp.w4b");
+        if (launch == null) {
+            feedback("WhatsApp não encontrado");
+            return;
+        }
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(launch);
+        feedback("Abrindo WhatsApp para " + contact);
+        handler.postDelayed(this::runWhatsAppHands, 1400);
+    }
+
+    private void runWhatsAppHands() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) {
+            retryWhatsAppHands("Esperando o WhatsApp abrir");
+            return;
+        }
+
+        if (whatsAppStep == 0) {
+            if (clickSearchControl(root)) {
+                whatsAppStep = 1;
+                whatsAppRetries = 0;
+                handler.postDelayed(this::runWhatsAppHands, 450);
+            } else {
+                retryWhatsAppHands("Procurando botão Pesquisar");
+            }
+            return;
+        }
+
+        if (whatsAppStep == 1) {
+            AccessibilityNodeInfo edit = findAnyEditable(root);
+            if (edit != null && setNodeText(edit, pendingWhatsAppContact)) {
+                feedback("Digitando contato: " + pendingWhatsAppContact);
+                whatsAppStep = 2;
+                whatsAppRetries = 0;
+                handler.postDelayed(this::runWhatsAppHands, 850);
+            } else {
+                retryWhatsAppHands("Esperando campo de pesquisa");
+            }
+            return;
+        }
+
+        if (whatsAppStep == 2) {
+            if (clickMatchingText(root, pendingWhatsAppContact)) {
+                feedback("Abrindo conversa com " + pendingWhatsAppContact);
+                whatsAppStep = 3;
+                whatsAppRetries = 0;
+                handler.postDelayed(this::runWhatsAppHands, 1000);
+            } else {
+                retryWhatsAppHands("Procurando contato " + pendingWhatsAppContact);
+            }
+            return;
+        }
+
+        if (whatsAppStep == 3) {
+            AccessibilityNodeInfo edit = findMessageEditable(root);
+            if (edit == null) edit = findAnyEditable(root);
+            if (edit != null && setNodeText(edit, pendingWhatsAppMessage)) {
+                feedback("Mensagem digitada");
+                whatsAppStep = 4;
+                whatsAppRetries = 0;
+                handler.postDelayed(this::runWhatsAppHands, 500);
+            } else {
+                retryWhatsAppHands("Esperando campo da mensagem");
+            }
+            return;
+        }
+
+        if (whatsAppStep == 4) {
+            if (clickSendControl(root)) {
+                feedback("Mensagem enviada para " + pendingWhatsAppContact);
+                whatsAppStep = 5;
+                pendingWhatsAppContact = "";
+                pendingWhatsAppMessage = "";
+            } else {
+                retryWhatsAppHands("Procurando botão Enviar");
+            }
+        }
+    }
+
+    private void retryWhatsAppHands(String statusText) {
+        whatsAppRetries++;
+        if (whatsAppRetries > 12) {
+            feedback("Não consegui concluir: " + statusText);
+            whatsAppStep = -1;
+            return;
+        }
+        feedback(statusText + " (" + whatsAppRetries + ")");
+        handler.postDelayed(this::runWhatsAppHands, 500);
+    }
+
+    private boolean clickSearchControl(AccessibilityNodeInfo root) {
+        AccessibilityNodeInfo node = findByDescription(root, "pesquisar");
+        if (node == null) node = findByDescription(root, "search");
+        if (node != null && clickNodeOrParent(node)) return true;
+        return clickMatchingText(root, "Pesquisar") || clickMatchingText(root, "Search");
+    }
+
+    private boolean clickSendControl(AccessibilityNodeInfo root) {
+        AccessibilityNodeInfo node = findByDescription(root, "enviar");
+        if (node == null) node = findByDescription(root, "send");
+        if (node != null && clickNodeOrParent(node)) return true;
+        if (clickMatchingText(root, "Enviar") || clickMatchingText(root, "Send")) return true;
+
+        // Último recurso: toque no local típico do botão Enviar, como um dedo na tela.
+        int w = getResources().getDisplayMetrics().widthPixels;
+        int h = getResources().getDisplayMetrics().heightPixels;
+        dispatchTap(w * 0.92f, h * 0.88f);
+        return true;
+    }
+
+    private boolean clickMatchingText(AccessibilityNodeInfo root, String wanted) {
+        List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByText(wanted);
+        if (nodes == null || nodes.isEmpty()) return false;
+        String normalizedWanted = normalize(wanted);
+        AccessibilityNodeInfo fallback = null;
+        for (AccessibilityNodeInfo node : nodes) {
+            CharSequence value = node.getText();
+            if (value == null) value = node.getContentDescription();
+            if (value != null && normalize(value.toString()).equals(normalizedWanted)) {
+                if (clickNodeOrParent(node)) return true;
+            }
+            if (fallback == null) fallback = node;
+        }
+        return fallback != null && clickNodeOrParent(fallback);
+    }
+
+    private AccessibilityNodeInfo findAnyEditable(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if (node.isEditable() && node.isVisibleToUser()) return node;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo found = findAnyEditable(node.getChild(i));
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private AccessibilityNodeInfo findMessageEditable(AccessibilityNodeInfo node) {
+        if (node == null) return null;
+        if (node.isEditable() && node.isVisibleToUser()) {
+            String hint = "";
+            if (Build.VERSION.SDK_INT >= 26 && node.getHintText() != null) hint = normalize(node.getHintText().toString());
+            String desc = node.getContentDescription() == null ? "" : normalize(node.getContentDescription().toString());
+            if (hint.contains("mensagem") || hint.contains("message") || desc.contains("mensagem") || desc.contains("message")) return node;
+        }
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo found = findMessageEditable(node.getChild(i));
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private boolean setNodeText(AccessibilityNodeInfo node, String value) {
+        if (node == null) return false;
+        node.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+        Bundle args = new Bundle();
+        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value);
+        return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+    }
+
+    private void dispatchTap(float x, float y) {
+        Path path = new Path();
+        path.moveTo(x, y);
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(path, 0, 80))
+                .build();
+        dispatchGesture(gesture, null, null);
+    }
+
+    private void adjustVolume(int direction) {"""
+            )
+
+            text = text.replace(
+                """        while (current != null && depth < 8) {
+            if (current.isClickable() && current.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true;
+            current = current.getParent();
+            depth++;
+        }
+        return false;""",
+                """        AccessibilityNodeInfo original = current;
+        while (current != null && depth < 8) {
+            if (current.isClickable() && current.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true;
+            current = current.getParent();
+            depth++;
+        }
+        if (original != null && original.isVisibleToUser()) {
+            Rect bounds = new Rect();
+            original.getBoundsInScreen(bounds);
+            if (!bounds.isEmpty()) {
+                dispatchTap(bounds.exactCenterX(), bounds.exactCenterY());
+                return true;
+            }
+        }
+        return false;"""
+            )
+
+            service.writeText(text)
+        }
+    }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(configureHandsMode)
 }
