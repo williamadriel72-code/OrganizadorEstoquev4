@@ -33,31 +33,31 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(24), dp(20), dp(24), dp(28));
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setBackgroundColor(Color.rgb(246, 247, 250));
+        root.setBackgroundColor(Color.rgb(245, 247, 251));
         scroll.addView(root, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView icon = new TextView(this);
-        icon.setText("🎤");
+        icon.setText("⚡");
         icon.setTextSize(48);
         icon.setGravity(Gravity.CENTER);
-        root.addView(icon, fullWidth(dp(74)));
+        root.addView(icon, fullWidth(dp(72)));
 
         TextView title = new TextView(this);
-        title.setText("VOICE CONTROL MASTER");
-        title.setTextSize(26);
+        title.setText("MASTER TOOLS");
+        title.setTextSize(27);
         title.setTextColor(Color.rgb(20, 25, 35));
         title.setGravity(Gravity.CENTER);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
-        root.addView(title, fullWidth(dp(60)));
+        root.addView(title, fullWidth(dp(58)));
 
         TextView description = new TextView(this);
-        description.setText("Controle o celular e digite textos usando comandos de voz pelo microfone flutuante.");
+        description.setText("Todos os controles em um único APK e usando um único serviço de Acessibilidade.");
         description.setTextSize(15);
         description.setTextColor(Color.DKGRAY);
         description.setGravity(Gravity.CENTER);
-        root.addView(description, fullWidth(dp(76)));
+        root.addView(description, fullWidth(dp(74)));
 
         permissionStatus = statusView();
         root.addView(permissionStatus, fullWidth(dp(42)));
@@ -71,17 +71,17 @@ public class MainActivity extends Activity {
         root.addView(permissions, fullWidth(dp(58)));
 
         Button accessibility = new Button(this);
-        accessibility.setText("ATIVAR ACESSIBILIDADE");
+        accessibility.setText("ATIVAR ACESSIBILIDADE UMA VEZ");
         accessibility.setOnClickListener(v -> {
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
             Toast.makeText(this,
-                    "Ative Voice Control Master - Acessibilidade.",
+                    "Ative Master Tools - Acessibilidade. Esse único acesso vale para todos os módulos.",
                     Toast.LENGTH_LONG).show();
         });
-        root.addView(accessibility, fullWidth(dp(58)));
+        root.addView(accessibility, fullWidth(dp(62)));
 
         Button floating = new Button(this);
-        floating.setText("USAR MICROFONE FLUTUANTE");
+        floating.setText("ABRIR PAINEL FLUTUANTE");
         floating.setOnClickListener(v -> {
             if (!isServiceEnabled(this, AutoClickService.class)) {
                 Toast.makeText(this, "Ative a Acessibilidade primeiro.", Toast.LENGTH_LONG).show();
@@ -89,44 +89,55 @@ public class MainActivity extends Activity {
                 return;
             }
             moveTaskToBack(true);
-            Toast.makeText(this, "Use o painel flutuante e toque em OUVIR.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Use o painel flutuante Master Tools.", Toast.LENGTH_SHORT).show();
         });
         root.addView(floating, fullWidth(dp(58)));
 
-        TextView examplesTitle = new TextView(this);
-        examplesTitle.setText("EXEMPLOS DE COMANDOS");
-        examplesTitle.setTextSize(16);
-        examplesTitle.setTextColor(Color.rgb(30, 35, 45));
-        examplesTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-        examplesTitle.setGravity(Gravity.CENTER);
-        root.addView(examplesTitle, fullWidth(dp(46)));
+        TextView modulesTitle = new TextView(this);
+        modulesTitle.setText("MÓDULOS INCLUÍDOS");
+        modulesTitle.setTextSize(17);
+        modulesTitle.setTextColor(Color.rgb(30, 35, 45));
+        modulesTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        modulesTitle.setGravity(Gravity.CENTER);
+        root.addView(modulesTitle, fullWidth(dp(48)));
 
-        TextView examples = new TextView(this);
-        examples.setText(
-                "• abrir WhatsApp / câmera / configurações\n" +
-                "• voltar / início / recentes / notificações\n" +
-                "• aumentar volume / diminuir volume / silenciar\n" +
-                "• ligar lanterna / desligar lanterna\n" +
-                "• rolar para baixo / cima\n" +
-                "• deslizar para esquerda / direita\n" +
-                "• tocar em Continuar\n" +
-                "• escrever bom dia, tudo bem?\n" +
-                "• apagar texto / apagar última palavra\n" +
-                "• selecionar tudo / copiar / colar / enviar\n" +
-                "• pesquisar previsão do tempo\n" +
-                "• ligar para 21999999999\n" +
-                "• captura de tela / bloquear tela / menu desligar");
-        examples.setTextSize(14);
-        examples.setTextColor(Color.DKGRAY);
-        examples.setPadding(dp(8), dp(8), dp(8), dp(8));
-        root.addView(examples, fullWidth(dp(350)));
+        TextView modules = new TextView(this);
+        modules.setText(
+                "• AutoClicker com vários pontos e marcadores\n" +
+                "• Deslize simples em 4 direções\n" +
+                "• Linha reta diagonal de canto a canto\n" +
+                "• 2 deslizes horizontais simultâneos\n" +
+                "• Modo Fruit Ninja / tela toda\n" +
+                "• Controle por voz e mãos na tela\n" +
+                "• Abrir apps, tocar, rolar, digitar e enviar\n" +
+                "• Comando de mensagem pelo WhatsApp\n" +
+                "• Painel minimizável e botão flutuante");
+        modules.setTextSize(14);
+        modules.setTextColor(Color.DKGRAY);
+        modules.setPadding(dp(8), dp(8), dp(8), dp(8));
+        root.addView(modules, fullWidth(dp(265)));
+
+        TextView voiceTitle = new TextView(this);
+        voiceTitle.setText("EXEMPLO POR VOZ");
+        voiceTitle.setTextSize(16);
+        voiceTitle.setTextColor(Color.rgb(30, 35, 45));
+        voiceTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        voiceTitle.setGravity(Gravity.CENTER);
+        root.addView(voiceTitle, fullWidth(dp(44)));
+
+        TextView voice = new TextView(this);
+        voice.setText("“Mandar mensagem para João dizendo estou chegando”\n“Modo diagonal” • “Iniciar automação” • “Parar automação”\n“Abra WhatsApp” • “Digite bom dia” • “Toque em enviar”");
+        voice.setTextSize(14);
+        voice.setTextColor(Color.DKGRAY);
+        voice.setGravity(Gravity.CENTER);
+        root.addView(voice, fullWidth(dp(118)));
 
         TextView note = new TextView(this);
-        note.setText("Algumas funções protegidas pelo Android não podem ser alteradas diretamente por um app comum. Nesses casos o comando abre a configuração correspondente.");
+        note.setText("Funções protegidas pelo Android, como algumas alterações diretas de Wi‑Fi ou Bluetooth, podem abrir a tela correta do sistema em vez de serem alteradas silenciosamente.");
         note.setTextSize(13);
         note.setTextColor(Color.GRAY);
         note.setGravity(Gravity.CENTER);
-        root.addView(note, fullWidth(dp(100)));
+        root.addView(note, fullWidth(dp(105)));
 
         setContentView(scroll);
         requestRequiredPermissions();
@@ -157,7 +168,7 @@ public class MainActivity extends Activity {
         permissionStatus.setTextColor(mic ? Color.rgb(0, 140, 70) : Color.rgb(190, 45, 45));
 
         boolean enabled = isServiceEnabled(this, AutoClickService.class);
-        accessibilityStatus.setText(enabled ? "ACESSIBILIDADE ATIVA ✓" : "ACESSIBILIDADE DESATIVADA");
+        accessibilityStatus.setText(enabled ? "ACESSIBILIDADE ÚNICA ATIVA ✓" : "ACESSIBILIDADE DESATIVADA");
         accessibilityStatus.setTextColor(enabled ? Color.rgb(0, 140, 70) : Color.rgb(190, 45, 45));
     }
 
