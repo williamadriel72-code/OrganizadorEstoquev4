@@ -23,7 +23,7 @@
         </activity>
 
         <service
-            android:name="com.autoclicker.android.MasterToolsService"
+            android:name="com.autoclicker.android.MasterToolsServiceV15"
             android:label="Master Tools - Acessibilidade"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
