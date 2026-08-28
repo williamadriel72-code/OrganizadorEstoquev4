@@ -38,8 +38,14 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        TextView icon = new TextView(this);
+        icon.setText("🎤");
+        icon.setTextSize(48);
+        icon.setGravity(Gravity.CENTER);
+        root.addView(icon, fullWidth(dp(74)));
+
         TextView title = new TextView(this);
-        title.setText("CONTROLE POR VOZ");
+        title.setText("VOICE CONTROL MASTER");
         title.setTextSize(26);
         title.setTextColor(Color.rgb(20, 25, 35));
         title.setGravity(Gravity.CENTER);
@@ -47,7 +53,7 @@ public class MainActivity extends Activity {
         root.addView(title, fullWidth(dp(60)));
 
         TextView description = new TextView(this);
-        description.setText("Controle o celular por voz usando um microfone flutuante e o serviço de Acessibilidade.");
+        description.setText("Controle o celular e digite textos usando comandos de voz pelo microfone flutuante.");
         description.setTextSize(15);
         description.setTextColor(Color.DKGRAY);
         description.setGravity(Gravity.CENTER);
@@ -69,23 +75,23 @@ public class MainActivity extends Activity {
         accessibility.setOnClickListener(v -> {
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
             Toast.makeText(this,
-                    "Ative Controle por Voz - Acessibilidade.",
+                    "Ative Voice Control Master - Acessibilidade.",
                     Toast.LENGTH_LONG).show();
         });
         root.addView(accessibility, fullWidth(dp(58)));
 
-        Button minimize = new Button(this);
-        minimize.setText("USAR CONTROLE FLUTUANTE");
-        minimize.setOnClickListener(v -> {
+        Button floating = new Button(this);
+        floating.setText("USAR MICROFONE FLUTUANTE");
+        floating.setOnClickListener(v -> {
             if (!isServiceEnabled(this, AutoClickService.class)) {
                 Toast.makeText(this, "Ative a Acessibilidade primeiro.", Toast.LENGTH_LONG).show();
                 startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
                 return;
             }
             moveTaskToBack(true);
-            Toast.makeText(this, "Toque no microfone flutuante e fale.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Use o painel flutuante e toque em OUVIR.", Toast.LENGTH_SHORT).show();
         });
-        root.addView(minimize, fullWidth(dp(58)));
+        root.addView(floating, fullWidth(dp(58)));
 
         TextView examplesTitle = new TextView(this);
         examplesTitle.setText("EXEMPLOS DE COMANDOS");
@@ -97,28 +103,30 @@ public class MainActivity extends Activity {
 
         TextView examples = new TextView(this);
         examples.setText(
-                "• abrir WhatsApp / abrir câmera / abrir configurações\n" +
+                "• abrir WhatsApp / câmera / configurações\n" +
                 "• voltar / início / recentes / notificações\n" +
                 "• aumentar volume / diminuir volume / silenciar\n" +
                 "• ligar lanterna / desligar lanterna\n" +
-                "• rolar para baixo / rolar para cima\n" +
-                "• deslizar para esquerda / deslizar para direita\n" +
+                "• rolar para baixo / cima\n" +
+                "• deslizar para esquerda / direita\n" +
                 "• tocar em Continuar\n" +
-                "• escrever bom dia\n" +
+                "• escrever bom dia, tudo bem?\n" +
+                "• apagar texto / apagar última palavra\n" +
+                "• selecionar tudo / copiar / colar / enviar\n" +
                 "• pesquisar previsão do tempo\n" +
                 "• ligar para 21999999999\n" +
                 "• captura de tela / bloquear tela / menu desligar");
         examples.setTextSize(14);
         examples.setTextColor(Color.DKGRAY);
         examples.setPadding(dp(8), dp(8), dp(8), dp(8));
-        root.addView(examples, fullWidth(dp(310)));
+        root.addView(examples, fullWidth(dp(350)));
 
         TextView note = new TextView(this);
-        note.setText("Algumas funções do Android não podem ser alteradas diretamente por apps comuns. Nesses casos o comando abre a configuração correta do sistema.");
+        note.setText("Algumas funções protegidas pelo Android não podem ser alteradas diretamente por um app comum. Nesses casos o comando abre a configuração correspondente.");
         note.setTextSize(13);
         note.setTextColor(Color.GRAY);
         note.setGravity(Gravity.CENTER);
-        root.addView(note, fullWidth(dp(92)));
+        root.addView(note, fullWidth(dp(100)));
 
         setContentView(scroll);
         requestRequiredPermissions();
