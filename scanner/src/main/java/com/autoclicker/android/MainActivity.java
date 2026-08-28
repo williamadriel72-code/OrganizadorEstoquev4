@@ -53,7 +53,7 @@ public class MainActivity extends Activity {
         root.addView(title, fullWidth(dp(58)));
 
         TextView description = new TextView(this);
-        description.setText("Todos os controles em um único APK e usando um único serviço de Acessibilidade.");
+        description.setText("Todos os controles de toque e deslize em um único APK, usando um único serviço de Acessibilidade.");
         description.setTextSize(15);
         description.setTextColor(Color.DKGRAY);
         description.setGravity(Gravity.CENTER);
@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
         root.addView(accessibilityStatus, fullWidth(dp(42)));
 
         Button permissions = new Button(this);
-        permissions.setText("LIBERAR MICROFONE E LANTERNA");
+        permissions.setText("LIBERAR LANTERNA");
         permissions.setOnClickListener(v -> requestRequiredPermissions());
         root.addView(permissions, fullWidth(dp(58)));
 
@@ -108,36 +108,20 @@ public class MainActivity extends Activity {
                 "• Linha reta diagonal de canto a canto\n" +
                 "• 2 deslizes horizontais simultâneos\n" +
                 "• Modo Fruit Ninja / tela toda\n" +
-                "• Controle por voz e mãos na tela\n" +
-                "• Abrir apps, tocar, rolar, digitar e enviar\n" +
-                "• Comando de mensagem pelo WhatsApp\n" +
-                "• Painel minimizável e botão flutuante");
+                "• Controle de velocidade e quantidade\n" +
+                "• Painel minimizável e botão flutuante\n" +
+                "• Um único acesso de Acessibilidade");
         modules.setTextSize(14);
         modules.setTextColor(Color.DKGRAY);
         modules.setPadding(dp(8), dp(8), dp(8), dp(8));
-        root.addView(modules, fullWidth(dp(265)));
-
-        TextView voiceTitle = new TextView(this);
-        voiceTitle.setText("EXEMPLO POR VOZ");
-        voiceTitle.setTextSize(16);
-        voiceTitle.setTextColor(Color.rgb(30, 35, 45));
-        voiceTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-        voiceTitle.setGravity(Gravity.CENTER);
-        root.addView(voiceTitle, fullWidth(dp(44)));
-
-        TextView voice = new TextView(this);
-        voice.setText("“Mandar mensagem para João dizendo estou chegando”\n“Modo diagonal” • “Iniciar automação” • “Parar automação”\n“Abra WhatsApp” • “Digite bom dia” • “Toque em enviar”");
-        voice.setTextSize(14);
-        voice.setTextColor(Color.DKGRAY);
-        voice.setGravity(Gravity.CENTER);
-        root.addView(voice, fullWidth(dp(118)));
+        root.addView(modules, fullWidth(dp(245)));
 
         TextView note = new TextView(this);
-        note.setText("Funções protegidas pelo Android, como algumas alterações diretas de Wi‑Fi ou Bluetooth, podem abrir a tela correta do sistema em vez de serem alteradas silenciosamente.");
+        note.setText("Esta versão não possui controle por voz nem usa o microfone.");
         note.setTextSize(13);
         note.setTextColor(Color.GRAY);
         note.setGravity(Gravity.CENTER);
-        root.addView(note, fullWidth(dp(105)));
+        root.addView(note, fullWidth(dp(70)));
 
         setContentView(scroll);
         requestRequiredPermissions();
@@ -157,15 +141,14 @@ public class MainActivity extends Activity {
 
     private void requestRequiredPermissions() {
         if (android.os.Build.VERSION.SDK_INT >= 23) {
-            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA}, REQ_PERMISSIONS);
+            requestPermissions(new String[]{Manifest.permission.CAMERA}, REQ_PERMISSIONS);
         }
     }
 
     private void updateStatus() {
-        boolean mic = checkSelfPermissionCompat(Manifest.permission.RECORD_AUDIO);
         boolean camera = checkSelfPermissionCompat(Manifest.permission.CAMERA);
-        permissionStatus.setText("PERMISSÕES: " + (mic ? "MIC ✓" : "MIC ✕") + "   " + (camera ? "LANTERNA ✓" : "LANTERNA ✕"));
-        permissionStatus.setTextColor(mic ? Color.rgb(0, 140, 70) : Color.rgb(190, 45, 45));
+        permissionStatus.setText("PERMISSÕES: " + (camera ? "LANTERNA ✓" : "LANTERNA ✕"));
+        permissionStatus.setTextColor(camera ? Color.rgb(0, 140, 70) : Color.rgb(190, 45, 45));
 
         boolean enabled = isServiceEnabled(this, AutoClickService.class);
         accessibilityStatus.setText(enabled ? "ACESSIBILIDADE ÚNICA ATIVA ✓" : "ACESSIBILIDADE DESATIVADA");
