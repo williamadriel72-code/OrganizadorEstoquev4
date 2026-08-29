@@ -9,18 +9,22 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class FruitNinjaAssistService extends AccessibilityService {
     private static final String FRUIT_NINJA_PACKAGE = "com.halfbrick.fruitninjafree";
@@ -44,7 +48,17 @@ public class FruitNinjaAssistService extends AccessibilityService {
     private int safetyMarginDp = 72;
     private boolean gestureBusy;
     private long lastFrameTimestamp;
-    private String activePackage = "";
+
+    // A versão anterior dependia apenas do último AccessibilityEvent.
+    // Overlays, notificações e System UI podiam sobrescrever o pacote ativo,
+    // fazendo o modo ficar ligado sem executar cortes. Agora combinamos:
+    // raiz da janela ativa + lista de janelas + último evento real do Fruit Ninja.
+    private long lastFruitNinjaSeenAt;
+    private long lastForegroundCheckAt;
+    private boolean cachedFruitNinjaForeground;
+
+    private long temporaryDetectorMessageUntil;
+    private String temporaryDetectorMessage = "";
 
     private float dragDownX, dragDownY;
     private int dragStartX, dragStartY;
@@ -97,10 +111,10 @@ public class FruitNinjaAssistService extends AccessibilityService {
         panel.addView(header, full(dp(38)));
 
         statusText = label("Aguardando Fruit Ninja", 10, Color.rgb(210, 255, 215));
-        panel.addView(statusText, full(dp(30)));
+        panel.addView(statusText, full(dp(34)));
 
         detectorText = label("Captura parada", 9, Color.LTGRAY);
-        panel.addView(detectorText, full(dp(30)));
+        panel.addView(detectorText, full(dp(34)));
 
         modeButton = button("");
         modeButton.setOnClickListener(v -> {
@@ -130,6 +144,10 @@ public class FruitNinjaAssistService extends AccessibilityService {
         });
         marginRow.addView(plus, cell(dp(36)));
         panel.addView(marginRow, full(dp(38)));
+
+        Button test = button("TESTAR GESTO");
+        test.setOnClickListener(v -> testAccessibilityGesture());
+        panel.addView(test, full(dp(40)));
 
         autoButton = button("");
         autoButton.setOnClickListener(v -> {
@@ -265,9 +283,9 @@ public class FruitNinjaAssistService extends AccessibilityService {
         @Override
         public void run() {
             try {
-                updateStatus();
-                if (autoCut && !gestureBusy && FruitNinjaBus.captureRunning
-                        && FRUIT_NINJA_PACKAGE.equals(activePackage)) {
+                boolean inGame = isFruitNinjaForeground();
+                updateStatus(inGame);
+                if (autoCut && !gestureBusy && FruitNinjaBus.captureRunning && inGame) {
                     FruitNinjaDetector.Result result = FruitNinjaBus.latestResult;
                     if (result != null && result.timestampMs != lastFrameTimestamp) {
                         lastFrameTimestamp = result.timestampMs;
@@ -281,13 +299,60 @@ public class FruitNinjaAssistService extends AccessibilityService {
         }
     };
 
-    private void updateStatus() {
-        if (detectorText != null) detectorText.setText(FruitNinjaBus.captureStatus);
+    private boolean isFruitNinjaForeground() {
+        long now = SystemClock.uptimeMillis();
+        if (now - lastForegroundCheckAt < 140) {
+            return cachedFruitNinjaForeground || now - lastFruitNinjaSeenAt < 1800;
+        }
+        lastForegroundCheckAt = now;
+
+        boolean found = false;
+
+        try {
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            if (root != null && root.getPackageName() != null
+                    && FRUIT_NINJA_PACKAGE.contentEquals(root.getPackageName())) {
+                found = true;
+            }
+        } catch (Throwable ignored) {}
+
+        if (!found) {
+            try {
+                List<AccessibilityWindowInfo> windows = getWindows();
+                if (windows != null) {
+                    for (AccessibilityWindowInfo window : windows) {
+                        if (window == null) continue;
+                        if (!window.isActive() && !window.isFocused()) continue;
+                        AccessibilityNodeInfo root = window.getRoot();
+                        if (root == null || root.getPackageName() == null) continue;
+                        if (FRUIT_NINJA_PACKAGE.contentEquals(root.getPackageName())) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        if (found) lastFruitNinjaSeenAt = now;
+        cachedFruitNinjaForeground = found || now - lastFruitNinjaSeenAt < 1800;
+        return cachedFruitNinjaForeground;
+    }
+
+    private void updateStatus(boolean inGame) {
+        if (detectorText != null) {
+            long now = SystemClock.uptimeMillis();
+            if (now < temporaryDetectorMessageUntil) {
+                detectorText.setText(temporaryDetectorMessage);
+            } else {
+                detectorText.setText(FruitNinjaBus.captureStatus);
+            }
+        }
         if (statusText == null) return;
 
         if (!FruitNinjaBus.captureRunning) {
             statusText.setText("Abra o app e inicie a captura da tela");
-        } else if (!FRUIT_NINJA_PACKAGE.equals(activePackage)) {
+        } else if (!inGame) {
             statusText.setText("Captura pronta • abra o Fruit Ninja");
         } else if (!autoCut) {
             statusText.setText("Fruit Ninja detectado • ative o corte");
@@ -298,11 +363,57 @@ public class FruitNinjaAssistService extends AccessibilityService {
             if (r == null) {
                 statusText.setText("Analisando a tela...");
             } else {
+                String mode = safeMode ? "SEGURO" : "AGRESSIVO";
                 statusText.setText(
-                        "Seguro • " + r.fruits.size() + " fruta(s) • "
+                        mode + " • " + r.fruits.size() + " fruta(s) • "
                                 + r.bombs.size() + " bomba(s)");
             }
         }
+    }
+
+    private void testAccessibilityGesture() {
+        if (gestureBusy) return;
+
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        float w = Math.max(1, dm.widthPixels);
+        float h = Math.max(1, dm.heightPixels);
+
+        Path path = new Path();
+        path.moveTo(w * 0.38f, h * 0.82f);
+        path.lineTo(w * 0.62f, h * 0.82f);
+
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(path, 0, 160))
+                .build();
+
+        gestureBusy = true;
+        showTemporaryDetectorMessage("TESTANDO GESTO...", 1800);
+        boolean accepted = dispatchGesture(
+                gesture,
+                new GestureResultCallback() {
+                    @Override
+                    public void onCompleted(GestureDescription gestureDescription) {
+                        gestureBusy = false;
+                        showTemporaryDetectorMessage("GESTO OK • Acessibilidade funcionando", 2600);
+                    }
+
+                    @Override
+                    public void onCancelled(GestureDescription gestureDescription) {
+                        gestureBusy = false;
+                        showTemporaryDetectorMessage("GESTO CANCELADO PELO ANDROID", 2600);
+                    }
+                },
+                null);
+        if (!accepted) {
+            gestureBusy = false;
+            showTemporaryDetectorMessage("GESTO RECUSADO • reative a Acessibilidade", 3000);
+        }
+    }
+
+    private void showTemporaryDetectorMessage(String message, long durationMs) {
+        temporaryDetectorMessage = message;
+        temporaryDetectorMessageUntil = SystemClock.uptimeMillis() + durationMs;
+        if (detectorText != null) detectorText.setText(message);
     }
 
     private void performSafeCuts(FruitNinjaDetector.Result result) {
@@ -365,7 +476,10 @@ public class FruitNinjaAssistService extends AccessibilityService {
                     }
                 },
                 null);
-        if (!accepted) gestureBusy = false;
+        if (!accepted) {
+            gestureBusy = false;
+            showTemporaryDetectorMessage("Corte recusado pelo Android", 1600);
+        }
     }
 
     private boolean wasRecentlyCut(FruitNinjaLogic.Fruit fruit, long now) {
@@ -446,7 +560,11 @@ public class FruitNinjaAssistService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null || event.getPackageName() == null) return;
-        activePackage = String.valueOf(event.getPackageName());
+        String pkg = String.valueOf(event.getPackageName());
+        if (FRUIT_NINJA_PACKAGE.equals(pkg)) {
+            lastFruitNinjaSeenAt = SystemClock.uptimeMillis();
+            cachedFruitNinjaForeground = true;
+        }
     }
 
     @Override
