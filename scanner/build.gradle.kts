@@ -8,7 +8,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.organizador.scanner"
+        applicationId = "com.boramaycon.hihi"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
