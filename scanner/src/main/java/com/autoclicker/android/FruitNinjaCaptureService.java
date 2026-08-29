@@ -147,68 +147,21 @@ public class FruitNinjaCaptureService extends Service {
         densityDpi = Math.max(120, dm.densityDpi);
     }
 
-    private void createVirtualDisplay() {
-        if (projection == null) return;
-        releaseDisplayOnly();
-
-        imageReader = ImageReader.newInstance(
+    private ImageReader newImageReader() {
+        ImageReader reader = ImageReader.newInstance(
                 screenWidth,
                 screenHeight,
                 PixelFormat.RGBA_8888,
                 3);
+        reader.setOnImageAvailableListener(this::processImage, captureHandler);
+        return reader;
+    }
 
-        imageReader.setOnImageAvailableListener(reader -> {
-            Image image = null;
-            try {
-                image = reader.acquireLatestImage();
-                if (image == null) return;
+    private void createVirtualDisplay() {
+        if (projection == null) return;
+        releaseDisplayOnly();
 
-                long now = SystemClock.uptimeMillis();
-                if (now - lastAnalysisAt < 38) return;
-                lastAnalysisAt = now;
-
-                Image.Plane[] planes = image.getPlanes();
-                if (planes == null || planes.length == 0) return;
-                Image.Plane plane = planes[0];
-                final ByteBuffer buffer = plane.getBuffer();
-                final int rowStride = plane.getRowStride();
-                final int pixelStride = plane.getPixelStride();
-                final int width = image.getWidth();
-                final int height = image.getHeight();
-
-                if (buffer == null || pixelStride < 3 || rowStride <= 0) return;
-
-                FruitNinjaDetector.Result result = detector.analyze(
-                        new FruitNinjaDetector.PixelSource() {
-                            @Override
-                            public int getArgb(int x, int y) {
-                                int pos = y * rowStride + x * pixelStride;
-                                if (pos < 0 || pos + 2 >= buffer.limit()) return 0xff000000;
-                                int r = buffer.get(pos) & 0xff;
-                                int g = buffer.get(pos + 1) & 0xff;
-                                int b = buffer.get(pos + 2) & 0xff;
-                                return 0xff000000 | (r << 16) | (g << 8) | b;
-                            }
-                        },
-                        width,
-                        height,
-                        now);
-
-                FruitNinjaBus.latestResult = result;
-                FruitNinjaBus.captureRunning = true;
-                FruitNinjaBus.captureStatus =
-                        "Captura ativa • " + result.bombs.size() + " bomba(s) • "
-                                + result.fruits.size() + " fruta(s) • "
-                                + result.analysisMs + " ms";
-            } catch (Throwable t) {
-                FruitNinjaBus.captureStatus = "Detector: " + t.getClass().getSimpleName();
-            } finally {
-                if (image != null) {
-                    try { image.close(); } catch (Throwable ignored) {}
-                }
-            }
-        }, captureHandler);
-
+        imageReader = newImageReader();
         virtualDisplay = projection.createVirtualDisplay(
                 "FruitGuardScreen",
                 screenWidth,
@@ -220,14 +173,84 @@ public class FruitNinjaCaptureService extends Service {
                 captureHandler);
     }
 
+    private void processImage(ImageReader reader) {
+        Image image = null;
+        try {
+            image = reader.acquireLatestImage();
+            if (image == null) return;
+
+            long now = SystemClock.uptimeMillis();
+            if (now - lastAnalysisAt < 38) return;
+            lastAnalysisAt = now;
+
+            Image.Plane[] planes = image.getPlanes();
+            if (planes == null || planes.length == 0) return;
+            Image.Plane plane = planes[0];
+            final ByteBuffer buffer = plane.getBuffer();
+            final int rowStride = plane.getRowStride();
+            final int pixelStride = plane.getPixelStride();
+            final int width = image.getWidth();
+            final int height = image.getHeight();
+
+            if (buffer == null || pixelStride < 3 || rowStride <= 0) return;
+
+            FruitNinjaDetector.Result result = detector.analyze(
+                    new FruitNinjaDetector.PixelSource() {
+                        @Override
+                        public int getArgb(int x, int y) {
+                            int pos = y * rowStride + x * pixelStride;
+                            if (pos < 0 || pos + 2 >= buffer.limit()) return 0xff000000;
+                            int r = buffer.get(pos) & 0xff;
+                            int g = buffer.get(pos + 1) & 0xff;
+                            int b = buffer.get(pos + 2) & 0xff;
+                            return 0xff000000 | (r << 16) | (g << 8) | b;
+                        }
+                    },
+                    width,
+                    height,
+                    now);
+
+            FruitNinjaBus.latestResult = result;
+            FruitNinjaBus.captureRunning = true;
+            FruitNinjaBus.captureStatus =
+                    "Captura ativa • " + result.bombs.size() + " bomba(s) • "
+                            + result.fruits.size() + " fruta(s) • "
+                            + result.analysisMs + " ms";
+        } catch (Throwable t) {
+            FruitNinjaBus.captureStatus = "Detector: " + t.getClass().getSimpleName();
+        } finally {
+            if (image != null) {
+                try { image.close(); } catch (Throwable ignored) {}
+            }
+        }
+    }
+
+    private void resizeVirtualDisplayForRotation() {
+        if (projection == null || virtualDisplay == null) return;
+        updateDisplayMetrics();
+
+        ImageReader oldReader = imageReader;
+        ImageReader newReader = newImageReader();
+        try {
+            virtualDisplay.resize(screenWidth, screenHeight, densityDpi);
+            virtualDisplay.setSurface(newReader.getSurface());
+            imageReader = newReader;
+            if (oldReader != null) {
+                try { oldReader.close(); } catch (Throwable ignored) {}
+            }
+        } catch (Throwable t) {
+            try { newReader.close(); } catch (Throwable ignored) {}
+            FruitNinjaBus.captureStatus = "Rotação: reinicie a captura";
+        }
+    }
+
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         if (projection == null || captureHandler == null) return;
         captureHandler.postDelayed(() -> {
             try {
-                updateDisplayMetrics();
-                createVirtualDisplay();
+                resizeVirtualDisplayForRotation();
                 FruitNinjaBus.captureStatus = "Captura reajustada à rotação";
             } catch (Throwable t) {
                 FruitNinjaBus.captureStatus = "Falha ao reajustar captura";
