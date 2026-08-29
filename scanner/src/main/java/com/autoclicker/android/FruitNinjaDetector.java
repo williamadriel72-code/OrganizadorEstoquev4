@@ -74,8 +74,6 @@ public final class FruitNinjaDetector {
         boolean[] colorfulMoving = new boolean[total];
         boolean[] darkMoving = new boolean[total];
 
-        // Faixa superior e bordas ficam proibidas para impedir que o detector trate
-        // placar, pausa, menus e gestos do sistema como objetos do jogo.
         int leftCut = Math.max(0, (int)(width * 0.065f));
         int rightCut = Math.min(width, (int)(width * 0.935f));
         int topCut = Math.max(0, (int)(height * 0.18f));
@@ -116,8 +114,6 @@ public final class FruitNinjaDetector {
                         && (max - min) >= 50
                         && lum >= 58;
 
-                // Mais permissivo que a versão anterior: bombas com reflexo, símbolo
-                // vermelho ou iluminação ainda entram na máscara de perigo.
                 darkBase[idx] = inPlay
                         && lum <= 128
                         && max <= 175
@@ -153,7 +149,7 @@ public final class FruitNinjaDetector {
         List<FruitNinjaLogic.Bomb> bombs = updateTracks(rawBombs, timestampMs);
 
         ArrayList<FruitNinjaLogic.Fruit> fruits = findFruitCandidates(
-                width, height, step, gw, gh, colorfulMoving, bombs,
+                width, height, step, gw, gh, colorfulMoving,
                 leftCut, rightCut, topCut, bottomCut);
 
         previous = current;
@@ -281,8 +277,6 @@ public final class FruitNinjaDetector {
                         && count >= 5
                         && darkRatio >= 0.20f;
 
-                // Proteção máxima: se parece com um objeto escuro móvel e arredondado,
-                // tratamos como perigo mesmo sem conseguir enxergar a chama em um frame.
                 if (!fuseEvidence && !redEvidence && !darkRoundObject) continue;
 
                 float radius = Math.max(30f, Math.max(bw, bh) * 0.78f + 14f);
@@ -308,7 +302,6 @@ public final class FruitNinjaDetector {
             int gw,
             int gh,
             boolean[] mask,
-            List<FruitNinjaLogic.Bomb> bombs,
             int leftCut,
             int rightCut,
             int topCut,
@@ -379,19 +372,10 @@ public final class FruitNinjaDetector {
                         0.28f + Math.min(0.42f, count / 45f) + Math.min(0.30f, fill * 0.55f));
                 if (confidence < 0.50f) continue;
 
-                boolean tooNearBomb = false;
-                for (FruitNinjaLogic.Bomb b : bombs) {
-                    float dx = cx - b.x;
-                    float dy = cy - b.y;
-                    float limit = b.radius + Math.max(52f, size * 0.72f);
-                    if (dx * dx + dy * dy < limit * limit) {
-                        tooNearBomb = true;
-                        break;
-                    }
-                }
-                if (!tooNearBomb) {
-                    out.add(new FruitNinjaLogic.Fruit(cx, cy, size, confidence));
-                }
+                // O detector informa a fruta mesmo se ela estiver perto de uma bomba.
+                // A decisão de cortar ou não pertence ao planejador de segurança,
+                // que usa previsão de movimento e margens muito maiores.
+                out.add(new FruitNinjaLogic.Fruit(cx, cy, size, confidence));
             }
         }
 
