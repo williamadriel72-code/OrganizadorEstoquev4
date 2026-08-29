@@ -1,20 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
+    <queries>
+        <package android:name="com.halfbrick.fruitninjafree" />
+    </queries>
 
     <application
         android:allowBackup="false"
-        android:label="Master Tools"
-        android:icon="@drawable/ic_voice_control"
-        android:roundIcon="@drawable/ic_voice_control"
+        android:label="Master Tools Fruit Guard"
+        android:icon="@drawable/ic_fruit_guard"
+        android:roundIcon="@drawable/ic_fruit_guard"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
         <activity
-            android:name="com.autoclicker.android.MainActivity"
+            android:name="com.autoclicker.android.FruitNinjaActivity"
+            android:screenOrientation="unspecified"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -23,8 +28,13 @@
         </activity>
 
         <service
-            android:name="com.autoclicker.android.MasterToolsServiceV15"
-            android:label="Master Tools - Acessibilidade"
+            android:name="com.autoclicker.android.FruitNinjaCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <service
+            android:name="com.autoclicker.android.FruitNinjaAssistService"
+            android:label="Fruit Guard - Evitar Bombas"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
             <intent-filter>
