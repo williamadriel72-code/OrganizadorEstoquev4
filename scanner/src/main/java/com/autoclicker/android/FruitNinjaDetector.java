@@ -66,15 +66,21 @@ public final class FruitNinjaDetector {
         int gw = Math.max(1, width / step);
         int gh = Math.max(1, height / step);
         int total = gw * gh;
+
         int[] current = new int[total];
         boolean[] moving = new boolean[total];
         boolean[] colorfulBase = new boolean[total];
         boolean[] darkBase = new boolean[total];
-        boolean[] colorful = new boolean[total];
+        boolean[] colorfulMoving = new boolean[total];
         boolean[] darkMoving = new boolean[total];
 
-        int topCut = Math.max(0, (int)(height * 0.12f));
-        int bottomCut = Math.min(height, (int)(height * 0.97f));
+        // Faixa superior e bordas ficam proibidas para impedir que o detector trate
+        // placar, pausa, menus e gestos do sistema como objetos do jogo.
+        int leftCut = Math.max(0, (int)(width * 0.065f));
+        int rightCut = Math.min(width, (int)(width * 0.935f));
+        int topCut = Math.max(0, (int)(height * 0.18f));
+        int bottomCut = Math.min(height, (int)(height * 0.91f));
+
         boolean havePrev = previous != null && previousGridW == gw && previousGridH == gh;
 
         for (int gy = 0; gy < gh; gy++) {
@@ -101,11 +107,21 @@ public final class FruitNinjaDetector {
                     diff = (Math.abs(r - pr) + Math.abs(g - pg) + Math.abs(b - pb)) / 3;
                 }
 
-                boolean inPlay = y >= topCut && y <= bottomCut;
-                boolean isMoving = havePrev && diff >= 18;
+                boolean inPlay = x >= leftCut && x <= rightCut && y >= topCut && y <= bottomCut;
+                boolean isMoving = havePrev && diff >= 15;
                 moving[idx] = isMoving;
-                colorfulBase[idx] = inPlay && max >= 95 && (max - min) >= 45 && lum >= 55;
-                darkBase[idx] = inPlay && lum <= 82 && max <= 115 && (max - min) <= 80;
+
+                colorfulBase[idx] = inPlay
+                        && max >= 100
+                        && (max - min) >= 50
+                        && lum >= 58;
+
+                // Mais permissivo que a versão anterior: bombas com reflexo, símbolo
+                // vermelho ou iluminação ainda entram na máscara de perigo.
+                darkBase[idx] = inPlay
+                        && lum <= 128
+                        && max <= 175
+                        && (max - min) <= 125;
             }
         }
 
@@ -126,7 +142,7 @@ public final class FruitNinjaDetector {
                             }
                         }
                     }
-                    colorful[idx] = colorfulBase[idx] && nearMotion;
+                    colorfulMoving[idx] = colorfulBase[idx] && nearMotion;
                     darkMoving[idx] = darkBase[idx] && nearMotion;
                 }
             }
@@ -134,11 +150,11 @@ public final class FruitNinjaDetector {
 
         ArrayList<RawBomb> rawBombs = findBombCandidates(
                 src, width, height, step, gw, gh, darkMoving);
-
         List<FruitNinjaLogic.Bomb> bombs = updateTracks(rawBombs, timestampMs);
 
         ArrayList<FruitNinjaLogic.Fruit> fruits = findFruitCandidates(
-                width, height, step, gw, gh, colorful, bombs);
+                width, height, step, gw, gh, colorfulMoving, bombs,
+                leftCut, rightCut, topCut, bottomCut);
 
         previous = current;
         previousGridW = gw;
@@ -187,6 +203,7 @@ public final class FruitNinjaDetector {
                 qy[tail] = sy;
                 tail++;
                 seen[sidx] = true;
+
                 int count = 0;
                 int minX = sx, maxX = sx, minY = sy, maxY = sy;
                 long sumX = 0, sumY = 0;
@@ -197,10 +214,136 @@ public final class FruitNinjaDetector {
                     count++;
                     sumX += x;
                     sumY += y;
-                    if (x < minX) minX = x;
-                    if (x > maxX) maxX = x;
-                    if (y < minY) minY = y;
-                    if (y > maxY) maxY = y;
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+
+                    for (int oy = -1; oy <= 1; oy++) {
+                        for (int ox = -1; ox <= 1; ox++) {
+                            if (ox == 0 && oy == 0) continue;
+                            int nx = x + ox, ny = y + oy;
+                            if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
+                            int ni = ny * gw + nx;
+                            if (mask[ni] && !seen[ni]) {
+                                seen[ni] = true;
+                                qx[tail] = nx;
+                                qy[tail] = ny;
+                                tail++;
+                            }
+                        }
+                    }
+                }
+
+                if (count < 3 || count > 520) continue;
+                int boxCells = Math.max(1, (maxX - minX + 1) * (maxY - minY + 1));
+                float fill = count / (float) boxCells;
+                float bw = (maxX - minX + 1) * step;
+                float bh = (maxY - minY + 1) * step;
+                if (bw < 16 || bh < 16 || bw > 260 || bh > 260) continue;
+                float aspect = bw / Math.max(1f, bh);
+                if (aspect < 0.45f || aspect > 2.20f || fill < 0.08f) continue;
+
+                float cx = ((sumX / (float)count) + 0.5f) * step;
+                float cy = ((sumY / (float)count) + 0.5f) * step;
+
+                int px0 = clamp((minX * step) - step * 5, 0, width - 1);
+                int py0 = clamp((minY * step) - step * 6, 0, height - 1);
+                int px1 = clamp(((maxX + 1) * step) + step * 5, 0, width - 1);
+                int py1 = clamp(((maxY + 1) * step) + step * 4, 0, height - 1);
+
+                int hot = 0;
+                int bright = 0;
+                int redMark = 0;
+                int dark = 0;
+                int sampled = 0;
+                int sample = Math.max(2, step / 2);
+                for (int y = py0; y <= py1; y += sample) {
+                    for (int x = px0; x <= px1; x += sample) {
+                        int c = src.getArgb(x, y);
+                        int r = (c >> 16) & 255;
+                        int g = (c >> 8) & 255;
+                        int b = c & 255;
+                        int lum = (r * 3 + g * 6 + b) / 10;
+                        sampled++;
+                        if (lum < 115) dark++;
+                        if (isHotFuseColor(r, g, b)) hot++;
+                        if (r > 185 && g > 135 && b < 130) bright++;
+                        if (r > 120 && r > g + 28 && r > b + 24) redMark++;
+                    }
+                }
+
+                float darkRatio = sampled == 0 ? 0f : dark / (float) sampled;
+                boolean fuseEvidence = hot + bright >= 1;
+                boolean redEvidence = redMark >= 2;
+                boolean darkRoundObject = fill >= 0.14f
+                        && aspect >= 0.55f && aspect <= 1.85f
+                        && count >= 5
+                        && darkRatio >= 0.20f;
+
+                // Proteção máxima: se parece com um objeto escuro móvel e arredondado,
+                // tratamos como perigo mesmo sem conseguir enxergar a chama em um frame.
+                if (!fuseEvidence && !redEvidence && !darkRoundObject) continue;
+
+                float radius = Math.max(30f, Math.max(bw, bh) * 0.78f + 14f);
+                out.add(new RawBomb(cx, cy, radius));
+            }
+        }
+
+        Collections.sort(out, new Comparator<RawBomb>() {
+            @Override public int compare(RawBomb a, RawBomb b) {
+                return Float.compare(b.radius, a.radius);
+            }
+        });
+        if (out.size() > 16) {
+            return new ArrayList<>(out.subList(0, 16));
+        }
+        return out;
+    }
+
+    private ArrayList<FruitNinjaLogic.Fruit> findFruitCandidates(
+            int width,
+            int height,
+            int step,
+            int gw,
+            int gh,
+            boolean[] mask,
+            List<FruitNinjaLogic.Bomb> bombs,
+            int leftCut,
+            int rightCut,
+            int topCut,
+            int bottomCut) {
+
+        ArrayList<FruitNinjaLogic.Fruit> out = new ArrayList<>();
+        boolean[] seen = new boolean[mask.length];
+        int[] qx = new int[mask.length];
+        int[] qy = new int[mask.length];
+
+        for (int sy = 0; sy < gh; sy++) {
+            for (int sx = 0; sx < gw; sx++) {
+                int sidx = sy * gw + sx;
+                if (!mask[sidx] || seen[sidx]) continue;
+
+                int head = 0, tail = 0;
+                qx[tail] = sx;
+                qy[tail] = sy;
+                tail++;
+                seen[sidx] = true;
+
+                int count = 0;
+                int minX = sx, maxX = sx, minY = sy, maxY = sy;
+                long sumX = 0, sumY = 0;
+
+                while (head < tail) {
+                    int x = qx[head], y = qy[head];
+                    head++;
+                    count++;
+                    sumX += x;
+                    sumY += y;
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
 
                     for (int oy = -1; oy <= 1; oy++) {
                         for (int ox = -1; ox <= 1; ox++) {
@@ -219,123 +362,28 @@ public final class FruitNinjaDetector {
                 }
 
                 if (count < 4 || count > 420) continue;
+                int boxCells = Math.max(1, (maxX - minX + 1) * (maxY - minY + 1));
+                float fill = count / (float) boxCells;
                 float bw = (maxX - minX + 1) * step;
                 float bh = (maxY - minY + 1) * step;
-                if (bw < 18 || bh < 18 || bw > 250 || bh > 250) continue;
+                if (bw < 20 || bh < 20 || bw > 190 || bh > 190) continue;
                 float aspect = bw / Math.max(1f, bh);
-                if (aspect < 0.42f || aspect > 2.35f) continue;
+                if (aspect < 0.42f || aspect > 2.40f || fill < 0.08f) continue;
 
                 float cx = ((sumX / (float)count) + 0.5f) * step;
                 float cy = ((sumY / (float)count) + 0.5f) * step;
-                float radius = Math.max(20f, Math.max(bw, bh) * 0.55f);
+                if (cx < leftCut || cx > rightCut || cy < topCut || cy > bottomCut) continue;
 
-                int px0 = clamp((minX * step) - step * 3, 0, width - 1);
-                int py0 = clamp((minY * step) - step * 4, 0, height - 1);
-                int px1 = clamp(((maxX + 1) * step) + step * 3, 0, width - 1);
-                int py1 = clamp(((maxY + 1) * step) + step * 2, 0, height - 1);
-
-                int hot = 0;
-                int bright = 0;
-                int sample = Math.max(2, step / 2);
-                for (int y = py0; y <= py1; y += sample) {
-                    for (int x = px0; x <= px1; x += sample) {
-                        int c = src.getArgb(x, y);
-                        int r = (c >> 16) & 255;
-                        int g = (c >> 8) & 255;
-                        int b = c & 255;
-                        if (isHotFuseColor(r, g, b)) hot++;
-                        if (r > 185 && g > 150 && b < 115) bright++;
-                    }
-                }
-
-                if (hot + bright < 2) continue;
-                out.add(new RawBomb(cx, cy, radius));
-            }
-        }
-
-        Collections.sort(out, new Comparator<RawBomb>() {
-            @Override public int compare(RawBomb a, RawBomb b) {
-                return Float.compare(a.radius, b.radius);
-            }
-        });
-        if (out.size() > 12) {
-            return new ArrayList<>(out.subList(0, 12));
-        }
-        return out;
-    }
-
-    private ArrayList<FruitNinjaLogic.Fruit> findFruitCandidates(
-            int width,
-            int height,
-            int step,
-            int gw,
-            int gh,
-            boolean[] mask,
-            List<FruitNinjaLogic.Bomb> bombs) {
-
-        ArrayList<FruitNinjaLogic.Fruit> out = new ArrayList<>();
-        boolean[] seen = new boolean[mask.length];
-        int[] qx = new int[mask.length];
-        int[] qy = new int[mask.length];
-
-        for (int sy = 0; sy < gh; sy++) {
-            for (int sx = 0; sx < gw; sx++) {
-                int sidx = sy * gw + sx;
-                if (!mask[sidx] || seen[sidx]) continue;
-
-                int head = 0, tail = 0;
-                qx[tail] = sx;
-                qy[tail] = sy;
-                tail++;
-                seen[sidx] = true;
-                int count = 0;
-                int minX = sx, maxX = sx, minY = sy, maxY = sy;
-                long sumX = 0, sumY = 0;
-
-                while (head < tail) {
-                    int x = qx[head], y = qy[head];
-                    head++;
-                    count++;
-                    sumX += x;
-                    sumY += y;
-                    if (x < minX) minX = x;
-                    if (x > maxX) maxX = x;
-                    if (y < minY) minY = y;
-                    if (y > maxY) maxY = y;
-
-                    for (int oy = -1; oy <= 1; oy++) {
-                        for (int ox = -1; ox <= 1; ox++) {
-                            if (ox == 0 && oy == 0) continue;
-                            int nx = x + ox, ny = y + oy;
-                            if (nx < 0 || ny < 0 || nx >= gw || ny >= gh) continue;
-                            int ni = ny * gw + nx;
-                            if (mask[ni] && !seen[ni]) {
-                                seen[ni] = true;
-                                qx[tail] = nx;
-                                qy[tail] = ny;
-                                tail++;
-                            }
-                        }
-                    }
-                }
-
-                if (count < 3 || count > 600) continue;
-                float bw = (maxX - minX + 1) * step;
-                float bh = (maxY - minY + 1) * step;
-                if (bw < 14 || bh < 14 || bw > 280 || bh > 280) continue;
-                float aspect = bw / Math.max(1f, bh);
-                if (aspect < 0.28f || aspect > 3.5f) continue;
-
-                float cx = ((sumX / (float)count) + 0.5f) * step;
-                float cy = ((sumY / (float)count) + 0.5f) * step;
-                float size = Math.max(18f, Math.max(bw, bh));
-                float confidence = Math.min(1f, count / 18f);
+                float size = Math.max(20f, Math.max(bw, bh));
+                float confidence = Math.min(1f,
+                        0.28f + Math.min(0.42f, count / 45f) + Math.min(0.30f, fill * 0.55f));
+                if (confidence < 0.50f) continue;
 
                 boolean tooNearBomb = false;
                 for (FruitNinjaLogic.Bomb b : bombs) {
                     float dx = cx - b.x;
                     float dy = cy - b.y;
-                    float limit = b.radius + Math.max(28f, size * 0.5f);
+                    float limit = b.radius + Math.max(52f, size * 0.72f);
                     if (dx * dx + dy * dy < limit * limit) {
                         tooNearBomb = true;
                         break;
@@ -352,14 +400,15 @@ public final class FruitNinjaDetector {
                 return Float.compare(b.confidence, a.confidence);
             }
         });
-        if (out.size() > 24) {
-            return new ArrayList<>(out.subList(0, 24));
+        if (out.size() > 12) {
+            return new ArrayList<>(out.subList(0, 12));
         }
         return out;
     }
 
     private List<FruitNinjaLogic.Bomb> updateTracks(List<RawBomb> detections, long nowMs) {
         boolean[] used = new boolean[detections.size()];
+
         for (Track t : tracks) {
             int best = -1;
             float bestD2 = Float.MAX_VALUE;
@@ -369,23 +418,24 @@ public final class FruitNinjaDetector {
                 float dx = d.x - t.x;
                 float dy = d.y - t.y;
                 float d2 = dx * dx + dy * dy;
-                float gate = Math.max(110f, t.radius * 3.2f);
+                float gate = Math.max(135f, t.radius * 3.8f);
                 if (d2 < gate * gate && d2 < bestD2) {
                     bestD2 = d2;
                     best = i;
                 }
             }
+
             if (best >= 0) {
                 RawBomb d = detections.get(best);
                 used[best] = true;
                 float dt = Math.max(0.016f, Math.min(0.25f, (nowMs - t.timestampMs) / 1000f));
                 float nvx = (d.x - t.x) / dt;
                 float nvy = (d.y - t.y) / dt;
-                t.vx = t.vx * 0.45f + nvx * 0.55f;
-                t.vy = t.vy * 0.45f + nvy * 0.55f;
+                t.vx = t.vx * 0.40f + nvx * 0.60f;
+                t.vy = t.vy * 0.40f + nvy * 0.60f;
                 t.x = d.x;
                 t.y = d.y;
-                t.radius = t.radius * 0.4f + d.radius * 0.6f;
+                t.radius = t.radius * 0.35f + d.radius * 0.65f;
                 t.timestampMs = nowMs;
                 t.misses = 0;
             } else {
@@ -400,25 +450,24 @@ public final class FruitNinjaDetector {
             t.x = d.x;
             t.y = d.y;
             t.radius = d.radius;
-            t.vx = 0f;
-            t.vy = 0f;
             t.timestampMs = nowMs;
             tracks.add(t);
         }
 
         for (int i = tracks.size() - 1; i >= 0; i--) {
-            if (tracks.get(i).misses > 2) tracks.remove(i);
+            if (tracks.get(i).misses > 4) tracks.remove(i);
         }
 
         ArrayList<FruitNinjaLogic.Bomb> out = new ArrayList<>();
         for (Track t : tracks) {
-            if (t.misses > 1) continue;
+            if (t.misses > 3) continue;
             float speed = (float)Math.sqrt(t.vx * t.vx + t.vy * t.vy);
-            float motionPadding = Math.min(55f, speed * 0.035f);
+            float motionPadding = Math.min(100f, speed * 0.055f);
+            float stalePadding = t.misses * 18f;
             out.add(new FruitNinjaLogic.Bomb(
                     t.x,
                     t.y,
-                    Math.max(25f, t.radius + motionPadding),
+                    Math.max(34f, t.radius + motionPadding + stalePadding),
                     t.vx,
                     t.vy,
                     nowMs));
@@ -427,8 +476,9 @@ public final class FruitNinjaDetector {
     }
 
     private static boolean isHotFuseColor(int r, int g, int b) {
-        return (r >= 155 && g >= 35 && g <= 175 && b <= 105)
-                || (r >= 195 && g >= 135 && b <= 120);
+        return (r >= 135 && g >= 25 && g <= 190 && b <= 125)
+                || (r >= 185 && g >= 115 && b <= 135)
+                || (r >= 215 && g >= 175 && b <= 160);
     }
 
     private static int clamp(int v, int min, int max) {
