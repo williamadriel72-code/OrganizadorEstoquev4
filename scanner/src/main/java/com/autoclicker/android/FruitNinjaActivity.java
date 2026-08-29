@@ -7,13 +7,11 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.util.Base64;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityManager;
@@ -24,8 +22,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.util.List;
 
 public class FruitNinjaActivity extends Activity {
@@ -51,11 +47,12 @@ public class FruitNinjaActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
         ImageView art = new ImageView(this);
-        art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        art.setAdjustViewBounds(true);
-        loadArt(art);
+        art.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        art.setImageResource(R.drawable.ic_fruit_guard);
+        art.setPadding(dp(22), dp(22), dp(22), dp(22));
+        art.setBackgroundColor(Color.rgb(12, 28, 16));
         root.addView(art, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(240)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
 
         TextView title = text("MASTER TOOLS • FRUIT GUARD", 23, Color.WHITE);
         title.setGravity(Gravity.CENTER);
@@ -226,21 +223,6 @@ public class FruitNinjaActivity extends Activity {
             requestPermissions(
                     new String[]{Manifest.permission.POST_NOTIFICATIONS},
                     REQ_NOTIFICATIONS);
-        }
-    }
-
-    private void loadArt(ImageView view) {
-        try {
-            InputStream in = getResources().openRawResource(R.raw.fruit_guard_art_b64);
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buf = new byte[4096];
-            int n;
-            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-            in.close();
-            byte[] jpeg = Base64.decode(out.toByteArray(), Base64.DEFAULT);
-            view.setImageBitmap(BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length));
-        } catch (Throwable t) {
-            view.setBackgroundColor(Color.rgb(18, 90, 35));
         }
     }
 
