@@ -45,14 +45,10 @@ public class FruitNinjaAssistService extends AccessibilityService {
 
     private boolean safeMode = true;
     private boolean autoCut;
-    private int safetyMarginDp = 72;
+    private int safetyMarginDp = 110;
     private boolean gestureBusy;
     private long lastFrameTimestamp;
 
-    // A versão anterior dependia apenas do último AccessibilityEvent.
-    // Overlays, notificações e System UI podiam sobrescrever o pacote ativo,
-    // fazendo o modo ficar ligado sem executar cortes. Agora combinamos:
-    // raiz da janela ativa + lista de janelas + último evento real do Fruit Ninja.
     private long lastFruitNinjaSeenAt;
     private long lastForegroundCheckAt;
     private boolean cachedFruitNinjaForeground;
@@ -86,8 +82,8 @@ public class FruitNinjaAssistService extends AccessibilityService {
         safeMode = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("safe_mode", true);
         autoCut = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("auto_cut", false);
         safetyMarginDp = clamp(
-                getSharedPreferences(PREFS, MODE_PRIVATE).getInt("margin_dp", 72),
-                30, 160);
+                getSharedPreferences(PREFS, MODE_PRIVATE).getInt("margin_dp", 110),
+                70, 220);
         showPanel();
         handler.post(loop);
     }
@@ -116,6 +112,10 @@ public class FruitNinjaAssistService extends AccessibilityService {
         detectorText = label("Captura parada", 9, Color.LTGRAY);
         panel.addView(detectorText, full(dp(34)));
 
+        TextView safeArea = label("UI PROTEGIDA • topo, bordas e rodapé bloqueados", 9,
+                Color.rgb(255, 215, 120));
+        panel.addView(safeArea, full(dp(30)));
+
         modeButton = button("");
         modeButton.setOnClickListener(v -> {
             if (gestureBusy) return;
@@ -131,27 +131,28 @@ public class FruitNinjaAssistService extends AccessibilityService {
         LinearLayout marginRow = row();
         Button minus = button("−10");
         minus.setOnClickListener(v -> {
-            safetyMarginDp = clamp(safetyMarginDp - 10, 30, 160);
+            safetyMarginDp = clamp(safetyMarginDp - 10, 70, 220);
             savePrefs();
             refreshButtons();
         });
         marginRow.addView(minus, cell(dp(36)));
         Button plus = button("+10");
         plus.setOnClickListener(v -> {
-            safetyMarginDp = clamp(safetyMarginDp + 10, 30, 160);
+            safetyMarginDp = clamp(safetyMarginDp + 10, 70, 220);
             savePrefs();
             refreshButtons();
         });
         marginRow.addView(plus, cell(dp(36)));
         panel.addView(marginRow, full(dp(38)));
 
-        Button test = button("TESTAR GESTO");
+        Button test = button("TESTAR GESTO SEGURO");
         test.setOnClickListener(v -> testAccessibilityGesture());
         panel.addView(test, full(dp(40)));
 
         autoButton = button("");
         autoButton.setOnClickListener(v -> {
             autoCut = !autoCut;
+            if (autoCut) recentCuts.clear();
             savePrefs();
             refreshButtons();
         });
@@ -171,7 +172,7 @@ public class FruitNinjaAssistService extends AccessibilityService {
         panel.addView(minimize, full(dp(38)));
 
         panelLp = new WindowManager.LayoutParams(
-                dp(245),
+                dp(250),
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
@@ -266,11 +267,11 @@ public class FruitNinjaAssistService extends AccessibilityService {
     private void refreshButtons() {
         if (modeButton != null) {
             modeButton.setText(safeMode
-                    ? "MODO: SEGURO • EVITA MAIS AS BOMBAS"
-                    : "MODO: AGRESSIVO • MAIS FRUTAS");
+                    ? "MODO: PROTEÇÃO MÁXIMA"
+                    : "MODO: RÁPIDO • MAIS FRUTAS");
         }
         if (marginText != null) {
-            marginText.setText("MARGEM EXTRA DA BOMBA: " + safetyMarginDp + " dp");
+            marginText.setText("DISTÂNCIA DA BOMBA: " + safetyMarginDp + " dp");
         }
         if (autoButton != null) {
             autoButton.setText(autoCut
@@ -289,7 +290,7 @@ public class FruitNinjaAssistService extends AccessibilityService {
                     FruitNinjaDetector.Result result = FruitNinjaBus.latestResult;
                     if (result != null && result.timestampMs != lastFrameTimestamp) {
                         lastFrameTimestamp = result.timestampMs;
-                        performSafeCuts(result);
+                        performSafeCut(result);
                     }
                 }
             } catch (Throwable ignored) {
@@ -307,7 +308,6 @@ public class FruitNinjaAssistService extends AccessibilityService {
         lastForegroundCheckAt = now;
 
         boolean found = false;
-
         try {
             AccessibilityNodeInfo root = getRootInActiveWindow();
             if (root != null && root.getPackageName() != null
@@ -357,16 +357,16 @@ public class FruitNinjaAssistService extends AccessibilityService {
         } else if (!autoCut) {
             statusText.setText("Fruit Ninja detectado • ative o corte");
         } else if (gestureBusy) {
-            statusText.setText("Cortando frutas seguras...");
+            statusText.setText("Executando 1 corte seguro...");
         } else {
             FruitNinjaDetector.Result r = FruitNinjaBus.latestResult;
             if (r == null) {
                 statusText.setText("Analisando a tela...");
             } else {
-                String mode = safeMode ? "SEGURO" : "AGRESSIVO";
+                String mode = safeMode ? "PROTEÇÃO" : "RÁPIDO";
                 statusText.setText(
                         mode + " • " + r.fruits.size() + " fruta(s) • "
-                                + r.bombs.size() + " bomba(s)");
+                                + r.bombs.size() + " perigo(s)");
             }
         }
     }
@@ -379,15 +379,15 @@ public class FruitNinjaAssistService extends AccessibilityService {
         float h = Math.max(1, dm.heightPixels);
 
         Path path = new Path();
-        path.moveTo(w * 0.38f, h * 0.82f);
-        path.lineTo(w * 0.62f, h * 0.82f);
+        path.moveTo(w * 0.42f, h * 0.74f);
+        path.lineTo(w * 0.58f, h * 0.74f);
 
         GestureDescription gesture = new GestureDescription.Builder()
-                .addStroke(new GestureDescription.StrokeDescription(path, 0, 160))
+                .addStroke(new GestureDescription.StrokeDescription(path, 0, 140))
                 .build();
 
         gestureBusy = true;
-        showTemporaryDetectorMessage("TESTANDO GESTO...", 1800);
+        showTemporaryDetectorMessage("TESTANDO GESTO SEGURO...", 1800);
         boolean accepted = dispatchGesture(
                 gesture,
                 new GestureResultCallback() {
@@ -416,54 +416,80 @@ public class FruitNinjaAssistService extends AccessibilityService {
         if (detectorText != null) detectorText.setText(message);
     }
 
-    private void performSafeCuts(FruitNinjaDetector.Result result) {
+    private void performSafeCut(FruitNinjaDetector.Result result) {
         if (result.fruits == null || result.fruits.isEmpty()) return;
 
-        cleanupRecentCuts();
-        final long lookAheadMs = safeMode ? 150L : 90L;
-        final float marginPx = dp(safetyMarginDp);
-        final int maxCuts = safeMode ? 3 : 5;
-        final long now = SystemClock.uptimeMillis();
+        long now = SystemClock.uptimeMillis();
+        // Nunca executa trajetória baseada em frame velho.
+        if (now - result.timestampMs > 220) return;
 
-        GestureDescription.Builder builder = new GestureDescription.Builder();
-        int added = 0;
+        cleanupRecentCuts();
+
+        final float left = result.width * 0.08f;
+        final float right = result.width * 0.92f;
+        final float top = result.height * 0.22f;
+        final float bottom = result.height * 0.88f;
+
+        final long lookAheadMs = safeMode ? 240L : 150L;
+        final float baseMargin = dp(safetyMarginDp);
+        final float bombMargin = baseMargin + dp(safeMode ? 38 : 20);
+        final float confidenceMin = safeMode ? 0.62f : 0.54f;
 
         for (FruitNinjaLogic.Fruit fruit : result.fruits) {
-            if (added >= maxCuts) break;
+            if (fruit == null || fruit.confidence < confidenceMin) continue;
+            if (fruit.size < dp(12) || fruit.size > Math.min(result.width, result.height) * 0.26f) continue;
             if (wasRecentlyCut(fruit, now)) continue;
+            if (!insideSafeArea(fruit.x, fruit.y, left, top, right, bottom)) continue;
 
+            float halfLength = Math.max(dp(16), Math.min(dp(42), fruit.size * 0.38f));
             float[] slice = FruitNinjaLogic.chooseSafeSlice(
                     fruit,
                     result.bombs,
                     lookAheadMs,
-                    marginPx,
-                    Math.max(dp(20), fruit.size * 0.46f),
+                    bombMargin,
+                    halfLength,
                     result.width,
                     result.height);
             if (slice == null) continue;
+
+            // Trava absoluta: início, fim e centro da linha precisam permanecer na
+            // área de jogo. Assim a automação não toca pausa, menu, barra do sistema
+            // nem bordas usadas para voltar/sair.
+            if (!insideSafeArea(slice[0], slice[1], left, top, right, bottom)
+                    || !insideSafeArea(slice[2], slice[3], left, top, right, bottom)
+                    || !insideSafeArea((slice[0] + slice[2]) * 0.5f,
+                                       (slice[1] + slice[3]) * 0.5f,
+                                       left, top, right, bottom)) {
+                continue;
+            }
 
             if (!FruitNinjaLogic.segmentClear(
                     slice[0], slice[1], slice[2], slice[3],
                     result.bombs,
                     lookAheadMs,
-                    marginPx + dp(safeMode ? 8 : 2))) {
+                    bombMargin + dp(safeMode ? 26 : 12))) {
                 continue;
             }
 
-            Path p = new Path();
-            p.moveTo(slice[0], slice[1]);
-            p.lineTo(slice[2], slice[3]);
-            long duration = safeMode ? 62 : 45;
-            builder.addStroke(new GestureDescription.StrokeDescription(p, 0, duration));
-            recentCuts.add(new RecentCut(fruit.x, fruit.y, now));
-            added++;
+            dispatchSingleCut(slice, fruit, now);
+            return; // UM corte por vez. Evita bagunçar a tela com multitouch aleatório.
         }
+    }
 
-        if (added == 0) return;
+    private void dispatchSingleCut(float[] slice, FruitNinjaLogic.Fruit fruit, long now) {
+        Path p = new Path();
+        p.moveTo(slice[0], slice[1]);
+        p.lineTo(slice[2], slice[3]);
+
+        long duration = safeMode ? 72 : 55;
+        GestureDescription gesture = new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(p, 0, duration))
+                .build();
 
         gestureBusy = true;
+        recentCuts.add(new RecentCut(fruit.x, fruit.y, now));
         boolean accepted = dispatchGesture(
-                builder.build(),
+                gesture,
                 new GestureResultCallback() {
                     @Override
                     public void onCompleted(GestureDescription gestureDescription) {
@@ -476,17 +502,23 @@ public class FruitNinjaAssistService extends AccessibilityService {
                     }
                 },
                 null);
+
         if (!accepted) {
             gestureBusy = false;
             showTemporaryDetectorMessage("Corte recusado pelo Android", 1600);
         }
     }
 
+    private boolean insideSafeArea(float x, float y,
+                                   float left, float top, float right, float bottom) {
+        return x >= left && x <= right && y >= top && y <= bottom;
+    }
+
     private boolean wasRecentlyCut(FruitNinjaLogic.Fruit fruit, long now) {
-        float gate = Math.max(dp(28), fruit.size * 0.85f);
+        float gate = Math.max(dp(34), fruit.size * 1.05f);
         float gate2 = gate * gate;
         for (RecentCut c : recentCuts) {
-            if (now - c.at > 260) continue;
+            if (now - c.at > 360) continue;
             float dx = fruit.x - c.x;
             float dy = fruit.y - c.y;
             if (dx * dx + dy * dy <= gate2) return true;
@@ -495,7 +527,7 @@ public class FruitNinjaAssistService extends AccessibilityService {
     }
 
     private void cleanupRecentCuts() {
-        long cutoff = SystemClock.uptimeMillis() - 450;
+        long cutoff = SystemClock.uptimeMillis() - 650;
         Iterator<RecentCut> it = recentCuts.iterator();
         while (it.hasNext()) {
             if (it.next().at < cutoff) it.remove();
