@@ -8,7 +8,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.organizador.scanner"
+        applicationId = "com.boramaycon.hihi"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -29,5 +29,4 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 }
