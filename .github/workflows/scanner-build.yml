@@ -31,6 +31,20 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Test Fruit Guard detector
+        run: |
+          mkdir -p /tmp/fruit-guard-tests
+          javac -d /tmp/fruit-guard-tests \
+            scanner/src/main/java/com/autoclicker/android/FruitNinjaLogic.java \
+            scanner/src/main/java/com/autoclicker/android/FruitNinjaDetector.java \
+            scanner/test-tools/FruitNinjaLogicSelfTest.java \
+            scanner/test-tools/FruitNinjaStressTest.java
+          java -cp /tmp/fruit-guard-tests com.autoclicker.android.FruitNinjaLogicSelfTest
+          java -cp /tmp/fruit-guard-tests com.autoclicker.android.FruitNinjaStressTest
+
+      - name: Android Lint
+        run: gradle :scanner:lintDebug --no-daemon
+
       - name: Build Scanner APK
         run: gradle :scanner:assembleDebug --no-daemon
 
