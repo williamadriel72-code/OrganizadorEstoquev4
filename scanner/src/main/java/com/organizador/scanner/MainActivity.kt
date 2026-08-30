@@ -20,6 +20,9 @@ import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -28,7 +31,7 @@ import android.widget.ImageView
 import androidx.activity.ComponentActivity
 
 private const val APP_URL = "https://bora-michael-hi-hi.vercel.app/?app=motoboy"
-private const val CHANNEL_ID = "bora_michael_updates_v24"
+private const val CHANNEL_ID = "bora_michael_updates_v25"
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
@@ -36,10 +39,13 @@ class MainActivity : ComponentActivity() {
     private var heeHeePlayer: MediaPlayer? = null
     private var foreground = true
     private var lastNotifyAt = 0L
+    private var fallbackLoaded = false
+    private var pageReady = false
 
     inner class BoraBridge {
         @JavascriptInterface
         fun appReady() {
+            pageReady = true
             runOnUiThread {
                 if (::sticker.isInitialized) sticker.visibility = View.VISIBLE
             }
@@ -76,11 +82,38 @@ class MainActivity : ComponentActivity() {
             settings.databaseEnabled = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.4.0"
+            settings.mediaPlaybackRequiresUserGesture = false
+            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.5.0"
             isVerticalScrollBarEnabled = false
             webChromeClient = WebChromeClient()
             addJavascriptInterface(BoraBridge(), "AndroidBora")
-            webViewClient = object : WebViewClient() {}
+            webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                    pageReady = false
+                    if (::sticker.isInitialized) sticker.visibility = View.GONE
+                    super.onPageStarted(view, url, favicon)
+                }
+
+                override fun onReceivedError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    error: WebResourceError?
+                ) {
+                    super.onReceivedError(view, request, error)
+                    if (request?.isForMainFrame == true && !pageReady) loadFallback()
+                }
+
+                override fun onReceivedHttpError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    errorResponse: WebResourceResponse?
+                ) {
+                    super.onReceivedHttpError(view, request, errorResponse)
+                    if (request?.isForMainFrame == true && (errorResponse?.statusCode ?: 0) >= 400 && !pageReady) {
+                        loadFallback()
+                    }
+                }
+            }
         }
 
         root.addView(
@@ -93,8 +126,8 @@ class MainActivity : ComponentActivity() {
 
         heeHeePlayer = createHeeHeePlayer()
 
-        val stickerWidth = (40 * density).toInt()
-        val stickerHeight = (60 * density).toInt()
+        val stickerWidth = (36 * density).toInt()
+        val stickerHeight = (54 * density).toInt()
         val sideMargin = (8 * density).toInt()
         val bottomMarginPx = (76 * density).toInt()
 
@@ -136,7 +169,38 @@ class MainActivity : ComponentActivity() {
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
         setContentView(root)
-        webView.loadUrl(APP_URL)
+        loadLatestOnline()
+    }
+
+    private fun loadLatestOnline() {
+        fallbackLoaded = false
+        pageReady = false
+        if (::sticker.isInitialized) sticker.visibility = View.GONE
+        val url = "$APP_URL&shell=stock&v=${System.currentTimeMillis()}"
+        webView.loadUrl(url)
+    }
+
+    private fun loadFallback() {
+        if (fallbackLoaded || !::webView.isInitialized) return
+        fallbackLoaded = true
+        runOnUiThread {
+            try {
+                val html = assets.open("bora_fallback.html").bufferedReader().use { it.readText() }
+                webView.loadDataWithBaseURL(
+                    "https://bora-michael-hi-hi.vercel.app/?app=motoboy&fallback=1",
+                    html,
+                    "text/html",
+                    "UTF-8",
+                    null
+                )
+            } catch (_: Exception) {
+                webView.loadData(
+                    "<html><body style='background:#0c0e10;color:white;font-family:sans-serif;padding:30px'><h3>Não foi possível abrir o sistema.</h3><p>Verifique sua internet e tente novamente.</p><button onclick='location.reload()'>Tentar novamente</button></body></html>",
+                    "text/html",
+                    "UTF-8"
+                )
+            }
+        }
     }
 
     private fun createHeeHeePlayer(): MediaPlayer? = try {
@@ -192,19 +256,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 2401)
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 2501)
         }
     }
 
     private fun showUpdateNotification() {
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) return
+
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pending = PendingIntent.getActivity(
             this,
-            2401,
+            2501,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -224,12 +293,30 @@ class MainActivity : ComponentActivity() {
             .setContentIntent(pending)
             .build()
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-            .notify(2401, notification)
+            .notify(2501, notification)
     }
 
     override fun onStart() {
         super.onStart()
         foreground = true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        foreground = true
+        if (::webView.isInitialized) {
+            webView.onResume()
+            webView.resumeTimers()
+            webView.evaluateJavascript(
+                "try{window.dispatchEvent(new Event('focus'));window.dispatchEvent(new Event('online'));}catch(e){}",
+                null
+            )
+        }
+    }
+
+    override fun onPause() {
+        if (::webView.isInitialized) webView.onPause()
+        super.onPause()
     }
 
     override fun onStop() {
