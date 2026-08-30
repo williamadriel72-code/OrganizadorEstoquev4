@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -258,9 +257,7 @@ private fun TodayScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit) 
         }
     }
 
-    if (addDialog) {
-        AddDeliveryDialog(db, onDismiss = { addDialog = false }, onAdded = refresh)
-    }
+    if (addDialog) AddDeliveryDialog(db, onDismiss = { addDialog = false }, onAdded = refresh)
 }
 
 @Composable
@@ -287,22 +284,15 @@ private fun AddDeliveryDialog(db: DeliveryDb, onDismiss: () -> Unit, onAdded: ()
                 Text("Adicionar entrega", fontSize = 22.sp, fontWeight = FontWeight.Black)
                 Text("Toque no bairro para lançar. O mesmo bairro pode ser lançado várias vezes.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(10.dp))
-                TextField(
-                    value = search,
-                    onValueChange = { search = it },
-                    label = { Text("Pesquisar bairro") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                TextField(value = search, onValueChange = { search = it }, label = { Text("Pesquisar bairro") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 if (note.isNotBlank()) Text(note, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(vertical = 8.dp))
                 LazyColumn(Modifier.heightIn(max = 430.dp)) {
                     items(shown, key = { it.id }) { n ->
                         Row(
                             Modifier.fillMaxWidth().clickable {
                                 val value = if (n.integral) integralFee else n.fee
-                                if (n.integral && value <= 0.0) {
-                                    note = "Defina a Taxa Integral na aba Bairros."
-                                } else {
+                                if (n.integral && value <= 0.0) note = "Defina a Taxa Integral na aba Bairros."
+                                else {
                                     db.addDelivery(LocalDate.now(), n.name, value)
                                     note = "${n.name} • ${brl(value)} adicionado"
                                     search = ""
@@ -329,11 +319,7 @@ private fun CalendarScreen(db: DeliveryDb, refreshToken: Int) {
     val stats = remember(refreshToken, year) { db.yearStats(year) }
     var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 OutlinedButton(onClick = { year-- }) { Text("‹") }
@@ -374,9 +360,7 @@ private fun MonthGrid(month: YearMonth, stats: Map<LocalDate, DaySummary>, onDay
         Column(Modifier.padding(12.dp)) {
             Text(name, fontSize = 19.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth()) {
-                labels.forEach { Text(it, Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
-            }
+            Row(Modifier.fillMaxWidth()) { labels.forEach { Text(it, Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 11.sp) } }
             repeat(6) { row ->
                 Row(Modifier.fillMaxWidth()) {
                     repeat(7) { col ->
@@ -409,21 +393,13 @@ private fun MonthGrid(month: YearMonth, stats: Map<LocalDate, DaySummary>, onDay
 private fun HistoryScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit) {
     var search by remember { mutableStateOf("") }
     val all = remember(refreshToken) { db.allDeliveries() }
-    val shown = if (search.isBlank()) all else all.filter {
-        it.neighborhood.contains(search.trim(), true) || it.date.format(dateFmt).contains(search.trim())
-    }
+    val shown = if (search.isBlank()) all else all.filter { it.neighborhood.contains(search.trim(), true) || it.date.format(dateFmt).contains(search.trim()) }
     val grouped = shown.groupBy { it.date }.toSortedMap(compareByDescending { it })
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Text("Histórico", fontSize = 26.sp, fontWeight = FontWeight.Black)
-            TextField(
-                value = search,
-                onValueChange = { search = it },
-                label = { Text("Buscar bairro ou data") },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                singleLine = true
-            )
+            TextField(value = search, onValueChange = { search = it }, label = { Text("Buscar bairro ou data") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), singleLine = true)
         }
         if (grouped.isEmpty()) item { Text("Nenhum registro encontrado.") }
         grouped.forEach { (date, list) ->
@@ -447,13 +423,7 @@ private fun HistoryScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit
 }
 
 @Composable
-private fun NeighborhoodsScreen(
-    db: DeliveryDb,
-    refreshToken: Int,
-    refresh: () -> Unit,
-    exportBackup: () -> Unit,
-    importBackup: () -> Unit
-) {
+private fun NeighborhoodsScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit, exportBackup: () -> Unit, importBackup: () -> Unit) {
     val neighborhoods = remember(refreshToken) { db.neighborhoods() }
     var search by remember { mutableStateOf("") }
     var integralText by remember(refreshToken) { mutableStateOf(db.getIntegralFee().takeIf { it > 0 }?.toString()?.replace('.', ',') ?: "") }
@@ -468,17 +438,9 @@ private fun NeighborhoodsScreen(
                 Column(Modifier.padding(14.dp)) {
                     Text("Taxa Integral", fontSize = 18.sp, fontWeight = FontWeight.Black)
                     Text("Usada nos locais marcados como Taxa Integral.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextField(
-                        value = integralText,
-                        onValueChange = { integralText = it },
-                        label = { Text("Valor R$") },
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        singleLine = true
-                    )
+                    TextField(value = integralText, onValueChange = { integralText = it }, label = { Text("Valor R$") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), singleLine = true)
                     Button(onClick = {
-                        integralText.replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0.0 }?.let {
-                            db.setIntegralFee(it); refresh()
-                        }
+                        integralText.replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0.0 }?.let { db.setIntegralFee(it); refresh() }
                     }, modifier = Modifier.padding(top = 8.dp)) { Text("Salvar Taxa Integral") }
                 }
             }
@@ -490,9 +452,7 @@ private fun NeighborhoodsScreen(
                 OutlinedButton(onClick = importBackup, modifier = Modifier.weight(1f)) { Text("Restaurar") }
             }
         }
-        item {
-            TextField(value = search, onValueChange = { search = it }, label = { Text("Pesquisar bairro") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        }
+        item { TextField(value = search, onValueChange = { search = it }, label = { Text("Pesquisar bairro") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
         items(shown, key = { it.id }) { n ->
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -507,16 +467,12 @@ private fun NeighborhoodsScreen(
         }
     }
 
-    if (newItem) {
-        NeighborhoodEditor(null, { newItem = false }) { name, fee, integral ->
-            if (db.addNeighborhood(name, fee, integral)) { newItem = false; refresh() }
-        }
+    if (newItem) NeighborhoodEditor(null, { newItem = false }) { name, fee, integral ->
+        if (db.addNeighborhood(name, fee, integral)) { newItem = false; refresh() }
     }
-    editor?.let { current ->
-        NeighborhoodEditor(current, { editor = null }) { name, fee, integral ->
-            if (db.updateNeighborhood(current.id, name, fee, integral)) { editor = null; refresh() }
-        }
-    }
+    editor?.let { current -> NeighborhoodEditor(current, { editor = null }) { name, fee, integral ->
+        if (db.updateNeighborhood(current.id, name, fee, integral)) { editor = null; refresh() }
+    } }
 }
 
 @Composable
@@ -644,9 +600,7 @@ class DeliveryDb(context: Context) : SQLiteOpenHelper(context, "bora_maycon.db",
             Triple("Virgem Santa depois do posto de saúde",0.0,true)
         )
         data.forEach { (name, fee, integral) ->
-            db.insert("neighborhoods", null, ContentValues().apply {
-                put("name", name); put("fee", fee); put("integral", if (integral) 1 else 0)
-            })
+            db.insert("neighborhoods", null, ContentValues().apply { put("name", name); put("fee", fee); put("integral", if (integral) 1 else 0) })
         }
         db.insert("settings", null, ContentValues().apply { put("key", "integral_fee"); put("value", "0") })
     }
@@ -660,23 +614,17 @@ class DeliveryDb(context: Context) : SQLiteOpenHelper(context, "bora_maycon.db",
     }
 
     fun addNeighborhood(name: String, fee: Double, integral: Boolean): Boolean = runCatching {
-        writableDatabase.insertOrThrow("neighborhoods", null, ContentValues().apply {
-            put("name", name.trim()); put("fee", fee); put("integral", if (integral) 1 else 0)
-        }); true
+        writableDatabase.insertOrThrow("neighborhoods", null, ContentValues().apply { put("name", name.trim()); put("fee", fee); put("integral", if (integral) 1 else 0) }); true
     }.getOrDefault(false)
 
     fun updateNeighborhood(id: Long, name: String, fee: Double, integral: Boolean): Boolean = runCatching {
-        writableDatabase.update("neighborhoods", ContentValues().apply {
-            put("name", name.trim()); put("fee", fee); put("integral", if (integral) 1 else 0)
-        }, "id=?", arrayOf(id.toString())) > 0
+        writableDatabase.update("neighborhoods", ContentValues().apply { put("name", name.trim()); put("fee", fee); put("integral", if (integral) 1 else 0) }, "id=?", arrayOf(id.toString())) > 0
     }.getOrDefault(false)
 
     fun deleteNeighborhood(id: Long) { writableDatabase.delete("neighborhoods", "id=?", arrayOf(id.toString())) }
 
     fun addDelivery(date: LocalDate, neighborhood: String, fee: Double) {
-        writableDatabase.insert("deliveries", null, ContentValues().apply {
-            put("date", date.toString()); put("neighborhood", neighborhood); put("fee", fee); put("created_at", System.currentTimeMillis())
-        })
+        writableDatabase.insert("deliveries", null, ContentValues().apply { put("date", date.toString()); put("neighborhood", neighborhood); put("fee", fee); put("created_at", System.currentTimeMillis()) })
     }
 
     fun deleteDelivery(id: Long) { writableDatabase.delete("deliveries", "id=?", arrayOf(id.toString())) }
@@ -684,10 +632,7 @@ class DeliveryDb(context: Context) : SQLiteOpenHelper(context, "bora_maycon.db",
 
     fun deliveriesBetween(start: LocalDate, end: LocalDate): List<Delivery> {
         val result = mutableListOf<Delivery>()
-        readableDatabase.query(
-            "deliveries", arrayOf("id","date","neighborhood","fee","created_at"),
-            "date>=? AND date<=?", arrayOf(start.toString(), end.toString()), null, null, "date DESC, created_at DESC"
-        ).use { c ->
+        readableDatabase.query("deliveries", arrayOf("id","date","neighborhood","fee","created_at"), "date>=? AND date<=?", arrayOf(start.toString(), end.toString()), null, null, "date DESC, created_at DESC").use { c ->
             while (c.moveToNext()) result += Delivery(c.getLong(0), LocalDate.parse(c.getString(1)), c.getString(2), c.getDouble(3), c.getLong(4))
         }
         return result
@@ -712,31 +657,20 @@ class DeliveryDb(context: Context) : SQLiteOpenHelper(context, "bora_maycon.db",
     }
 
     fun getIntegralFee(): Double {
-        readableDatabase.rawQuery("SELECT value FROM settings WHERE key='integral_fee'", null).use { c ->
-            return if (c.moveToFirst()) c.getString(0).toDoubleOrNull() ?: 0.0 else 0.0
-        }
+        readableDatabase.rawQuery("SELECT value FROM settings WHERE key='integral_fee'", null).use { c -> return if (c.moveToFirst()) c.getString(0).toDoubleOrNull() ?: 0.0 else 0.0 }
     }
 
     fun setIntegralFee(value: Double) {
-        writableDatabase.insertWithOnConflict("settings", null, ContentValues().apply {
-            put("key", "integral_fee"); put("value", value.toString())
-        }, SQLiteDatabase.CONFLICT_REPLACE)
+        writableDatabase.insertWithOnConflict("settings", null, ContentValues().apply { put("key", "integral_fee"); put("value", value.toString()) }, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
     fun exportJson(): String {
         val root = JSONObject()
         val ns = JSONArray()
-        neighborhoods().forEach { n -> ns.put(JSONObject().apply {
-            put("name", n.name); put("fee", n.fee); put("integral", n.integral)
-        }) }
+        neighborhoods().forEach { n -> ns.put(JSONObject().apply { put("name", n.name); put("fee", n.fee); put("integral", n.integral) }) }
         val ds = JSONArray()
-        allDeliveries().forEach { d -> ds.put(JSONObject().apply {
-            put("date", d.date.toString()); put("neighborhood", d.neighborhood); put("fee", d.fee); put("created_at", d.createdAt)
-        }) }
-        root.put("version", 1)
-        root.put("integral_fee", getIntegralFee())
-        root.put("neighborhoods", ns)
-        root.put("deliveries", ds)
+        allDeliveries().forEach { d -> ds.put(JSONObject().apply { put("date", d.date.toString()); put("neighborhood", d.neighborhood); put("fee", d.fee); put("created_at", d.createdAt) }) }
+        root.put("version", 1); root.put("integral_fee", getIntegralFee()); root.put("neighborhoods", ns); root.put("deliveries", ds)
         return root.toString(2)
     }
 
@@ -747,26 +681,17 @@ class DeliveryDb(context: Context) : SQLiteOpenHelper(context, "bora_maycon.db",
         val db = writableDatabase
         db.beginTransaction()
         try {
-            db.delete("deliveries", null, null)
-            db.delete("neighborhoods", null, null)
+            db.delete("deliveries", null, null); db.delete("neighborhoods", null, null)
             for (i in 0 until ns.length()) {
                 val o = ns.getJSONObject(i)
-                db.insertOrThrow("neighborhoods", null, ContentValues().apply {
-                    put("name", o.getString("name")); put("fee", o.optDouble("fee", 0.0)); put("integral", if (o.optBoolean("integral", false)) 1 else 0)
-                })
+                db.insertOrThrow("neighborhoods", null, ContentValues().apply { put("name", o.getString("name")); put("fee", o.optDouble("fee", 0.0)); put("integral", if (o.optBoolean("integral", false)) 1 else 0) })
             }
             for (i in 0 until ds.length()) {
                 val o = ds.getJSONObject(i)
-                db.insertOrThrow("deliveries", null, ContentValues().apply {
-                    put("date", o.getString("date")); put("neighborhood", o.getString("neighborhood")); put("fee", o.getDouble("fee")); put("created_at", o.optLong("created_at", System.currentTimeMillis()))
-                })
+                db.insertOrThrow("deliveries", null, ContentValues().apply { put("date", o.getString("date")); put("neighborhood", o.getString("neighborhood")); put("fee", o.getDouble("fee")); put("created_at", o.optLong("created_at", System.currentTimeMillis())) })
             }
-            db.insertWithOnConflict("settings", null, ContentValues().apply {
-                put("key", "integral_fee"); put("value", root.optDouble("integral_fee", 0.0).toString())
-            }, SQLiteDatabase.CONFLICT_REPLACE)
+            db.insertWithOnConflict("settings", null, ContentValues().apply { put("key", "integral_fee"); put("value", root.optDouble("integral_fee", 0.0).toString()) }, SQLiteDatabase.CONFLICT_REPLACE)
             db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
-        }
+        } finally { db.endTransaction() }
     }
 }
