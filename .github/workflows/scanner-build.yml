@@ -38,10 +38,12 @@ jobs:
           mkdir -p scanner/src/main/res/mipmap-xxxhdpi
           mkdir -p scanner/src/main/res/drawable-nodpi
           mkdir -p scanner/src/main/res/raw
+          mkdir -p scanner/src/main/assets
 
           curl -fsSL "https://bora-michael-assets.vercel.app/icon.b64" -o /tmp/bora-icon.b64
           cp scanner/assets/sticker_tiny.b64 /tmp/sticker.b64
           cat scanner/assets/heehee_v24_1.b64 scanner/assets/heehee_v24_2.b64 scanner/assets/heehee_v24_3.b64 > /tmp/heehee.b64
+          cat scanner/assets/bora_web/part_*.txt > scanner/src/main/assets/bora_fallback.html
 
           python3 - <<'PY'
           import base64, pathlib, re
@@ -57,6 +59,10 @@ jobs:
               data = base64.b64decode(clean, validate=False)
               pathlib.Path(dst).write_bytes(data)
               print(src, 'base64=', len(clean), 'bytes=', len(data), '->', dst)
+          html = pathlib.Path('scanner/src/main/assets/bora_fallback.html').read_text(errors='strict')
+          assert '<!doctype html' in html.lower(), 'fallback sem doctype'
+          assert '</html>' in html.lower(), 'fallback incompleto'
+          print('fallback html bytes=', len(html.encode()))
           PY
 
           file scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png
@@ -65,6 +71,7 @@ jobs:
           test "$(wc -c < scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png)" -gt 4000
           test "$(wc -c < scanner/src/main/res/drawable-nodpi/michael_sticker.webp)" -gt 2000
           test "$(wc -c < scanner/src/main/res/raw/heehee.ogg)" -gt 10000
+          test "$(wc -c < scanner/src/main/assets/bora_fallback.html)" -gt 40000
           if command -v ffprobe >/dev/null 2>&1; then
             ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 scanner/src/main/res/raw/heehee.ogg
           fi
@@ -75,6 +82,6 @@ jobs:
       - name: Upload Bora Michael APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bora-Michael-Hi-Hi-v2.4.0
+          name: Bora-Michael-Hi-Hi-v2.5.0
           path: scanner/build/outputs/apk/debug/scanner-debug.apk
           if-no-files-found: error
