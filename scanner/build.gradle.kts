@@ -11,8 +11,8 @@ android {
         applicationId = "com.boramichael.hihi"
         minSdk = 26
         targetSdk = 36
-        versionCode = 26
-        versionName = "2.5.0"
+        versionCode = 27
+        versionName = "2.6.0"
     }
 
     buildFeatures {
