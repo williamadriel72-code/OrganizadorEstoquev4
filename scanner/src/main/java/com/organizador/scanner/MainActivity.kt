@@ -17,6 +17,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -73,6 +74,28 @@ class MainActivity : ComponentActivity() {
         val density = resources.displayMetrics.density
         val root = FrameLayout(this).apply {
             setBackgroundColor(Color.rgb(12, 14, 16))
+            setOnApplyWindowInsetsListener { view, insets ->
+                val top: Int
+                val bottom: Int
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val safe = insets.getInsets(
+                        WindowInsets.Type.statusBars() or
+                            WindowInsets.Type.navigationBars() or
+                            WindowInsets.Type.displayCutout()
+                    )
+                    top = safe.top
+                    bottom = safe.bottom
+                } else {
+                    @Suppress("DEPRECATION")
+                    top = insets.systemWindowInsetTop
+                    @Suppress("DEPRECATION")
+                    bottom = insets.systemWindowInsetBottom
+                }
+                if (view.paddingTop != top || view.paddingBottom != bottom) {
+                    view.setPadding(0, top, 0, bottom)
+                }
+                insets
+            }
         }
 
         webView = WebView(this).apply {
@@ -83,7 +106,7 @@ class MainActivity : ComponentActivity() {
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.mediaPlaybackRequiresUserGesture = false
-            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.5.0"
+            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.6.0"
             isVerticalScrollBarEnabled = false
             webChromeClient = WebChromeClient()
             addJavascriptInterface(BoraBridge(), "AndroidBora")
@@ -169,6 +192,7 @@ class MainActivity : ComponentActivity() {
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
         setContentView(root)
+        root.requestApplyInsets()
         loadLatestOnline()
     }
 
