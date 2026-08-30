@@ -21,9 +21,14 @@
   }
   let html=parts.join('');
   if(!/<!doctype html/i.test(html)||!/<\/html>/i.test(html))throw new Error('versão incompleta');
-  const pr=await fetch(`${base}/patch_arrival_v1.js?v=${stamp}`,{cache:'no-store'});
-  if(!pr.ok)throw new Error(`patch chegada: HTTP ${pr.status}`);
-  const patch=await pr.text();
+  const patchNames=['patch_arrival_v1.js','patch_menu_v1.js','patch_rider_note_confirm_v1.js'];
+  const patches=[];
+  for(const name of patchNames){
+   const r=await fetch(`${base}/${name}?v=${stamp}`,{cache:'no-store'});
+   if(!r.ok)throw new Error(`${name}: HTTP ${r.status}`);
+   patches.push(await r.text());
+  }
+  const patch=patches.join('\n');
   const marker='\nboot();\n';
   if(!html.includes(marker))throw new Error('ponto de atualização não encontrado');
   html=html.replace(marker,'\n'+patch+'\nboot();\n');
