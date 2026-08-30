@@ -31,15 +31,26 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Restore Bora Michael icon
+      - name: Restore Bora Michael assets
         shell: bash
         run: |
           set -e
           mkdir -p scanner/src/main/res/mipmap-xxxhdpi
+          mkdir -p scanner/src/main/res/drawable-nodpi
+          mkdir -p scanner/src/main/res/raw
+
           curl -fsSL "https://bora-michael-assets.vercel.app/icon.b64" -o /tmp/bora-icon.b64
           tr -d '\r\n ' < /tmp/bora-icon.b64 | base64 -d > scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+          tr -d '\r\n ' < scanner/assets/sticker_webp.b64 | base64 -d > scanner/src/main/res/drawable-nodpi/michael_sticker.webp
+          tr -d '\r\n ' < scanner/assets/heehee_mp3.b64 | base64 -d > scanner/src/main/res/raw/heehee.mp3
+
           file scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          file scanner/src/main/res/drawable-nodpi/michael_sticker.webp
+          file scanner/src/main/res/raw/heehee.mp3
           test "$(wc -c < scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png)" -gt 4000
+          test "$(wc -c < scanner/src/main/res/drawable-nodpi/michael_sticker.webp)" -gt 2000
+          test "$(wc -c < scanner/src/main/res/raw/heehee.mp3)" -gt 2000
 
       - name: Build Bora Michael APK
         run: gradle :scanner:assembleDebug --no-daemon
