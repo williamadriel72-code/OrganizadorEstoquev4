@@ -15,12 +15,15 @@ riderDay=async function(date){
 function bmRiderNoteCard(e){
  const confirmed=!!e.nota_confirmada;
  const confirmedAt=e.nota_confirmada_at?new Date(e.nota_confirmada_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'';
- return `<div style="padding:16px 0;border-bottom:1px solid rgba(255,255,255,.08)">
-  <div class="stat-label">NÚMERO DA NOTA</div>
-  <div style="font-size:34px;font-weight:900;letter-spacing:1px;margin:4px 0 8px">${esc(e.nota_numero)}</div>
+ const cardStyle=confirmed
+  ? 'padding:16px;margin:10px 0;border:2px solid #21c875;border-radius:14px;background:rgba(33,200,117,.18);box-shadow:0 0 0 1px rgba(33,200,117,.08) inset'
+  : 'padding:16px 0;border-bottom:1px solid rgba(255,255,255,.08)';
+ return `<div data-note-card="${e.id}" style="${cardStyle}">
+  <div class="stat-label" style="${confirmed?'color:#5df0a8':''}">NÚMERO DA NOTA</div>
+  <div style="font-size:34px;font-weight:900;letter-spacing:1px;margin:4px 0 8px;${confirmed?'color:#5df0a8':''}">${esc(e.nota_numero)}</div>
   ${confirmed
-   ? `<div class="notice" style="border-color:rgba(42,211,126,.35);margin-top:8px"><b>✓ NOTA CONFIRMADA</b>${confirmedAt?` · ${confirmedAt}`:''}</div>`
-   : `<div class="row-sub" style="margin-bottom:10px">Compare este número com a nota que você pegou. Se estiver igual, confirme abaixo.</div><button class="btn green" style="width:100%;font-weight:900" data-confirm-note="${e.id}">CONFIRMAR NOTA</button>`}
+   ? `<div style="margin-top:8px;padding:12px 14px;border-radius:10px;background:#159958;color:#fff;font-weight:900;text-align:center">✓ NOTA CONFIRMADA${confirmedAt?` · ${confirmedAt}`:''}</div>`
+   : `<div class="row-sub" style="margin-bottom:10px">Compare este número com a nota que você pegou. Se estiver igual, confirme abaixo.</div><button class="btn" style="width:100%;font-weight:900;background:#159958;color:#fff;border:1px solid #21c875" data-confirm-note="${e.id}">CONFIRMAR NOTA</button>`}
  </div>`;
 }
 
@@ -41,19 +44,33 @@ todayHtml=function(d){
 
 async function bmConfirmRiderNote(id){
  const btn=document.querySelector(`[data-confirm-note="${id}"]`);
- if(btn){btn.disabled=true;btn.textContent='CONFIRMANDO...'}
+ if(btn){btn.disabled=true;btn.textContent='CONFIRMANDO...';btn.style.background='#159958';btn.style.color='#fff'}
  try{
   rider.silentConfirmId=id;
   const r=await sb.rpc('kh_confirm_motoboy_delivery_note',{p_delivery_id:id});
   if(r.error)throw r.error;
+  const card=document.querySelector(`[data-note-card="${id}"]`);
+  if(card){
+   card.style.padding='16px';
+   card.style.margin='10px 0';
+   card.style.border='2px solid #21c875';
+   card.style.borderRadius='14px';
+   card.style.background='rgba(33,200,117,.18)';
+   const noteNumber=card.querySelector('div[style*="font-size:34px"]');
+   if(noteNumber)noteNumber.style.color='#5df0a8';
+   if(btn)btn.outerHTML='<div style="margin-top:8px;padding:12px 14px;border-radius:10px;background:#159958;color:#fff;font-weight:900;text-align:center">✓ NOTA CONFIRMADA</div>';
+  }
+  if(rider.todayCache?.e){
+   const item=rider.todayCache.e.find(x=>x.id===id);
+   if(item){item.nota_confirmada=true;item.nota_confirmada_at=new Date().toISOString()}
+  }
   toast(`Nota ${r.data?.nota_numero||''} confirmada.`);
-  await renderRider('Hoje');
-  setTimeout(()=>{if(rider.silentConfirmId===id)rider.silentConfirmId=null},5000);
+  setTimeout(async()=>{try{await renderRider('Hoje')}catch(_){ }finally{if(rider.silentConfirmId===id)rider.silentConfirmId=null}},700);
  }catch(e){
   rider.silentConfirmId=null;
   console.error(e);
   toast(e?.message||'Não foi possível confirmar a nota.');
-  if(btn){btn.disabled=false;btn.textContent='CONFIRMAR NOTA'}
+  if(btn){btn.disabled=false;btn.textContent='CONFIRMAR NOTA';btn.style.background='#159958';btn.style.color='#fff'}
  }
 }
 
