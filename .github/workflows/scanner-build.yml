@@ -42,7 +42,9 @@ jobs:
           curl -fsSL "https://bora-michael-assets.vercel.app/icon.b64" -o /tmp/bora-icon.b64
           tr -d '\r\n ' < /tmp/bora-icon.b64 | base64 -d > scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
-          tr -d '\r\n ' < scanner/assets/sticker_webp.b64 | base64 -d > scanner/src/main/res/drawable-nodpi/michael_sticker.webp
+          cat scanner/assets/sticker_1.txt scanner/assets/sticker_2.txt scanner/assets/sticker_3.txt scanner/assets/sticker_4.txt > /tmp/sticker.b64
+          tr -d '\r\n ' < /tmp/sticker.b64 | base64 -d > scanner/src/main/res/drawable-nodpi/michael_sticker.webp
+
           tr -d '\r\n ' < scanner/assets/heehee_mp3.b64 | base64 -d > scanner/src/main/res/raw/heehee.mp3
 
           file scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png
