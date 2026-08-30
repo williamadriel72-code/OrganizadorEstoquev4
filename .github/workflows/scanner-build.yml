@@ -59,7 +59,20 @@ jobs:
               data = base64.b64decode(clean, validate=False)
               pathlib.Path(dst).write_bytes(data)
               print(src, 'base64=', len(clean), 'bytes=', len(data), '->', dst)
-          html = pathlib.Path('scanner/src/main/assets/bora_fallback.html').read_text(errors='strict')
+
+          html_path = pathlib.Path('scanner/src/main/assets/bora_fallback.html')
+          html = html_path.read_text(errors='strict')
+          patch_files = [
+              'scanner/assets/bora_web/patch_arrival_v1.js',
+              'scanner/assets/bora_web/patch_arrival_rules_v2.js',
+              'scanner/assets/bora_web/patch_menu_v1.js',
+              'scanner/assets/bora_web/patch_rider_notes_v3.js',
+          ]
+          patch = '\n'.join(pathlib.Path(p).read_text(errors='strict') for p in patch_files)
+          marker = '\nboot();\n'
+          assert marker in html, 'fallback sem ponto de injeção'
+          html = html.replace(marker, '\n' + patch + '\nboot();\n', 1)
+          html_path.write_text(html)
           assert '<!doctype html' in html.lower(), 'fallback sem doctype'
           assert '</html>' in html.lower(), 'fallback incompleto'
           print('fallback html bytes=', len(html.encode()))
@@ -71,7 +84,7 @@ jobs:
           test "$(wc -c < scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png)" -gt 4000
           test "$(wc -c < scanner/src/main/res/drawable-nodpi/michael_sticker.webp)" -gt 2000
           test "$(wc -c < scanner/src/main/res/raw/heehee.ogg)" -gt 10000
-          test "$(wc -c < scanner/src/main/assets/bora_fallback.html)" -gt 40000
+          test "$(wc -c < scanner/src/main/assets/bora_fallback.html)" -gt 45000
           if command -v ffprobe >/dev/null 2>&1; then
             ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 scanner/src/main/res/raw/heehee.ogg
           fi
@@ -82,6 +95,6 @@ jobs:
       - name: Upload Bora Michael APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bora-Michael-Hi-Hi-v2.5.0
+          name: Bora-Michael-Hi-Hi-v2.6.0
           path: scanner/build/outputs/apk/debug/scanner-debug.apk
           if-no-files-found: error
