@@ -34,11 +34,12 @@ jobs:
       - name: Restore Bora Michael icon
         shell: bash
         run: |
-          if [ -f scanner/icon.b64 ]; then
-            mkdir -p scanner/src/main/res/mipmap-xxxhdpi
-            base64 -d scanner/icon.b64 > scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            file scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          fi
+          set -e
+          mkdir -p scanner/src/main/res/mipmap-xxxhdpi
+          curl -fsSL "https://bora-michael-assets.vercel.app/icon.b64" -o /tmp/bora-icon.b64
+          tr -d '\r\n ' < /tmp/bora-icon.b64 | base64 -d > scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          file scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          test "$(wc -c < scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png)" -gt 4000
 
       - name: Build Bora Michael APK
         run: gradle :scanner:assembleDebug --no-daemon
