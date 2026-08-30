@@ -102,3 +102,58 @@ bindAdmin=function(){
   arrivalBox.appendChild(btn);
  }
 };
+
+function bmNormalizeName(v){
+ return String(v||'').replace(/\s+/g,' ').trim();
+}
+
+function bmOpenRegisterMotoModal(){
+ const el=modal(`<div class="modal-head"><h3>Cadastrar motoboy</h3><button class="x" data-close>×</button></div>
+ <div class="notice"><b>Motoboy sem APK / iPhone</b><br>Este cadastro funciona normalmente no painel para chegada, diária, notas, Taxa Integral, saídas e histórico. Nenhum aparelho ou usuário Android será criado.</div>
+ <label class="field" style="margin-top:14px"><span>Nome do motoboy</span><input id="bmNewMotoName" autocomplete="off" maxlength="80" placeholder="Digite o nome"></label>
+ <label class="field" style="margin-top:10px"><span>Telefone (opcional)</span><input id="bmNewMotoPhone" inputmode="tel" autocomplete="off" maxlength="30" placeholder="(22) 99999-9999"></label>
+ <label class="field" style="margin-top:10px"><span>Tipo de acesso</span><select id="bmNewMotoAccess"><option value="manual">Sem APK / iPhone</option></select></label>
+ <div class="quick-actions" style="margin-top:14px"><button class="btn secondary" data-close>Cancelar</button><button id="bmSaveNewMoto" class="btn green">CADASTRAR MOTOBOY</button></div>`);
+ setTimeout(()=>$('#bmNewMotoName')?.focus(),30);
+ $('#bmSaveNewMoto')?.addEventListener('click',async()=>{
+  const nome=bmNormalizeName($('#bmNewMotoName')?.value);
+  const telefone=String($('#bmNewMotoPhone')?.value||'').trim();
+  if(nome.length<2){toast('Digite o nome do motoboy.');return}
+  const duplicate=adminState.motoboys.some(m=>bmNormalizeName(m.nome).toLocaleLowerCase('pt-BR')===nome.toLocaleLowerCase('pt-BR'));
+  if(duplicate){toast('Já existe um motoboy cadastrado com esse nome.');return}
+  const btn=$('#bmSaveNewMoto');
+  if(btn){btn.disabled=true;btn.textContent='CADASTRANDO...'}
+  try{
+   const payload={nome,ativo:true,login_numero:null,user_id:null,telefone:telefone||null,updated_at:new Date().toISOString()};
+   const r=await sb.from('kh_motoboys').insert(payload).select('*').single();
+   if(r.error)throw r.error;
+   adminState.selectedMoto=r.data.id;
+   el.remove();
+   toast(`${nome} cadastrado sem APK.`);
+   await renderAdmin();
+  }catch(e){
+   console.error(e);
+   toast(e?.message||'Não foi possível cadastrar o motoboy.');
+   if(btn){btn.disabled=false;btn.textContent='CADASTRAR MOTOBOY'}
+  }
+ });
+}
+
+function bmInstallRegisterMotoButton(){
+ const sidebar=document.querySelector('.sidebar');
+ if(!sidebar||document.getElementById('bmRegisterMoto'))return;
+ const btn=document.createElement('button');
+ btn.id='bmRegisterMoto';
+ btn.className='btn green';
+ btn.style.width='100%';
+ btn.style.marginTop='12px';
+ btn.textContent='+ CADASTRAR MOTOBOY';
+ btn.addEventListener('click',bmOpenRegisterMotoModal);
+ sidebar.appendChild(btn);
+}
+
+const bmBindAdminWithArrival=bindAdmin;
+bindAdmin=function(){
+ bmBindAdminWithArrival();
+ bmInstallRegisterMotoButton();
+};
