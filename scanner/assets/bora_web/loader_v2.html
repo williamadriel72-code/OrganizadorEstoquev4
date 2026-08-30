@@ -21,7 +21,7 @@
   }
   let html=parts.join('');
   if(!/<!doctype html/i.test(html)||!/<\/html>/i.test(html))throw new Error('versão incompleta');
-  const patchNames=['patch_arrival_v1.js','patch_arrival_rules_v2.js','patch_menu_v1.js','patch_rider_notes_v3.js'];
+  const patchNames=['patch_arrival_v1.js','patch_arrival_rules_v2.js','patch_menu_v1.js','patch_rider_notes_v3.js','patch_admin_refresh_v1.js'];
   const patches=[];
   for(const name of patchNames){
    const r=await fetch(`${base}/${name}?v=${stamp}`,{cache:'no-store'});
