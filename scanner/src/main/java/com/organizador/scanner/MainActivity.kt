@@ -28,7 +28,7 @@ import android.widget.ImageView
 import androidx.activity.ComponentActivity
 
 private const val APP_URL = "https://bora-michael-hi-hi.vercel.app/?app=motoboy"
-private const val CHANNEL_ID = "bora_michael_updates"
+private const val CHANNEL_ID = "bora_michael_updates_v24"
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
@@ -51,8 +51,7 @@ class MainActivity : ComponentActivity() {
             if (now - lastNotifyAt < 900) return
             lastNotifyAt = now
             runOnUiThread {
-                playHeeHee()
-                if (!foreground) showUpdateNotification()
+                if (foreground) playHeeHee() else showUpdateNotification()
             }
         }
     }
@@ -77,17 +76,11 @@ class MainActivity : ComponentActivity() {
             settings.databaseEnabled = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.3.0"
+            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.4.0"
             isVerticalScrollBarEnabled = false
             webChromeClient = WebChromeClient()
             addJavascriptInterface(BoraBridge(), "AndroidBora")
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView, url: String) {
-                    super.onPageFinished(view, url)
-                    // A figurinha continua escondida. A página chama AndroidBora.appReady()
-                    // somente depois que a interface real estiver pronta.
-                }
-            }
+            webViewClient = object : WebViewClient() {}
         }
 
         root.addView(
@@ -98,17 +91,17 @@ class MainActivity : ComponentActivity() {
             )
         )
 
-        heeHeePlayer = MediaPlayer.create(this, R.raw.heehee)
+        heeHeePlayer = createHeeHeePlayer()
 
-        val stickerWidth = (46 * density).toInt()
-        val stickerHeight = (69 * density).toInt()
+        val stickerWidth = (40 * density).toInt()
+        val stickerHeight = (60 * density).toInt()
         val sideMargin = (8 * density).toInt()
-        val bottomMarginPx = (78 * density).toInt()
+        val bottomMarginPx = (76 * density).toInt()
 
         sticker = ImageView(this).apply {
             setImageResource(R.drawable.michael_sticker)
             scaleType = ImageView.ScaleType.FIT_CENTER
-            elevation = 16 * density
+            elevation = 14 * density
             contentDescription = "Bordão Hee Hee"
             visibility = View.GONE
             isClickable = true
@@ -116,16 +109,16 @@ class MainActivity : ComponentActivity() {
             setOnClickListener {
                 playHeeHee()
                 animate()
-                    .scaleX(1.14f)
-                    .scaleY(1.14f)
+                    .scaleX(1.12f)
+                    .scaleY(1.12f)
                     .rotation(-4f)
-                    .setDuration(100)
+                    .setDuration(90)
                     .withEndAction {
                         animate()
                             .scaleX(1f)
                             .scaleY(1f)
                             .rotation(0f)
-                            .setDuration(130)
+                            .setDuration(120)
                             .start()
                     }
                     .start()
@@ -146,12 +139,33 @@ class MainActivity : ComponentActivity() {
         webView.loadUrl(APP_URL)
     }
 
+    private fun createHeeHeePlayer(): MediaPlayer? = try {
+        MediaPlayer.create(this, R.raw.heehee)?.apply {
+            setVolume(1f, 1f)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
     private fun playHeeHee() {
-        heeHeePlayer?.let { player ->
+        try {
+            var player = heeHeePlayer
+            if (player == null) {
+                player = createHeeHeePlayer()
+                heeHeePlayer = player
+            }
+            player ?: return
+            if (player.isPlaying) player.pause()
+            player.seekTo(0)
+            player.start()
+        } catch (_: Exception) {
             try {
-                if (player.isPlaying) player.pause()
-                player.seekTo(0)
-                player.start()
+                heeHeePlayer?.release()
+            } catch (_: Exception) {
+            }
+            heeHeePlayer = createHeeHeePlayer()
+            try {
+                heeHeePlayer?.start()
             } catch (_: Exception) {
             }
         }
@@ -179,7 +193,7 @@ class MainActivity : ComponentActivity() {
 
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 2301)
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 2401)
         }
     }
 
@@ -190,7 +204,7 @@ class MainActivity : ComponentActivity() {
         }
         val pending = PendingIntent.getActivity(
             this,
-            2301,
+            2401,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -210,7 +224,7 @@ class MainActivity : ComponentActivity() {
             .setContentIntent(pending)
             .build()
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-            .notify(2301, notification)
+            .notify(2401, notification)
     }
 
     override fun onStart() {
@@ -229,7 +243,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        heeHeePlayer?.release()
+        try {
+            heeHeePlayer?.release()
+        } catch (_: Exception) {
+        }
         heeHeePlayer = null
         if (::webView.isInitialized) {
             webView.stopLoading()
