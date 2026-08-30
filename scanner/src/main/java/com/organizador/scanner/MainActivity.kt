@@ -2,6 +2,7 @@ package com.organizador.scanner
 
 import android.annotation.SuppressLint
 import android.graphics.Color
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
@@ -21,6 +22,7 @@ private const val BRAND_JS = """
     document.title='Bora Michael Hi Hi';
     const root=document.body||document.documentElement;
     if(!root)return;
+
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
     let n;
     while((n=walker.nextNode())){
@@ -28,6 +30,33 @@ private const val BRAND_JS = """
         n.nodeValue=n.nodeValue.replaceAll('Bora Maycon Hi Hi','Bora Michael Hi Hi');
       }
     }
+
+    if(!document.getElementById('bora-michael-polish')){
+      const s=document.createElement('style');
+      s.id='bora-michael-polish';
+      s.textContent=`
+        html,body{background:#0d0f12!important;}
+        body{color:#f8fafc!important;}
+        button{border-radius:18px!important;}
+        [class*="card"],[class*="Card"]{border-radius:18px!important;}
+      `;
+      document.head.appendChild(s);
+    }
+
+    const labels=['ESTA SEMANA','ESTE MÊS'];
+    document.querySelectorAll('body *').forEach(el=>{
+      const txt=(el.textContent||'').trim().toUpperCase();
+      if(labels.includes(txt)){
+        let p=el;
+        for(let i=0;i<4 && p.parentElement;i++){
+          p=p.parentElement;
+          const t=(p.textContent||'').trim().toUpperCase();
+          if(t.includes(txt) && t.length<120){
+            p.style.display='none';
+          }
+        }
+      }
+    });
   };
   apply();
   if(!window.__boraMichaelObserver){
@@ -39,6 +68,7 @@ private const val BRAND_JS = """
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
+    private var heeHeePlayer: MediaPlayer? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,18 +76,19 @@ class MainActivity : ComponentActivity() {
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
 
+        val density = resources.displayMetrics.density
         val root = FrameLayout(this).apply {
-            setBackgroundColor(Color.rgb(16, 18, 20))
+            setBackgroundColor(Color.rgb(13, 15, 18))
         }
 
         webView = WebView(this).apply {
-            setBackgroundColor(Color.rgb(16, 18, 20))
+            setBackgroundColor(Color.rgb(13, 15, 18))
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.databaseEnabled = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.1.1"
+            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.2.0"
             isVerticalScrollBarEnabled = false
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
@@ -67,22 +98,63 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        root.addView(webView, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        ))
 
-        val logoSize = (88 * resources.displayMetrics.density).toInt()
-        val margin = (16 * resources.displayMetrics.density).toInt()
-        val logo = ImageView(this).apply {
-            setImageResource(com.organizador.scanner.R.mipmap.ic_launcher)
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            elevation = 14 * resources.displayMetrics.density
-            contentDescription = "Bora Michael Hi Hi"
+        root.addView(
+            webView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        heeHeePlayer = MediaPlayer.create(this, R.raw.heehee)
+
+        val stickerWidth = (58 * density).toInt()
+        val stickerHeight = (87 * density).toInt()
+        val sideMargin = (10 * density).toInt()
+        val bottomMargin = (84 * density).toInt()
+
+        val sticker = ImageView(this).apply {
+            setImageResource(R.drawable.michael_sticker)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            elevation = 18 * density
+            contentDescription = "Bordão Hee Hee"
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                heeHeePlayer?.let { player ->
+                    if (player.isPlaying) {
+                        player.pause()
+                        player.seekTo(0)
+                    } else {
+                        player.seekTo(0)
+                    }
+                    player.start()
+                }
+                animate()
+                    .scaleX(1.16f)
+                    .scaleY(1.16f)
+                    .rotation(-5f)
+                    .setDuration(110)
+                    .withEndAction {
+                        animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .rotation(0f)
+                            .setDuration(140)
+                            .start()
+                    }
+                    .start()
+            }
         }
-        root.addView(logo, FrameLayout.LayoutParams(logoSize, logoSize, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
-            topMargin = margin
-        })
+
+        root.addView(
+            sticker,
+            FrameLayout.LayoutParams(stickerWidth, stickerHeight, Gravity.END or Gravity.BOTTOM).apply {
+                marginEnd = sideMargin
+                bottomMargin = bottomMargin
+            }
+        )
 
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
@@ -96,6 +168,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        heeHeePlayer?.release()
+        heeHeePlayer = null
         if (::webView.isInitialized) {
             webView.stopLoading()
             webView.destroy()
