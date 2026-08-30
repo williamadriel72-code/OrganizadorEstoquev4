@@ -41,7 +41,7 @@ jobs:
 
           curl -fsSL "https://bora-michael-assets.vercel.app/icon.b64" -o /tmp/bora-icon.b64
           cp scanner/assets/sticker_tiny.b64 /tmp/sticker.b64
-          cp scanner/assets/heehee_tiny.b64 /tmp/heehee.b64
+          cat scanner/assets/heehee_v24_1.b64 scanner/assets/heehee_v24_2.b64 scanner/assets/heehee_v24_3.b64 > /tmp/heehee.b64
 
           python3 - <<'PY'
           import base64, pathlib, re
@@ -64,7 +64,10 @@ jobs:
           file scanner/src/main/res/raw/heehee.ogg
           test "$(wc -c < scanner/src/main/res/mipmap-xxxhdpi/ic_launcher.png)" -gt 4000
           test "$(wc -c < scanner/src/main/res/drawable-nodpi/michael_sticker.webp)" -gt 2000
-          test "$(wc -c < scanner/src/main/res/raw/heehee.ogg)" -gt 2000
+          test "$(wc -c < scanner/src/main/res/raw/heehee.ogg)" -gt 10000
+          if command -v ffprobe >/dev/null 2>&1; then
+            ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 scanner/src/main/res/raw/heehee.ogg
+          fi
 
       - name: Build Bora Michael APK
         run: gradle :scanner:assembleDebug --no-daemon
@@ -72,6 +75,6 @@ jobs:
       - name: Upload Bora Michael APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bora-Michael-Hi-Hi-v2.2.0
+          name: Bora-Michael-Hi-Hi-v2.4.0
           path: scanner/build/outputs/apk/debug/scanner-debug.apk
           if-no-files-found: error
