@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -54,7 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +69,6 @@ import androidx.compose.ui.window.Dialog
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.NumberFormat
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -174,17 +172,13 @@ private fun BoraApp(
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+        Column(Modifier.fillMaxSize().padding(padding)) {
             NavigationTabs(tab = tab, onChange = { tab = it })
             when (tab) {
-                "Hoje" -> HomeScreen(db, refreshToken, refresh, snackbar)
+                "Hoje" -> HomeScreen(db, refreshToken, refresh)
                 "Calendário" -> CalendarScreen(db, refreshToken)
                 "Histórico" -> HistoryScreen(db, refreshToken, refresh)
-                "Bairros" -> NeighborhoodScreen(db, refreshToken, refresh, exportBackup, importBackup, snackbar)
+                "Bairros" -> NeighborhoodScreen(db, refreshToken, refresh, exportBackup, importBackup)
                 "Relatórios" -> ReportsScreen(db, refreshToken)
             }
         }
@@ -195,25 +189,18 @@ private fun BoraApp(
 private fun NavigationTabs(tab: String, onChange: (String) -> Unit) {
     val tabs = listOf("Hoje", "Calendário", "Histórico", "Bairros", "Relatórios")
     Row(
-        Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .background(Color(0xFF17191C))
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).background(Color(0xFF17191C)).padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         tabs.forEach { item ->
-            if (item == tab) {
-                Button(onClick = { onChange(item) }) { Text(item) }
-            } else {
-                OutlinedButton(onClick = { onChange(item) }) { Text(item) }
-            }
+            if (item == tab) Button(onClick = { onChange(item) }) { Text(item) }
+            else OutlinedButton(onClick = { onChange(item) }) { Text(item) }
         }
     }
 }
 
 @Composable
-private fun HomeScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit, snackbar: SnackbarHostState) {
+private fun HomeScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit) {
     val today = LocalDate.now()
     val deliveries = remember(refreshToken) { db.deliveriesOn(today) }
     val total = deliveries.sumOf { it.fee }
@@ -229,9 +216,7 @@ private fun HomeScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit, s
                 Image(
                     painter = painterResource(R.drawable.profile_maycon),
                     contentDescription = "Foto de perfil",
-                    modifier = Modifier
-                        .size(94.dp)
-                        .clip(CircleShape),
+                    modifier = Modifier.size(94.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
                 Spacer(Modifier.height(8.dp))
@@ -264,10 +249,7 @@ private fun HomeScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit, s
             }
         } else {
             items(deliveries, key = { it.id }) { delivery ->
-                DeliveryRow(delivery = delivery, onDelete = {
-                    db.deleteDelivery(delivery.id)
-                    refresh()
-                })
+                DeliveryRow(delivery = delivery, onDelete = { db.deleteDelivery(delivery.id); refresh() })
             }
         }
     }
@@ -276,23 +258,14 @@ private fun HomeScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit, s
         AddDeliveryDialog(
             db = db,
             onDismiss = { addOpen = false },
-            onAdded = { name ->
-                refresh()
-                kotlinx.coroutines.MainScope().launch {
-                    snackbar.showSnackbar("$name adicionado")
-                }
-            }
+            onAdded = { refresh() }
         )
     }
 }
 
 @Composable
 private fun SummaryCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF22252A)),
-        shape = RoundedCornerShape(18.dp)
-    ) {
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF22252A)), shape = RoundedCornerShape(18.dp)) {
         Column(Modifier.padding(16.dp)) {
             Text(title, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(value, fontSize = 22.sp, fontWeight = FontWeight.Black)
@@ -303,11 +276,7 @@ private fun SummaryCard(title: String, value: String, modifier: Modifier = Modif
 @Composable
 private fun DeliveryRow(delivery: Delivery, onDelete: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        Row(
-            Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
                 Text(delivery.neighborhood, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(money(delivery.fee), color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
@@ -318,14 +287,13 @@ private fun DeliveryRow(delivery: Delivery, onDelete: () -> Unit) {
 }
 
 @Composable
-private fun AddDeliveryDialog(db: DeliveryDb, onDismiss: () -> Unit, onAdded: (String) -> Unit) {
+private fun AddDeliveryDialog(db: DeliveryDb, onDismiss: () -> Unit, onAdded: () -> Unit) {
     val neighborhoods = remember { db.neighborhoods() }
     var search by remember { mutableStateOf("") }
     var localMessage by remember { mutableStateOf<String?>(null) }
     val integralFee = remember { db.getIntegralFee() }
     val filtered = remember(search, neighborhoods) {
-        if (search.isBlank()) neighborhoods
-        else neighborhoods.filter { it.name.contains(search.trim(), ignoreCase = true) }
+        if (search.isBlank()) neighborhoods else neighborhoods.filter { it.name.contains(search.trim(), ignoreCase = true) }
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -334,16 +302,8 @@ private fun AddDeliveryDialog(db: DeliveryDb, onDismiss: () -> Unit, onAdded: (S
                 Text("Adicionar entrega", fontSize = 22.sp, fontWeight = FontWeight.Black)
                 Text("Toque no bairro para lançar. Você pode tocar várias vezes no mesmo bairro.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(10.dp))
-                TextField(
-                    value = search,
-                    onValueChange = { search = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Pesquisar bairro") },
-                    singleLine = true
-                )
-                if (!localMessage.isNullOrBlank()) {
-                    Text(localMessage!!, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(vertical = 8.dp))
-                }
+                TextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Pesquisar bairro") }, singleLine = true)
+                if (!localMessage.isNullOrBlank()) Text(localMessage!!, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(vertical = 8.dp))
                 LazyColumn(Modifier.heightIn(max = 430.dp)) {
                     items(filtered, key = { it.id }) { n ->
                         Row(
@@ -355,7 +315,7 @@ private fun AddDeliveryDialog(db: DeliveryDb, onDismiss: () -> Unit, onAdded: (S
                                     db.addDelivery(LocalDate.now(), n.name, fee)
                                     localMessage = "${n.name} • ${money(fee)} adicionado"
                                     search = ""
-                                    onAdded(n.name)
+                                    onAdded()
                                 }
                             }.padding(vertical = 13.dp, horizontal = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -378,11 +338,7 @@ private fun CalendarScreen(db: DeliveryDb, refreshToken: Int) {
     val stats = remember(refreshToken, year) { db.statsForYear(year) }
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 OutlinedButton(onClick = { year-- }) { Text("‹") }
@@ -390,9 +346,7 @@ private fun CalendarScreen(db: DeliveryDb, refreshToken: Int) {
                 OutlinedButton(onClick = { year++ }) { Text("›") }
             }
         }
-        items((1..12).toList()) { month ->
-            MonthCard(YearMonth.of(year, month), stats) { selectedDate = it }
-        }
+        items((1..12).toList()) { month -> MonthCard(YearMonth.of(year, month), stats) { selectedDate = it } }
     }
 
     selectedDate?.let { date ->
@@ -426,9 +380,7 @@ private fun MonthCard(month: YearMonth, stats: Map<LocalDate, DayStat>, onDay: (
         Column(Modifier.padding(12.dp)) {
             Text(monthName, fontSize = 19.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth()) {
-                labels.forEach { Text(it, Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
+            Row(Modifier.fillMaxWidth()) { labels.forEach { Text(it, Modifier.weight(1f), textAlign = TextAlign.Center, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
             repeat(6) { week ->
                 Row(Modifier.fillMaxWidth()) {
                     repeat(7) { col ->
@@ -441,8 +393,7 @@ private fun MonthCard(month: YearMonth, stats: Map<LocalDate, DayStat>, onDay: (
                             Box(
                                 Modifier.weight(1f).padding(2.dp).clip(RoundedCornerShape(8.dp))
                                     .background(if (highlighted) Color(0xFF8D2E29) else Color.Transparent)
-                                    .clickable { onDay(date) }
-                                    .padding(vertical = 8.dp),
+                                    .clickable { onDay(date) }.padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -450,9 +401,7 @@ private fun MonthCard(month: YearMonth, stats: Map<LocalDate, DayStat>, onDay: (
                                     if (highlighted) Text(stat!!.count.toString(), fontSize = 9.sp, color = Color.White)
                                 }
                             }
-                        } else {
-                            Spacer(Modifier.weight(1f).height(42.dp))
-                        }
+                        } else Spacer(Modifier.weight(1f).height(42.dp))
                     }
                 }
             }
@@ -465,27 +414,14 @@ private fun HistoryScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit
     var search by remember { mutableStateOf("") }
     val all = remember(refreshToken) { db.allDeliveries() }
     val filtered = remember(search, all) {
-        if (search.isBlank()) all
-        else all.filter {
-            it.neighborhood.contains(search.trim(), ignoreCase = true) || it.date.format(BrDate).contains(search.trim())
-        }
+        if (search.isBlank()) all else all.filter { it.neighborhood.contains(search.trim(), ignoreCase = true) || it.date.format(BrDate).contains(search.trim()) }
     }
     val grouped = filtered.groupBy { it.date }.toSortedMap(compareByDescending { it })
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Text("Histórico", fontSize = 26.sp, fontWeight = FontWeight.Black)
-            TextField(
-                value = search,
-                onValueChange = { search = it },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                label = { Text("Buscar bairro ou data") },
-                singleLine = true
-            )
+            TextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), label = { Text("Buscar bairro ou data") }, singleLine = true)
         }
         if (grouped.isEmpty()) item { Text("Nenhum registro encontrado.") }
         grouped.forEach { (date, list) ->
@@ -509,14 +445,7 @@ private fun HistoryScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit
 }
 
 @Composable
-private fun NeighborhoodScreen(
-    db: DeliveryDb,
-    refreshToken: Int,
-    refresh: () -> Unit,
-    exportBackup: () -> Unit,
-    importBackup: () -> Unit,
-    snackbar: SnackbarHostState
-) {
+private fun NeighborhoodScreen(db: DeliveryDb, refreshToken: Int, refresh: () -> Unit, exportBackup: () -> Unit, importBackup: () -> Unit) {
     val neighborhoods = remember(refreshToken) { db.neighborhoods() }
     var integralText by remember(refreshToken) { mutableStateOf(db.getIntegralFee().takeIf { it > 0 }?.toString()?.replace('.', ',') ?: "") }
     var search by remember { mutableStateOf("") }
@@ -524,30 +453,17 @@ private fun NeighborhoodScreen(
     var adding by remember { mutableStateOf(false) }
     val filtered = if (search.isBlank()) neighborhoods else neighborhoods.filter { it.name.contains(search, ignoreCase = true) }
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Text("Bairros e taxas", fontSize = 26.sp, fontWeight = FontWeight.Black)
             Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF24272B)), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Column(Modifier.padding(14.dp)) {
                     Text("Taxa Integral", fontWeight = FontWeight.Black, fontSize = 18.sp)
                     Text("Usada para Vale Encantado, Imburo e locais marcados como taxa integral.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TextField(
-                        value = integralText,
-                        onValueChange = { integralText = it },
-                        label = { Text("Valor em R$") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    )
+                    TextField(value = integralText, onValueChange = { integralText = it }, label = { Text("Valor em R$") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
                     Button(onClick = {
                         val value = integralText.replace(',', '.').toDoubleOrNull()
-                        if (value != null && value >= 0) {
-                            db.setIntegralFee(value)
-                            refresh()
-                        }
+                        if (value != null && value >= 0) { db.setIntegralFee(value); refresh() }
                     }, modifier = Modifier.padding(top = 8.dp)) { Text("Salvar Taxa Integral") }
                 }
             }
@@ -559,9 +475,7 @@ private fun NeighborhoodScreen(
                 OutlinedButton(onClick = importBackup, modifier = Modifier.weight(1f)) { Text("Restaurar") }
             }
         }
-        item {
-            TextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Pesquisar bairro") }, singleLine = true)
-        }
+        item { TextField(value = search, onValueChange = { search = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Pesquisar bairro") }, singleLine = true) }
         items(filtered, key = { it.id }) { n ->
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -576,22 +490,12 @@ private fun NeighborhoodScreen(
         }
     }
 
-    if (adding) {
-        NeighborhoodEditor(null, onDismiss = { adding = false }) { name, fee, integral ->
-            if (db.addNeighborhood(name, fee, integral)) {
-                adding = false
-                refresh()
-            }
-        }
+    if (adding) NeighborhoodEditor(null, onDismiss = { adding = false }) { name, fee, integral ->
+        if (db.addNeighborhood(name, fee, integral)) { adding = false; refresh() }
     }
-    editing?.let { n ->
-        NeighborhoodEditor(n, onDismiss = { editing = null }) { name, fee, integral ->
-            if (db.updateNeighborhood(n.id, name, fee, integral)) {
-                editing = null
-                refresh()
-            }
-        }
-    }
+    editing?.let { n -> NeighborhoodEditor(n, onDismiss = { editing = null }) { name, fee, integral ->
+        if (db.updateNeighborhood(n.id, name, fee, integral)) { editing = null; refresh() }
+    } }
 }
 
 @Composable
@@ -643,17 +547,12 @@ private fun ReportsScreen(db: DeliveryDb, refreshToken: Int) {
     val byNeighborhood = deliveries.groupingBy { it.neighborhood }.eachCount().entries.sortedByDescending { it.value }
     val top = byNeighborhood.firstOrNull()
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Text("Relatórios", fontSize = 26.sp, fontWeight = FontWeight.Black)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("Hoje", "Ontem", "7 dias", "Mês", "Ano", "Período").forEach { label ->
-                    if (mode == label) Button(onClick = { mode = label }) { Text(label) }
-                    else OutlinedButton(onClick = { mode = label }) { Text(label) }
+                    if (mode == label) Button(onClick = { mode = label }) { Text(label) } else OutlinedButton(onClick = { mode = label }) { Text(label) }
                 }
             }
         }
@@ -704,37 +603,28 @@ class DeliveryDb(context: Context) : SQLiteOpenHelper(context, "bora_maycon.db",
 
     private fun seed(db: SQLiteDatabase) {
         val rows = listOf(
-            Triple("Águas Maravilhosas", 8.0, false), Triple("Ajuda de Cima", 7.0, false), Triple("Ajuda de Baixo", 6.0, false),
-            Triple("Aroeira", 3.0, false), Triple("Atlântico Norte", 7.0, false), Triple("Barra", 4.0, false),
-            Triple("Barreto", 8.0, false), Triple("Barramares", 7.0, false), Triple("Bela Vista", 4.0, false),
-            Triple("Bosque Azul", 7.0, false), Triple("Botafogo", 5.0, false), Triple("Brasília", 4.0, false),
-            Triple("Brisa do Vale", 8.0, false), Triple("Cabiúnas", 15.0, false), Triple("Cajueiros", 3.0, false),
-            Triple("Campo D'Oeste", 4.0, false), Triple("Cancela Preta", 7.0, false), Triple("Cavaleiros", 7.0, false),
-            Triple("Centro", 3.0, false), Triple("Costa do Sol", 4.0, false), Triple("Engenho da Praia", 13.0, false),
-            Triple("Franco Plaza", 7.0, false), Triple("Fronteira", 4.0, false), Triple("Glória", 8.0, false),
-            Triple("Granja dos Cavaleiros", 10.0, false), Triple("Horto", 15.0, false), Triple("Imbetiba", 3.0, false),
-            Triple("Ilha Leocádia", 10.0, false), Triple("Imburo", 0.0, true), Triple("Jardim Carioca 1", 6.0, false),
-            Triple("Jardim Esperança", 5.0, false), Triple("Jardim Carioca 2", 7.0, false), Triple("Jardim Guanabara", 12.0, false),
-            Triple("Jardim Maringá", 5.0, false), Triple("Jardim Santo Antônio", 5.0, false), Triple("Jardim Vitória", 5.0, false),
-            Triple("Jardim Franco", 7.0, false), Triple("Lagoa", 10.0, false), Triple("Lagomar", 13.0, false),
-            Triple("Maracaibo/Monza", 7.0, false), Triple("Marville", 7.0, false), Triple("Malvinas", 5.0, false),
-            Triple("Miramar", 3.0, false), Triple("Mirante da Lagoa", 12.0, false), Triple("Morro de Santa Mônica", 5.0, false),
-            Triple("Nova Esperança", 7.0, false), Triple("Nova Holanda", 7.0, false), Triple("Nova Macaé", 5.0, false),
-            Triple("Novo Cavaleiros", 10.0, false), Triple("Novo Horizonte", 5.0, false), Triple("Parque Aeroporto", 7.0, false),
-            Triple("Parque Atlântico", 7.0, false), Triple("Parque União", 7.0, false), Triple("Praia do Pecado", 9.0, false),
-            Triple("Piracema", 8.0, false), Triple("Planalto da Ajuda", 7.0, false), Triple("Praia Campista", 5.0, false),
-            Triple("Riviera", 5.0, false), Triple("São Marcos", 11.0, false), Triple("Sol e Mar", 5.0, false),
-            Triple("Santa Mônica", 5.0, false), Triple("Vale das Palmeiras", 15.0, false), Triple("Vale dos Cristais", 15.0, false),
-            Triple("Vale Encantado", 0.0, true), Triple("Verdes Mares", 7.0, false), Triple("Vila Badejo", 5.0, false),
-            Triple("Vila Moreira", 12.0, false), Triple("Vill. do Horto", 15.0, false), Triple("Virgem Santa", 7.0, false),
-            Triple("Visconde", 3.0, false), Triple("Itaparica", 5.0, false), Triple("Quinta da Boa Vista", 0.0, true),
+            Triple("Águas Maravilhosas", 8.0, false), Triple("Ajuda de Cima", 7.0, false), Triple("Ajuda de Baixo", 6.0, false), Triple("Aroeira", 3.0, false),
+            Triple("Atlântico Norte", 7.0, false), Triple("Barra", 4.0, false), Triple("Barreto", 8.0, false), Triple("Barramares", 7.0, false),
+            Triple("Bela Vista", 4.0, false), Triple("Bosque Azul", 7.0, false), Triple("Botafogo", 5.0, false), Triple("Brasília", 4.0, false),
+            Triple("Brisa do Vale", 8.0, false), Triple("Cabiúnas", 15.0, false), Triple("Cajueiros", 3.0, false), Triple("Campo D'Oeste", 4.0, false),
+            Triple("Cancela Preta", 7.0, false), Triple("Cavaleiros", 7.0, false), Triple("Centro", 3.0, false), Triple("Costa do Sol", 4.0, false),
+            Triple("Engenho da Praia", 13.0, false), Triple("Franco Plaza", 7.0, false), Triple("Fronteira", 4.0, false), Triple("Glória", 8.0, false),
+            Triple("Granja dos Cavaleiros", 10.0, false), Triple("Horto", 15.0, false), Triple("Imbetiba", 3.0, false), Triple("Ilha Leocádia", 10.0, false),
+            Triple("Imburo", 0.0, true), Triple("Jardim Carioca 1", 6.0, false), Triple("Jardim Esperança", 5.0, false), Triple("Jardim Carioca 2", 7.0, false),
+            Triple("Jardim Guanabara", 12.0, false), Triple("Jardim Maringá", 5.0, false), Triple("Jardim Santo Antônio", 5.0, false), Triple("Jardim Vitória", 5.0, false),
+            Triple("Jardim Franco", 7.0, false), Triple("Lagoa", 10.0, false), Triple("Lagomar", 13.0, false), Triple("Maracaibo/Monza", 7.0, false),
+            Triple("Marville", 7.0, false), Triple("Malvinas", 5.0, false), Triple("Miramar", 3.0, false), Triple("Mirante da Lagoa", 12.0, false),
+            Triple("Morro de Santa Mônica", 5.0, false), Triple("Nova Esperança", 7.0, false), Triple("Nova Holanda", 7.0, false), Triple("Nova Macaé", 5.0, false),
+            Triple("Novo Cavaleiros", 10.0, false), Triple("Novo Horizonte", 5.0, false), Triple("Parque Aeroporto", 7.0, false), Triple("Parque Atlântico", 7.0, false),
+            Triple("Parque União", 7.0, false), Triple("Praia do Pecado", 9.0, false), Triple("Piracema", 8.0, false), Triple("Planalto da Ajuda", 7.0, false),
+            Triple("Praia Campista", 5.0, false), Triple("Riviera", 5.0, false), Triple("São Marcos", 11.0, false), Triple("Sol e Mar", 5.0, false),
+            Triple("Santa Mônica", 5.0, false), Triple("Vale das Palmeiras", 15.0, false), Triple("Vale dos Cristais", 15.0, false), Triple("Vale Encantado", 0.0, true),
+            Triple("Verdes Mares", 7.0, false), Triple("Vila Badejo", 5.0, false), Triple("Vila Moreira", 12.0, false), Triple("Vill. do Horto", 15.0, false),
+            Triple("Virgem Santa", 7.0, false), Triple("Visconde", 3.0, false), Triple("Itaparica", 5.0, false), Triple("Quinta da Boa Vista", 0.0, true),
             Triple("Fazenda depois da Virgem Santa", 0.0, true), Triple("Virgem Santa depois do posto de saúde", 0.0, true)
         )
         rows.forEach { (name, fee, integral) ->
-            val cv = ContentValues().apply {
-                put("name", name); put("fee", fee); put("integral", if (integral) 1 else 0)
-            }
-            db.insert("neighborhoods", null, cv)
+            db.insert("neighborhoods", null, ContentValues().apply { put("name", name); put("fee", fee); put("integral", if (integral) 1 else 0) })
         }
         db.insert("settings", null, ContentValues().apply { put("key", "integral_fee"); put("value", "0") })
     }
@@ -748,36 +638,25 @@ class DeliveryDb(context: Context) : SQLiteOpenHelper(context, "bora_maycon.db",
     }
 
     fun addNeighborhood(name: String, fee: Double, integral: Boolean): Boolean = runCatching {
-        writableDatabase.insertOrThrow("neighborhoods", null, ContentValues().apply {
-            put("name", name.trim()); put("fee", fee); put("integral", if (integral) 1 else 0)
-        })
-        true
+        writableDatabase.insertOrThrow("neighborhoods", null, ContentValues().apply { put("name", name.trim()); put("fee", fee); put("integral", if (integral) 1 else 0) }); true
     }.getOrDefault(false)
 
     fun updateNeighborhood(id: Long, name: String, fee: Double, integral: Boolean): Boolean = runCatching {
-        writableDatabase.update("neighborhoods", ContentValues().apply {
-            put("name", name.trim()); put("fee", fee); put("integral", if (integral) 1 else 0)
-        }, "id=?", arrayOf(id.toString())) > 0
+        writableDatabase.update("neighborhoods", ContentValues().apply { put("name", name.trim()); put("fee", fee); put("integral", if (integral) 1 else 0) }, "id=?", arrayOf(id.toString())) > 0
     }.getOrDefault(false)
 
     fun deleteNeighborhood(id: Long) { writableDatabase.delete("neighborhoods", "id=?", arrayOf(id.toString())) }
 
     fun addDelivery(date: LocalDate, neighborhood: String, fee: Double) {
-        writableDatabase.insert("deliveries", null, ContentValues().apply {
-            put("date", date.toString()); put("neighborhood", neighborhood); put("fee", fee); put("created_at", System.currentTimeMillis())
-        })
+        writableDatabase.insert("deliveries", null, ContentValues().apply { put("date", date.toString()); put("neighborhood", neighborhood); put("fee", fee); put("created_at", System.currentTimeMillis()) })
     }
 
     fun deleteDelivery(id: Long) { writableDatabase.delete("deliveries", "id=?", arrayOf(id.toString())) }
-
     fun deliveriesOn(date: LocalDate): List<Delivery> = deliveriesBetween(date, date)
 
     fun deliveriesBetween(start: LocalDate, end: LocalDate): List<Delivery> {
         val out = mutableListOf<Delivery>()
-        readableDatabase.query(
-            "deliveries", arrayOf("id", "date", "neighborhood", "fee", "created_at"),
-            "date>=? AND date<=?", arrayOf(start.toString(), end.toString()), null, null, "date DESC, created_at DESC"
-        ).use { c ->
+        readableDatabase.query("deliveries", arrayOf("id", "date", "neighborhood", "fee", "created_at"), "date>=? AND date<=?", arrayOf(start.toString(), end.toString()), null, null, "date DESC, created_at DESC").use { c ->
             while (c.moveToNext()) out += Delivery(c.getLong(0), LocalDate.parse(c.getString(1)), c.getString(2), c.getDouble(3), c.getLong(4))
         }
         return out
@@ -795,41 +674,27 @@ class DeliveryDb(context: Context) : SQLiteOpenHelper(context, "bora_maycon.db",
         val out = linkedMapOf<LocalDate, DayStat>()
         val start = LocalDate.of(year, 1, 1).toString()
         val end = LocalDate.of(year, 12, 31).toString()
-        readableDatabase.rawQuery(
-            "SELECT date, COUNT(*), SUM(fee) FROM deliveries WHERE date>=? AND date<=? GROUP BY date",
-            arrayOf(start, end)
-        ).use { c ->
+        readableDatabase.rawQuery("SELECT date, COUNT(*), SUM(fee) FROM deliveries WHERE date>=? AND date<=? GROUP BY date", arrayOf(start, end)).use { c ->
             while (c.moveToNext()) out[LocalDate.parse(c.getString(0))] = DayStat(c.getInt(1), c.getDouble(2))
         }
         return out
     }
 
     fun getIntegralFee(): Double {
-        readableDatabase.rawQuery("SELECT value FROM settings WHERE key='integral_fee'", null).use { c ->
-            return if (c.moveToFirst()) c.getString(0).toDoubleOrNull() ?: 0.0 else 0.0
-        }
+        readableDatabase.rawQuery("SELECT value FROM settings WHERE key='integral_fee'", null).use { c -> return if (c.moveToFirst()) c.getString(0).toDoubleOrNull() ?: 0.0 else 0.0 }
     }
 
     fun setIntegralFee(value: Double) {
-        writableDatabase.insertWithOnConflict("settings", null, ContentValues().apply {
-            put("key", "integral_fee"); put("value", value.toString())
-        }, SQLiteDatabase.CONFLICT_REPLACE)
+        writableDatabase.insertWithOnConflict("settings", null, ContentValues().apply { put("key", "integral_fee"); put("value", value.toString()) }, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
     fun exportJson(): String {
         val root = JSONObject()
         val neighborhoodsJson = JSONArray()
-        neighborhoods().forEach { n -> neighborhoodsJson.put(JSONObject().apply {
-            put("name", n.name); put("fee", n.fee); put("integral", n.integral)
-        }) }
+        neighborhoods().forEach { n -> neighborhoodsJson.put(JSONObject().apply { put("name", n.name); put("fee", n.fee); put("integral", n.integral) }) }
         val deliveriesJson = JSONArray()
-        allDeliveries().forEach { d -> deliveriesJson.put(JSONObject().apply {
-            put("date", d.date.toString()); put("neighborhood", d.neighborhood); put("fee", d.fee); put("created_at", d.createdAt)
-        }) }
-        root.put("version", 1)
-        root.put("integral_fee", getIntegralFee())
-        root.put("neighborhoods", neighborhoodsJson)
-        root.put("deliveries", deliveriesJson)
+        allDeliveries().forEach { d -> deliveriesJson.put(JSONObject().apply { put("date", d.date.toString()); put("neighborhood", d.neighborhood); put("fee", d.fee); put("created_at", d.createdAt) }) }
+        root.put("version", 1); root.put("integral_fee", getIntegralFee()); root.put("neighborhoods", neighborhoodsJson); root.put("deliveries", deliveriesJson)
         return root.toString(2)
     }
 
@@ -843,20 +708,14 @@ class DeliveryDb(context: Context) : SQLiteOpenHelper(context, "bora_maycon.db",
             writableDatabase.delete("neighborhoods", null, null)
             for (i in 0 until nArray.length()) {
                 val o = nArray.getJSONObject(i)
-                writableDatabase.insertOrThrow("neighborhoods", null, ContentValues().apply {
-                    put("name", o.getString("name")); put("fee", o.optDouble("fee", 0.0)); put("integral", if (o.optBoolean("integral", false)) 1 else 0)
-                })
+                writableDatabase.insertOrThrow("neighborhoods", null, ContentValues().apply { put("name", o.getString("name")); put("fee", o.optDouble("fee", 0.0)); put("integral", if (o.optBoolean("integral", false)) 1 else 0) })
             }
             for (i in 0 until dArray.length()) {
                 val o = dArray.getJSONObject(i)
-                writableDatabase.insertOrThrow("deliveries", null, ContentValues().apply {
-                    put("date", o.getString("date")); put("neighborhood", o.getString("neighborhood")); put("fee", o.getDouble("fee")); put("created_at", o.optLong("created_at", System.currentTimeMillis()))
-                })
+                writableDatabase.insertOrThrow("deliveries", null, ContentValues().apply { put("date", o.getString("date")); put("neighborhood", o.getString("neighborhood")); put("fee", o.getDouble("fee")); put("created_at", o.optLong("created_at", System.currentTimeMillis())) })
             }
             setIntegralFee(root.optDouble("integral_fee", 0.0))
             writableDatabase.setTransactionSuccessful()
-        } finally {
-            writableDatabase.endTransaction()
-        }
+        } finally { writableDatabase.endTransaction() }
     }
 }
