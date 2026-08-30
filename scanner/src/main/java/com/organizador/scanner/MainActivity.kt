@@ -14,7 +14,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.ComponentActivity
 
-private const val APP_URL = "https://bora-maycon-hi-hi.vercel.app/?app=motoboy"
+private const val APP_URL = "https://bora-michael-hi-hi.vercel.app/?app=motoboy"
 private const val BRAND_JS = """
 (function(){
   const apply=function(){
@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
             settings.databaseEnabled = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.1.0"
+            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.1.1"
             isVerticalScrollBarEnabled = false
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
@@ -72,12 +72,12 @@ class MainActivity : ComponentActivity() {
             ViewGroup.LayoutParams.MATCH_PARENT
         ))
 
-        val logoSize = (72 * resources.displayMetrics.density).toInt()
-        val margin = (14 * resources.displayMetrics.density).toInt()
+        val logoSize = (88 * resources.displayMetrics.density).toInt()
+        val margin = (16 * resources.displayMetrics.density).toInt()
         val logo = ImageView(this).apply {
             setImageResource(com.organizador.scanner.R.mipmap.ic_launcher)
             scaleType = ImageView.ScaleType.CENTER_CROP
-            elevation = 12 * resources.displayMetrics.density
+            elevation = 14 * resources.displayMetrics.density
             contentDescription = "Bora Michael Hi Hi"
         }
         root.addView(logo, FrameLayout.LayoutParams(logoSize, logoSize, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
