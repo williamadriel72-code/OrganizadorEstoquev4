@@ -140,16 +140,17 @@ function bmOpenRegisterMotoModal(){
 }
 
 function bmInstallRegisterMotoButton(){
- const sidebar=document.querySelector('.sidebar');
- if(!sidebar||document.getElementById('bmRegisterMoto'))return;
+ const head=document.querySelector('.moto-list-head');
+ if(!head||document.getElementById('bmRegisterMoto'))return;
  const btn=document.createElement('button');
  btn.id='bmRegisterMoto';
  btn.className='btn green';
- btn.style.width='100%';
- btn.style.marginTop='12px';
+ btn.style.marginLeft='auto';
+ btn.style.padding='10px 14px';
+ btn.style.fontWeight='800';
  btn.textContent='+ CADASTRAR MOTOBOY';
  btn.addEventListener('click',bmOpenRegisterMotoModal);
- sidebar.appendChild(btn);
+ head.appendChild(btn);
 }
 
 const bmBindAdminWithArrival=bindAdmin;
