@@ -112,7 +112,7 @@ class MainActivity : ComponentActivity() {
         val stickerWidth = (58 * density).toInt()
         val stickerHeight = (87 * density).toInt()
         val sideMargin = (10 * density).toInt()
-        val bottomMargin = (84 * density).toInt()
+        val bottomMarginPx = (84 * density).toInt()
 
         val sticker = ImageView(this).apply {
             setImageResource(R.drawable.michael_sticker)
@@ -152,7 +152,7 @@ class MainActivity : ComponentActivity() {
             sticker,
             FrameLayout.LayoutParams(stickerWidth, stickerHeight, Gravity.END or Gravity.BOTTOM).apply {
                 marginEnd = sideMargin
-                bottomMargin = bottomMargin
+                bottomMargin = bottomMarginPx
             }
         )
 
