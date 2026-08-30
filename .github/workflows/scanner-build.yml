@@ -53,6 +53,7 @@ jobs:
           for src, dst in items:
               raw = pathlib.Path(src).read_text(errors='ignore')
               clean = ''.join(re.findall(r'[A-Za-z0-9+/=]', raw))
+              clean += '=' * (-len(clean) % 4)
               data = base64.b64decode(clean, validate=False)
               pathlib.Path(dst).write_bytes(data)
               print(src, 'base64=', len(clean), 'bytes=', len(data), '->', dst)
