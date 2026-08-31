@@ -157,15 +157,15 @@ fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoque
 
  if(!document.getElementById('bmRiderRefreshStyle')){
   const s=document.createElement('style');s.id='bmRiderRefreshStyle';s.textContent=`
-   #bmRiderRefresh{position:fixed;z-index:9998;left:50%;top:max(118px,calc(env(safe-area-inset-top) + 82px));transform:translateX(-50%);width:42px;height:42px;padding:0;display:grid;place-items:center;border:1px solid rgba(255,255,255,.15);border-radius:50%;background:rgba(18,23,29,.94);color:#dce3e9;box-shadow:0 8px 24px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.04);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+   #bmRiderRefresh{position:fixed;z-index:9998;right:max(16px,env(safe-area-inset-right));top:max(76px,calc(env(safe-area-inset-top) + 42px));width:42px;height:42px;padding:0;display:grid;place-items:center;border:1px solid rgba(255,255,255,.15);border-radius:50%;background:rgba(18,23,29,.94);color:#dce3e9;box-shadow:0 8px 24px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.04);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
    #bmRiderRefresh svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-   #bmRiderRefresh:active{transform:translateX(-50%) scale(.94)}
+   #bmRiderRefresh:active{transform:scale(.94)}
    #bmRiderRefresh.bm-update-available{border-color:#31d982;color:#8af1bb;background:rgba(9,43,27,.96);box-shadow:0 0 0 1px rgba(49,217,130,.18),0 0 22px rgba(49,217,130,.25);animation:bmRefreshPulse 1.5s ease-in-out infinite}
    #bmRiderRefresh.bm-refreshing{opacity:.78;pointer-events:none}
    #bmRiderRefresh.bm-refreshing svg{animation:bmRefreshSpin .75s linear infinite}
    @keyframes bmRefreshSpin{to{transform:rotate(360deg)}}
    @keyframes bmRefreshPulse{0%,100%{box-shadow:0 0 0 0 rgba(49,217,130,.25),0 8px 24px rgba(0,0,0,.32)}50%{box-shadow:0 0 0 7px rgba(49,217,130,0),0 0 25px rgba(49,217,130,.3)}}
-   @media(max-width:420px){#bmRiderRefresh{top:max(112px,calc(env(safe-area-inset-top) + 76px));width:40px;height:40px}#bmRiderRefresh svg{width:20px;height:20px}}
+   @media(max-width:420px){#bmRiderRefresh{right:max(14px,env(safe-area-inset-right));top:max(72px,calc(env(safe-area-inset-top) + 38px));width:40px;height:40px}#bmRiderRefresh svg{width:20px;height:20px}}
    @media(prefers-reduced-motion:reduce){#bmRiderRefresh.bm-update-available,#bmRiderRefresh.bm-refreshing svg{animation:none}}
   `;document.head.appendChild(s);
  }
