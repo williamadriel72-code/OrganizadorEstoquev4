@@ -132,3 +132,9 @@ if(new URLSearchParams(location.search).get('app')!=='motoboy'){
   .then(code=>(0,eval)(code))
   .catch(e=>console.warn('shift-reports',e?.message||e));
 }
+
+/* Correção da animação de despacho no painel e no APK. */
+fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/patch_dispatch_fix_v1.js?v='+Date.now(),{cache:'no-store'})
+ .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
+ .then(code=>(0,eval)(code))
+ .catch(e=>console.warn('dispatch-fix',e?.message||e));
