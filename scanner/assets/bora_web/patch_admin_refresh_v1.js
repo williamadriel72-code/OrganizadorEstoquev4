@@ -61,3 +61,32 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
   if(!adminState?.selectedMoto&&typeof drawAdmin==='function')setTimeout(()=>drawAdmin(),0);
  },100);
 })();
+
+/* Luzes ambientais e microanimações premium — somente painel admin. */
+(function bmInstallPanelMotionV1(){
+ if(new URLSearchParams(location.search).get('app')==='motoboy')return;
+ if(window.__bmPanelMotionV1)return;window.__bmPanelMotionV1=true;
+ const s=document.createElement('style');s.id='bmPanelMotionV1';s.textContent=`
+ body.bm-reference-admin .app{background:radial-gradient(circle at 82% 18%,rgba(255,35,62,.16),transparent 28%),radial-gradient(circle at 18% 72%,rgba(32,119,255,.11),transparent 29%),radial-gradient(circle at 58% 92%,rgba(255,126,62,.07),transparent 30%),#06090d!important;background-size:145% 145%,155% 155%,165% 165%,auto!important;animation:bmAmbientGlow 16s ease-in-out infinite alternate!important}
+ @keyframes bmAmbientGlow{0%{background-position:0% 0%,100% 40%,50% 100%,0 0}45%{background-position:18% 12%,78% 58%,60% 84%,0 0}100%{background-position:34% 20%,62% 76%,42% 70%,0 0}}
+ .bm-ov-head,.bm-ov-stat,.bm-ov-card,.moto-item,.moto-hero{position:relative;overflow:hidden;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease,background .22s ease}
+ .bm-ov-stat:hover,.bm-ov-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.18)!important;box-shadow:0 18px 48px rgba(0,0,0,.34),0 0 24px rgba(255,42,67,.06)}
+ body.bm-reference-admin .moto-item:hover{transform:translateX(3px) translateY(-1px)!important;box-shadow:0 10px 28px rgba(0,0,0,.25),0 0 18px rgba(255,36,59,.07)!important}
+ .bm-ov-stat:after,.bm-ov-card:after,.bm-ov-head:after{content:'';position:absolute;z-index:0;top:-65%;left:-42%;width:28%;height:230%;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,255,255,.055),transparent);transform:rotate(18deg);animation:bmCardSweep 9s ease-in-out infinite}
+ .bm-ov-card:nth-child(2):after{animation-delay:2.1s}.bm-ov-stat:nth-child(2):after{animation-delay:.8s}.bm-ov-stat:nth-child(3):after{animation-delay:1.5s}.bm-ov-stat:nth-child(4):after{animation-delay:2.3s}.bm-ov-stat:nth-child(5):after{animation-delay:3s}.bm-ov-stat:nth-child(6):after{animation-delay:3.7s}
+ .bm-ov-stat>*,.bm-ov-card>*,.bm-ov-head>*{position:relative;z-index:1}
+ @keyframes bmCardSweep{0%,68%{left:-42%;opacity:0}74%{opacity:1}88%{left:118%;opacity:.8}100%{left:118%;opacity:0}}
+ .bm-ov-head h2{position:relative;width:max-content;max-width:100%}.bm-ov-head h2:after{content:'';position:absolute;left:0;bottom:-7px;width:46%;height:2px;border-radius:99px;background:linear-gradient(90deg,#ff2944,rgba(255,96,73,.68),transparent);box-shadow:0 0 14px rgba(255,41,68,.7);animation:bmTitleGlow 3.8s ease-in-out infinite}
+ @keyframes bmTitleGlow{0%,100%{width:34%;opacity:.62}50%{width:76%;opacity:1}}
+ .bm-ov-dot{box-shadow:0 0 0 0 rgba(77,156,255,.45);animation:bmStatusPulse 2.2s ease-out infinite}.bm-ov-dot.green{box-shadow:0 0 0 0 rgba(43,209,128,.5)}.bm-ov-dot.red{box-shadow:0 0 0 0 rgba(255,67,89,.5)}
+ @keyframes bmStatusPulse{0%{transform:scale(.92);filter:brightness(.9)}45%{transform:scale(1.12);filter:brightness(1.25)}100%{transform:scale(.92);filter:brightness(.9);box-shadow:0 0 0 8px transparent}}
+ .bm-ov-event{animation:bmEventIn .48s cubic-bezier(.2,.8,.2,1) both}.bm-ov-event:nth-child(2){animation-delay:.05s}.bm-ov-event:nth-child(3){animation-delay:.1s}.bm-ov-event:nth-child(4){animation-delay:.15s}.bm-ov-event:nth-child(5){animation-delay:.2s}.bm-ov-event:nth-child(6){animation-delay:.25s}.bm-ov-event:nth-child(7){animation-delay:.3s}.bm-ov-event:nth-child(8){animation-delay:.35s}
+ @keyframes bmEventIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+ .bm-ov-clock small:before{content:'●';display:inline-block;margin-right:6px;color:#28d17c;font-size:9px;filter:drop-shadow(0 0 5px #28d17c);animation:bmLiveBlink 1.8s ease-in-out infinite}
+ @keyframes bmLiveBlink{0%,100%{opacity:.35}50%{opacity:1}}
+ .bm-ov-head:before{content:'';position:absolute;z-index:0;left:-24%;top:0;width:20%;height:1px;background:linear-gradient(90deg,transparent,#ff4359,rgba(96,166,255,.9),transparent);box-shadow:0 0 12px rgba(255,67,89,.5);animation:bmScanLine 7s linear infinite;pointer-events:none}
+ @keyframes bmScanLine{0%{left:-24%;opacity:0}8%{opacity:1}72%{opacity:.8}100%{left:118%;opacity:0}}
+ body.bm-reference-admin .btn{transition:transform .16s ease,box-shadow .2s ease,filter .2s ease!important}body.bm-reference-admin .btn:hover{transform:translateY(-1px);filter:brightness(1.07);box-shadow:0 9px 24px rgba(0,0,0,.3)!important}
+ @media(prefers-reduced-motion:reduce){body.bm-reference-admin .app,.bm-ov-stat:after,.bm-ov-card:after,.bm-ov-head:after,.bm-ov-head h2:after,.bm-ov-dot,.bm-ov-event,.bm-ov-clock small:before,.bm-ov-head:before{animation:none!important}.bm-ov-stat:hover,.bm-ov-card:hover,body.bm-reference-admin .moto-item:hover,body.bm-reference-admin .btn:hover{transform:none!important}}
+ `;document.head.appendChild(s);
+})();
