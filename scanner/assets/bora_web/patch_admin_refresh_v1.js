@@ -43,3 +43,10 @@ bindAdmin=function(){
  bmBindAdminBeforeRefresh();
  bmInstallAdminRefreshButton();
 };
+
+if(new URLSearchParams(location.search).get('app')!=='motoboy'&&!document.getElementById('bmPanelOverviewLoader')){
+ const s=document.createElement('script');
+ s.id='bmPanelOverviewLoader';
+ s.src='https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/patch_panel_overview_v1.js?v='+Date.now();
+ document.head.appendChild(s);
+}
