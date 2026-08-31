@@ -77,3 +77,11 @@ if(new URLSearchParams(location.search).get('app')!=='motoboy'){
  obs.observe(document.documentElement,{childList:true,subtree:true});
  setTimeout(move,0);setTimeout(move,250);setTimeout(move,900);
 })();
+
+/* Relatórios automáticos por turno, SOMENTE no painel. O APK não recebe esta interface. */
+if(new URLSearchParams(location.search).get('app')!=='motoboy'){
+ fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/patch_shift_reports_v1.js?v='+Date.now(),{cache:'no-store'})
+  .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
+  .then(code=>(0,eval)(code))
+  .catch(e=>console.warn('shift-reports',e?.message||e));
+}
