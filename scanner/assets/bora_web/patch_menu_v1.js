@@ -138,3 +138,62 @@ fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoque
  .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
  .then(code=>(0,eval)(code))
  .catch(e=>console.warn('dispatch-fix',e?.message||e));
+
+/* Botão de atualização manual no APK + aviso quando esta patch mudar no servidor. */
+(function bmInstallRiderRefreshButton(){
+ if(new URLSearchParams(location.search).get('app')!=='motoboy')return;
+ if(window.__bmRiderRefreshButtonV1)return;
+ window.__bmRiderRefreshButtonV1=true;
+
+ const SOURCE='https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/patch_menu_v1.js';
+ let baseline=null,checking=false;
+
+ const hash=text=>{
+  let h=2166136261;
+  for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}
+  return (h>>>0).toString(16);
+ };
+
+ if(!document.getElementById('bmRiderRefreshStyle')){
+  const s=document.createElement('style');s.id='bmRiderRefreshStyle';s.textContent=`
+   #bmRiderRefresh{position:fixed;z-index:9998;right:10px;top:max(10px,env(safe-area-inset-top));min-height:34px;padding:7px 11px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(18,23,29,.94);color:#dce3e9;font:800 10px/1 system-ui;letter-spacing:.04em;box-shadow:0 8px 24px rgba(0,0,0,.32);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+   #bmRiderRefresh:active{transform:scale(.97)}
+   #bmRiderRefresh.bm-update-available{border-color:#31d982;color:#8af1bb;background:rgba(9,43,27,.96);box-shadow:0 0 0 1px rgba(49,217,130,.18),0 0 22px rgba(49,217,130,.22);animation:bmRefreshPulse 1.5s ease-in-out infinite}
+   #bmRiderRefresh.bm-refreshing{opacity:.72;pointer-events:none}
+   @keyframes bmRefreshPulse{0%,100%{box-shadow:0 0 0 0 rgba(49,217,130,.25),0 8px 24px rgba(0,0,0,.32)}50%{box-shadow:0 0 0 7px rgba(49,217,130,0),0 0 25px rgba(49,217,130,.3)}}
+   @media(max-width:420px){#bmRiderRefresh{right:8px;top:max(8px,env(safe-area-inset-top));padding:7px 9px;font-size:9px}}
+   @media(prefers-reduced-motion:reduce){#bmRiderRefresh.bm-update-available{animation:none}}
+  `;document.head.appendChild(s);
+ }
+
+ const mount=()=>{
+  if(document.getElementById('bmRiderRefresh'))return;
+  const btn=document.createElement('button');
+  btn.id='bmRiderRefresh';btn.type='button';btn.textContent='↻ ATUALIZAR';btn.setAttribute('aria-label','Atualizar aplicativo');
+  btn.onclick=()=>{
+   btn.classList.add('bm-refreshing');btn.textContent='ATUALIZANDO…';
+   try{
+    const u=new URL(location.href);u.searchParams.set('refresh',Date.now().toString());location.replace(u.toString());
+   }catch(_){location.reload()}
+  };
+  document.body.appendChild(btn);
+ };
+
+ const markUpdate=()=>{
+  mount();const btn=document.getElementById('bmRiderRefresh');if(!btn)return;
+  btn.classList.add('bm-update-available');btn.textContent='● ATUALIZAÇÃO';
+ };
+
+ const check=async()=>{
+  if(checking||!navigator.onLine)return;checking=true;
+  try{
+   const r=await fetch(SOURCE+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)return;
+   const h=hash(await r.text());
+   if(baseline===null)baseline=h;else if(h!==baseline)markUpdate();
+  }catch(_){ }finally{checking=false}
+ };
+
+ const mo=new MutationObserver(mount);mo.observe(document.documentElement,{childList:true,subtree:true});
+ mount();check();setInterval(check,30000);
+ window.addEventListener('focus',check);window.addEventListener('online',check);
+})();
