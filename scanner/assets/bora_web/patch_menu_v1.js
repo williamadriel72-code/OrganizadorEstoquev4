@@ -33,3 +33,26 @@ if(new URLSearchParams(location.search).get('app')!=='motoboy'){
   .then(code=>(0,eval)(code))
   .catch(e=>console.warn('panel-reference',e?.message||e));
 }
+
+/* A interface nova esconde a sidebar antiga; mantenha o botão de relatórios visível no cabeçalho. */
+(function bmKeepDailyReportsVisible(){
+ if(new URLSearchParams(location.search).get('app')==='motoboy')return;
+ if(window.__bmReportsVisibleObserver)return;
+ window.__bmReportsVisibleObserver=true;
+ const move=()=>{
+  const btn=document.getElementById('bmDailyReportsBtn');
+  const head=document.querySelector('.admin-head');
+  if(!btn||!head)return;
+  const logout=document.getElementById('logout');
+  if(btn.parentElement!==head){
+   btn.className='btn secondary small';
+   btn.textContent='RELATÓRIOS DIÁRIOS';
+   btn.style.width='auto';
+   btn.style.margin='0 8px 0 auto';
+   if(logout)head.insertBefore(btn,logout);else head.appendChild(btn);
+  }
+ };
+ const obs=new MutationObserver(move);
+ obs.observe(document.documentElement,{childList:true,subtree:true});
+ setTimeout(move,0);setTimeout(move,250);setTimeout(move,900);
+})();
