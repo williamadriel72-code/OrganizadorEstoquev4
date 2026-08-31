@@ -147,6 +147,7 @@ fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoque
 
  const SOURCE='https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/patch_menu_v1.js';
  let baseline=null,checking=false;
+ const ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5"/><path d="M18.2 9A7.5 7.5 0 1 0 19 15"/></svg>';
 
  const hash=text=>{
   let h=2166136261;
@@ -156,22 +157,25 @@ fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoque
 
  if(!document.getElementById('bmRiderRefreshStyle')){
   const s=document.createElement('style');s.id='bmRiderRefreshStyle';s.textContent=`
-   #bmRiderRefresh{position:fixed;z-index:9998;right:10px;top:max(10px,env(safe-area-inset-top));min-height:34px;padding:7px 11px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(18,23,29,.94);color:#dce3e9;font:800 10px/1 system-ui;letter-spacing:.04em;box-shadow:0 8px 24px rgba(0,0,0,.32);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-   #bmRiderRefresh:active{transform:scale(.97)}
-   #bmRiderRefresh.bm-update-available{border-color:#31d982;color:#8af1bb;background:rgba(9,43,27,.96);box-shadow:0 0 0 1px rgba(49,217,130,.18),0 0 22px rgba(49,217,130,.22);animation:bmRefreshPulse 1.5s ease-in-out infinite}
-   #bmRiderRefresh.bm-refreshing{opacity:.72;pointer-events:none}
+   #bmRiderRefresh{position:fixed;z-index:9998;left:50%;top:max(118px,calc(env(safe-area-inset-top) + 82px));transform:translateX(-50%);width:42px;height:42px;padding:0;display:grid;place-items:center;border:1px solid rgba(255,255,255,.15);border-radius:50%;background:rgba(18,23,29,.94);color:#dce3e9;box-shadow:0 8px 24px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.04);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+   #bmRiderRefresh svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+   #bmRiderRefresh:active{transform:translateX(-50%) scale(.94)}
+   #bmRiderRefresh.bm-update-available{border-color:#31d982;color:#8af1bb;background:rgba(9,43,27,.96);box-shadow:0 0 0 1px rgba(49,217,130,.18),0 0 22px rgba(49,217,130,.25);animation:bmRefreshPulse 1.5s ease-in-out infinite}
+   #bmRiderRefresh.bm-refreshing{opacity:.78;pointer-events:none}
+   #bmRiderRefresh.bm-refreshing svg{animation:bmRefreshSpin .75s linear infinite}
+   @keyframes bmRefreshSpin{to{transform:rotate(360deg)}}
    @keyframes bmRefreshPulse{0%,100%{box-shadow:0 0 0 0 rgba(49,217,130,.25),0 8px 24px rgba(0,0,0,.32)}50%{box-shadow:0 0 0 7px rgba(49,217,130,0),0 0 25px rgba(49,217,130,.3)}}
-   @media(max-width:420px){#bmRiderRefresh{right:8px;top:max(8px,env(safe-area-inset-top));padding:7px 9px;font-size:9px}}
-   @media(prefers-reduced-motion:reduce){#bmRiderRefresh.bm-update-available{animation:none}}
+   @media(max-width:420px){#bmRiderRefresh{top:max(112px,calc(env(safe-area-inset-top) + 76px));width:40px;height:40px}#bmRiderRefresh svg{width:20px;height:20px}}
+   @media(prefers-reduced-motion:reduce){#bmRiderRefresh.bm-update-available,#bmRiderRefresh.bm-refreshing svg{animation:none}}
   `;document.head.appendChild(s);
  }
 
  const mount=()=>{
   if(document.getElementById('bmRiderRefresh'))return;
   const btn=document.createElement('button');
-  btn.id='bmRiderRefresh';btn.type='button';btn.textContent='↻ ATUALIZAR';btn.setAttribute('aria-label','Atualizar aplicativo');
+  btn.id='bmRiderRefresh';btn.type='button';btn.innerHTML=ICON;btn.setAttribute('aria-label','Atualizar aplicativo');btn.setAttribute('title','Atualizar');
   btn.onclick=()=>{
-   btn.classList.add('bm-refreshing');btn.textContent='ATUALIZANDO…';
+   btn.classList.add('bm-refreshing');
    try{
     const u=new URL(location.href);u.searchParams.set('refresh',Date.now().toString());location.replace(u.toString());
    }catch(_){location.reload()}
@@ -181,7 +185,7 @@ fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoque
 
  const markUpdate=()=>{
   mount();const btn=document.getElementById('bmRiderRefresh');if(!btn)return;
-  btn.classList.add('bm-update-available');btn.textContent='● ATUALIZAÇÃO';
+  btn.classList.add('bm-update-available');btn.innerHTML=ICON;
  };
 
  const check=async()=>{
