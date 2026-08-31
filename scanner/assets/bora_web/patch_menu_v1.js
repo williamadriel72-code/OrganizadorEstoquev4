@@ -66,6 +66,7 @@ if(typeof bmArrivalRule==='function'){
    const reports=document.querySelector('.shell .reports');
    if(reports){
     reports.innerHTML=`
+     <div class="notice" style="border-color:#22c55e55"><strong>REGRA ATUAL:</strong> até 18:00 — R$ 70,00 · a partir de 18:01 — R$ 60,00.</div>
      <div class="report-card">
       <b>Segunda a sexta</b>
       <div class="row-sub" style="margin-top:8px">10:00 às 15:00 — R$ 48,00</div>
