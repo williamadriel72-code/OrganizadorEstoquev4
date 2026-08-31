@@ -26,6 +26,27 @@ bindAdmin=function(){
  bmInstallMainMenuButton();
 };
 
+/* Nova faixa de diária: 10:00 até 15:00.
+   Segunda a sexta: R$ 48,00 | Domingo: R$ 55,00.
+   Sábado e demais horários continuam usando as regras anteriores. */
+if(typeof bmArrivalRule==='function'){
+ const bmArrivalRuleBeforeMidday=bmArrivalRule;
+ bmArrivalRule=function(timeStr){
+  const parts=String(timeStr||'').split(':').map(Number);
+  const hh=parts[0],mm=parts[1];
+  if(Number.isInteger(hh)&&Number.isInteger(mm)&&hh>=0&&hh<=23&&mm>=0&&mm<=59){
+   const mins=hh*60+mm;
+   if(mins>=10*60&&mins<=15*60){
+    const [y,mo,d]=today().split('-').map(Number);
+    const dow=new Date(y,mo-1,d,12,0,0).getDay();
+    if(dow>=1&&dow<=5)return {tipo:'antes_18',valor:48,manual:false,faixa:'10_15'};
+    if(dow===0)return {tipo:'antes_18',valor:55,manual:false,faixa:'10_15'};
+   }
+  }
+  return bmArrivalRuleBeforeMidday(timeStr);
+ };
+}
+
 /* Interface premium inspirada na referência: carregada SOMENTE no painel administrativo. */
 if(new URLSearchParams(location.search).get('app')!=='motoboy'){
  fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/patch_panel_reference_v1.js?v='+Date.now(),{cache:'no-store'})
