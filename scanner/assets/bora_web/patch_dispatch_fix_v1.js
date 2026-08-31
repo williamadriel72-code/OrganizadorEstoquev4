@@ -4,6 +4,17 @@
  const riderMode=new URLSearchParams(location.search).get('app')==='motoboy';
  const ASSET='https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/motoboy-saida-mobile.webp';
 
+ if(riderMode&&!document.getElementById('bmRiderRefreshPositionFix')){
+  const ps=document.createElement('style');
+  ps.id='bmRiderRefreshPositionFix';
+  ps.textContent=`
+   #bmRiderRefresh{right:max(40px,env(safe-area-inset-right))!important;top:max(100px,calc(env(safe-area-inset-top) + 66px))!important;left:auto!important;transform:none!important}
+   #bmRiderRefresh:active{transform:scale(.94)!important}
+   @media(max-width:420px){#bmRiderRefresh{right:max(36px,env(safe-area-inset-right))!important;top:max(96px,calc(env(safe-area-inset-top) + 62px))!important}}
+  `;
+  document.head.appendChild(ps);
+ }
+
  if(!document.getElementById('bmDispatchFixStyle')){
   const s=document.createElement('style');
   s.id='bmDispatchFixStyle';
