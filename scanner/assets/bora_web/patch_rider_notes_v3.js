@@ -19,7 +19,7 @@ riderDay=async function(date){
  if(e.error)throw e.error;
  if(so.error)throw so.error;
  const entregas=e.data||[];
- const total=Number(j.data.base_valor||0)+entregas.reduce((a,x)=>a+Number(x.valor||0),0);
+ const total=(j.data.chegada_at?Number(j.data.base_valor||0):0)+entregas.reduce((a,x)=>a+Number(x.valor||0),0);
  return {j:j.data,e:bmSortRiderNotes(entregas),s:so.data||[],total};
 };
 
