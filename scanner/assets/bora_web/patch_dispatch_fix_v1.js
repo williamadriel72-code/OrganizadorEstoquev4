@@ -9,8 +9,8 @@
   (0,eval)(await r.text());
  }catch(e){console.warn('dispatch-stable-load',e?.message||e)}
 
- if(!riderMode||window.__bmRiderShiftHardZeroV3)return;
- window.__bmRiderShiftHardZeroV3=true;
+ if(!riderMode||window.__bmRiderShiftDailyV4)return;
+ window.__bmRiderShiftDailyV4=true;
 
  function spParts(date=new Date()){
   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
@@ -27,10 +27,12 @@
   return false;
  }
 
- /* Fonte única para a tela Hoje: depois das 17h a diária é sempre R$ 0,00.
-    Entregas e saídas anteriores às 17h ficam fora do turno atual. */
- if(typeof riderDay==='function'&&!window.__bmRiderDayShiftWrappedV3){
-  window.__bmRiderDayShiftWrappedV3=true;
+ /* Fonte única para a tela Hoje:
+    - às 17h o turno 2 começa sem carregar a diária do turno 1;
+    - se uma nova diária for lançada no painel depois das 17h, ela aparece no APK e soma ao total;
+    - entregas e saídas anteriores às 17h ficam fora do turno atual. */
+ if(typeof riderDay==='function'&&!window.__bmRiderDayShiftWrappedV4){
+  window.__bmRiderDayShiftWrappedV4=true;
   const rawRiderDay=riderDay;
   riderDay=async function(date){
    const d=await rawRiderDay(date);
@@ -38,8 +40,7 @@
    const key=shiftKey();
    const e=(d?.e||[]).filter(x=>inShift(x.created_at,key));
    const s=(d?.s||[]).filter(x=>inShift(x.horario_saida||x.created_at,key));
-   let base=0;
-   if(key==='10_17'&&d?.j?.chegada_at&&inShift(d.j.chegada_at,key))base=Number(d.j.base_valor||0);
+   const base=(d?.j?.chegada_at&&inShift(d.j.chegada_at,key))?Number(d.j.base_valor||0):0;
    const j=d?.j?{...d.j,base_valor:base,chegada_at:base?d.j.chegada_at:null}:d?.j;
    const total=base+e.reduce((a,x)=>a+Number(x.valor||0),0);
    return {...d,j,e,s,total,__bmShift:key};
@@ -47,8 +48,8 @@
  }
 
  /* Garante o texto do turno mesmo quando uma versão antiga da tela estiver em uso. */
- if(typeof todayHtml==='function'&&!window.__bmTodayShiftLabelV3){
-  window.__bmTodayShiftLabelV3=true;
+ if(typeof todayHtml==='function'&&!window.__bmTodayShiftLabelV4){
+  window.__bmTodayShiftLabelV4=true;
   const rawTodayHtml=todayHtml;
   todayHtml=function(d){
    const key=d?.__bmShift||shiftKey();
@@ -65,7 +66,7 @@
   if(busy||!rider?.profile||typeof renderRider!=='function')return;
   if(rider?.active&&rider.active!=='Hoje')return;
   busy=true;
-  try{await renderRider('Hoje')}catch(e){console.warn('rider-shift-v3',e?.message||e)}finally{busy=false}
+  try{await renderRider('Hoje')}catch(e){console.warn('rider-shift-v4',e?.message||e)}finally{busy=false}
  }
  setTimeout(()=>redraw(true),250);
  setTimeout(()=>redraw(true),1100);
