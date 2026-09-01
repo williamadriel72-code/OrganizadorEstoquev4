@@ -201,3 +201,55 @@ fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoque
  mount();check();setInterval(check,30000);
  window.addEventListener('focus',check);window.addEventListener('online',check);
 })();
+
+/* No APK, a tela Hoje zera às 17:00 e passa a mostrar apenas o turno atual. */
+(function bmInstallRiderShiftReset(){
+ if(new URLSearchParams(location.search).get('app')!=='motoboy')return;
+ if(window.__bmRiderShiftResetV1)return;
+ window.__bmRiderShiftResetV1=true;
+ if(typeof todayHtml!=='function'||typeof renderRider!=='function')return;
+
+ function spParts(date=new Date()){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
+  const o={};for(const p of parts)if(p.type!=='literal')o[p.type]=p.value;
+  return {date:`${o.year}-${o.month}-${o.day}`,mins:Number(o.hour)*60+Number(o.minute)};
+ }
+ function shiftKey(){const p=spParts();return p.mins>=17*60?'17_24':p.mins>=10*60?'10_17':'pre_10'}
+ function inShift(iso,key){
+  if(!iso)return false;
+  const now=spParts(),p=spParts(new Date(iso));
+  if(p.date!==now.date)return false;
+  if(key==='17_24')return p.mins>=17*60;
+  if(key==='10_17')return p.mins>=10*60&&p.mins<17*60;
+  return false;
+ }
+ function currentView(d){
+  const key=shiftKey();
+  const e=(d?.e||[]).filter(x=>inShift(x.created_at,key));
+  const s=(d?.s||[]).filter(x=>inShift(x.horario_saida||x.created_at,key));
+  const base=d?.j?.chegada_at&&inShift(d.j.chegada_at,key)?Number(d.j.base_valor||0):0;
+  const j=d?.j?{...d.j,base_valor:base,chegada_at:base?d.j.chegada_at:null}:d?.j;
+  const total=base+e.reduce((a,x)=>a+Number(x.valor||0),0);
+  return {...d,e,s,j,total,__bmShift:key};
+ }
+
+ const previousTodayHtml=todayHtml;
+ todayHtml=function(d){
+  const view=currentView(d);
+  const label=view.__bmShift==='17_24'?'Turno 2 · 17:00–00:00':view.__bmShift==='10_17'?'Turno 1 · 10:00–17:00':'Aguardando turno · 10:00';
+  return `<div class="notice" style="margin-bottom:10px;border-color:#31d98255"><strong>${label}</strong> · os contadores desta tela mostram somente o turno atual.</div>`+previousTodayHtml(view);
+ };
+
+ let lastKey=shiftKey();
+ async function checkBoundary(){
+  const key=shiftKey();
+  if(key===lastKey)return;
+  lastKey=key;
+  if(rider?.active==='Hoje'){
+   try{await renderRider('Hoje')}catch(e){console.warn('rider-shift-boundary',e?.message||e)}
+  }
+ }
+ setInterval(checkBoundary,15000);
+ window.addEventListener('focus',checkBoundary);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkBoundary()});
+})();
