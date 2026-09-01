@@ -9,8 +9,8 @@
   (0,eval)(await r.text());
  }catch(e){console.warn('dispatch-stable-load',e?.message||e)}
 
- if(!riderMode||window.__bmRiderShiftDailyV4)return;
- window.__bmRiderShiftDailyV4=true;
+ if(!riderMode||window.__bmRiderShiftDailyV5)return;
+ window.__bmRiderShiftDailyV5=true;
 
  function spParts(date=new Date()){
   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
@@ -27,50 +27,54 @@
   return false;
  }
 
- /* Fonte única para a tela Hoje:
-    - às 17h o turno 2 começa sem carregar a diária do turno 1;
-    - se uma nova diária for lançada no painel depois das 17h, ela aparece no APK e soma ao total;
-    - entregas e saídas anteriores às 17h ficam fora do turno atual. */
- if(typeof riderDay==='function'&&!window.__bmRiderDayShiftWrappedV4){
-  window.__bmRiderDayShiftWrappedV4=true;
-  const rawRiderDay=riderDay;
+ /* Substitui riderDay por uma leitura limpa do banco para evitar que wrappers antigos
+    zerem a diária lançada dentro do turno 2. */
+ if(typeof sb!=='undefined'&&typeof today==='function'&&rider?.profile){
   riderDay=async function(date){
-   const d=await rawRiderDay(date);
-   if(String(date)!==String(today()))return d;
-   const key=shiftKey();
-   const e=(d?.e||[]).filter(x=>inShift(x.created_at,key));
-   const s=(d?.s||[]).filter(x=>inShift(x.horario_saida||x.created_at,key));
-   const base=(d?.j?.chegada_at&&inShift(d.j.chegada_at,key))?Number(d.j.base_valor||0):0;
-   const j=d?.j?{...d.j,base_valor:base,chegada_at:base?d.j.chegada_at:null}:d?.j;
-   const total=base+e.reduce((a,x)=>a+Number(x.valor||0),0);
-   return {...d,j,e,s,total,__bmShift:key};
+   const j=await sb.from('kh_motoboy_jornadas')
+    .select('id,data,base_valor,chegada_at,chegada_tipo,fechado')
+    .eq('motoboy_id',rider.profile.id).eq('data',date).maybeSingle();
+   if(j.error)throw j.error;
+   if(!j.data)return {j:null,e:[],s:[],total:0};
+
+   const [e,so]=await Promise.all([
+    sb.from('kh_motoboy_entregas')
+     .select('id,nota_numero,bairro_nome,tipo,valor,status,saida_id,created_at,updated_at')
+     .eq('jornada_id',j.data.id).order('created_at'),
+    sb.from('kh_motoboy_saidas')
+     .select('id,numero_sequencial,horario_saida,total,status,created_at')
+     .eq('jornada_id',j.data.id).order('numero_sequencial')
+   ]);
+   if(e.error)throw e.error;if(so.error)throw so.error;
+
+   let es=e.data||[],ss=so.data||[],base=j.data.chegada_at?Number(j.data.base_valor||0):0,jornada={...j.data};
+   if(String(date)===String(today())){
+    const key=shiftKey();
+    es=es.filter(x=>inShift(x.created_at,key));
+    ss=ss.filter(x=>inShift(x.horario_saida||x.created_at,key));
+    base=(j.data.chegada_at&&inShift(j.data.chegada_at,key))?Number(j.data.base_valor||0):0;
+    jornada={...j.data,base_valor:base,chegada_at:base?j.data.chegada_at:null};
+   }
+   const total=base+es.filter(x=>x.status!=='cancelada').reduce((a,x)=>a+Number(x.valor||0),0);
+   return {j:jornada,e:es,s:ss,total,__bmShift:String(date)===String(today())?shiftKey():null};
   };
  }
 
- /* Garante o texto do turno mesmo quando uma versão antiga da tela estiver em uso. */
- if(typeof todayHtml==='function'&&!window.__bmTodayShiftLabelV4){
-  window.__bmTodayShiftLabelV4=true;
-  const rawTodayHtml=todayHtml;
-  todayHtml=function(d){
-   const key=d?.__bmShift||shiftKey();
-   const title=key==='17_24'?'Turno 2 · 17:00–00:00':key==='10_17'?'Turno 1 · 10:00–17:00':'Aguardando turno · 10:00';
-   return `<div class="notice" style="margin-bottom:10px;border-color:#31d98255"><strong>${title}</strong> · diária e totais referentes somente ao turno atual.</div>`+rawTodayHtml(d);
-  };
- }
-
- let lastShift=shiftKey(),busy=false;
- async function redraw(force=false){
-  const key=shiftKey();
-  if(!force&&key===lastShift)return;
-  lastShift=key;
-  if(busy||!rider?.profile||typeof renderRider!=='function')return;
+ /* Corrige também a tela já montada, usando a diária do próprio turno. */
+ async function forceToday(){
+  if(!rider?.profile||typeof renderRider!=='function')return;
   if(rider?.active&&rider.active!=='Hoje')return;
-  busy=true;
-  try{await renderRider('Hoje')}catch(e){console.warn('rider-shift-v4',e?.message||e)}finally{busy=false}
+  try{await renderRider('Hoje')}catch(e){console.warn('rider-shift-v5',e?.message||e)}
  }
- setTimeout(()=>redraw(true),250);
- setTimeout(()=>redraw(true),1100);
- setInterval(()=>redraw(false),15000);
- window.addEventListener('focus',()=>redraw(true));
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)redraw(true)});
+ setTimeout(forceToday,200);
+ setTimeout(forceToday,900);
+ setTimeout(forceToday,1800);
+
+ let lastShift=shiftKey();
+ setInterval(()=>{
+  const k=shiftKey();
+  if(k!==lastShift){lastShift=k;forceToday()}
+ },15000);
+ window.addEventListener('focus',forceToday);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)forceToday()});
 })();
