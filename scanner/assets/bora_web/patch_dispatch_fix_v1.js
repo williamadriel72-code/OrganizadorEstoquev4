@@ -28,7 +28,8 @@
  }
 
  /* Substitui riderDay por uma leitura limpa do banco para evitar que wrappers antigos
-    zerem a diária lançada dentro do turno 2. */
+    zerem a diária lançada dentro do turno 2. Preserva também o estado de confirmação
+    das notas já conferidas pelo motoboy. */
  if(typeof sb!=='undefined'&&typeof today==='function'&&rider?.profile){
   riderDay=async function(date){
    const j=await sb.from('kh_motoboy_jornadas')
@@ -39,7 +40,7 @@
 
    const [e,so]=await Promise.all([
     sb.from('kh_motoboy_entregas')
-     .select('id,nota_numero,bairro_nome,tipo,valor,status,saida_id,created_at,updated_at')
+     .select('id,nota_numero,bairro_nome,tipo,valor,status,saida_id,nota_confirmada,nota_confirmada_at,created_at,updated_at')
      .eq('jornada_id',j.data.id).order('created_at'),
     sb.from('kh_motoboy_saidas')
      .select('id,numero_sequencial,horario_saida,total,status,created_at')
@@ -55,6 +56,7 @@
     base=(j.data.chegada_at&&inShift(j.data.chegada_at,key))?Number(j.data.base_valor||0):0;
     jornada={...j.data,base_valor:base,chegada_at:base?j.data.chegada_at:null};
    }
+   if(typeof bmSortRiderNotes==='function')es=bmSortRiderNotes(es);
    const total=base+es.filter(x=>x.status!=='cancelada').reduce((a,x)=>a+Number(x.valor||0),0);
    return {j:jornada,e:es,s:ss,total,__bmShift:String(date)===String(today())?shiftKey():null};
   };
