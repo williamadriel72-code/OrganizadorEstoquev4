@@ -118,4 +118,61 @@
  setInterval(()=>{ensureFixChannel();if(!document.hidden)pollReleased()},1500);
  window.addEventListener('focus',()=>{ensureFixChannel();pollReleased()});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){ensureFixChannel();pollReleased()}});
+
+ /* Hotfix do fechamento no APK. Esta patch já é buscada com cache-busting pela versão instalada. */
+ if(!window.__bmRiderShiftHotfixV2){
+  window.__bmRiderShiftHotfixV2=true;
+
+  function bmShiftSpParts(date=new Date()){
+   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
+   const o={};for(const p of parts)if(p.type!=='literal')o[p.type]=p.value;
+   return {date:`${o.year}-${o.month}-${o.day}`,mins:Number(o.hour)*60+Number(o.minute)};
+  }
+  function bmShiftKeyNow(){const p=bmShiftSpParts();return p.mins>=17*60?'17_24':p.mins>=10*60?'10_17':'pre_10'}
+  function bmInCurrentShift(iso,key=bmShiftKeyNow()){
+   if(!iso)return false;
+   const now=bmShiftSpParts(),p=bmShiftSpParts(new Date(iso));
+   if(p.date!==now.date)return false;
+   if(key==='17_24')return p.mins>=17*60;
+   if(key==='10_17')return p.mins>=10*60&&p.mins<17*60;
+   return false;
+  }
+  function bmShiftView(d){
+   const key=bmShiftKeyNow();
+   const e=(d?.e||[]).filter(x=>bmInCurrentShift(x.created_at,key));
+   const s=(d?.s||[]).filter(x=>bmInCurrentShift(x.horario_saida||x.created_at,key));
+   const base=d?.j?.chegada_at&&bmInCurrentShift(d.j.chegada_at,key)?Number(d.j.base_valor||0):0;
+   const j=d?.j?{...d.j,base_valor:base,chegada_at:base?d.j.chegada_at:null}:d?.j;
+   return {...d,e,s,j,total:base+e.reduce((a,x)=>a+Number(x.valor||0),0),__bmShift:key};
+  }
+
+  /* Fallback para versões do menu que ainda não receberam a regra de turno. */
+  if(!window.__bmRiderShiftResetV1&&typeof todayHtml==='function'){
+   const oldTodayHtml=todayHtml;
+   todayHtml=function(d){
+    const view=bmShiftView(d);
+    const name=view.__bmShift==='17_24'?'Turno 2 · 17:00–00:00':view.__bmShift==='10_17'?'Turno 1 · 10:00–17:00':'Aguardando turno · 10:00';
+    return `<div class="notice" style="margin-bottom:10px;border-color:#31d98255"><strong>${name}</strong> · valores e entregas exibidos somente do turno atual.</div>`+oldTodayHtml(view);
+   };
+  }
+
+  let bmLastShift=bmShiftKeyNow();
+  let bmShiftRenderBusy=false;
+  async function bmRefreshRiderShift(force=false){
+   const key=bmShiftKeyNow();
+   if(!force&&key===bmLastShift)return;
+   bmLastShift=key;
+   if(bmShiftRenderBusy||!rider?.profile||typeof renderRider!=='function')return;
+   if(rider?.active&&rider.active!=='Hoje')return;
+   bmShiftRenderBusy=true;
+   try{await renderRider('Hoje')}catch(e){console.warn('rider-shift-hotfix',e?.message||e)}finally{bmShiftRenderBusy=false}
+  }
+
+  /* Força uma renderização logo após a patch carregar, inclusive se já passou das 17h. */
+  setTimeout(()=>bmRefreshRiderShift(true),180);
+  setTimeout(()=>bmRefreshRiderShift(true),850);
+  setInterval(()=>bmRefreshRiderShift(false),15000);
+  window.addEventListener('focus',()=>bmRefreshRiderShift(false));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)bmRefreshRiderShift(false)});
+ }
 })();
