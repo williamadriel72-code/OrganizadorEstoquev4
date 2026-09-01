@@ -108,8 +108,13 @@
  function installBadge(){
   const head=document.querySelector('.admin-head');if(!head)return;
   let el=document.getElementById('bmCurrentShiftBadge');
-  if(!el){el=document.createElement('span');el.id='bmCurrentShiftBadge';el.style.cssText='display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;border:1px solid rgba(49,217,130,.24);background:rgba(49,217,130,.08);color:#86efb6;font-size:10px;font-weight:900;white-space:nowrap';const firstBtn=head.querySelector('button');if(firstBtn)head.insertBefore(el,firstBtn);else head.appendChild(el)}
-  const key=shiftKeyNow();el.textContent=key==='17_24'?'TURNO 2 · 17:00–00:00':key==='10_17'?'TURNO 1 · 10:00–17:00':'AGUARDANDO TURNO · 10:00';
+  if(!el){
+   el=document.createElement('span');el.id='bmCurrentShiftBadge';el.style.cssText='display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;border:1px solid rgba(49,217,130,.24);background:rgba(49,217,130,.08);color:#86efb6;font-size:10px;font-weight:900;white-space:nowrap';
+   const firstBtn=head.querySelector('button');if(firstBtn)head.insertBefore(el,firstBtn);else head.appendChild(el);
+  }
+  const key=shiftKeyNow();
+  const text=key==='17_24'?'TURNO 2 · 17:00–00:00':key==='10_17'?'TURNO 1 · 10:00–17:00':'AGUARDANDO TURNO · 10:00';
+  if(el.textContent!==text)el.textContent=text;
  }
 
  let lastKey=shiftKeyNow();
@@ -126,7 +131,8 @@
   }catch(e){console.warn('shift-boundary',e?.message||e)}
  }
 
- const obs=new MutationObserver(installBadge);obs.observe(document.documentElement,{childList:true,subtree:true});
+ const badgeObs=new MutationObserver(()=>{if(!document.getElementById('bmCurrentShiftBadge'))installBadge()});
+ badgeObs.observe(document.documentElement,{childList:true,subtree:true});
  setTimeout(()=>{installBadge();if(typeof drawAdmin==='function')drawAdmin()},80);
  setInterval(checkBoundary,15000);
  window.addEventListener('focus',checkBoundary);
