@@ -8,8 +8,8 @@
   (0,eval)(await r.text());
  }catch(e){console.warn('dispatch-stable-load',e?.message||e)}
 
- if(!riderMode||window.__bmRiderSyncV6)return;
- window.__bmRiderSyncV6=true;
+ if(!riderMode||window.__bmRiderSyncV7)return;
+ window.__bmRiderSyncV7=true;
 
  function spParts(date=new Date()){
   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
@@ -25,6 +25,21 @@
   if(key==='10_17')return p.mins>=10*60&&p.mins<17*60;
   return false;
  }
+ function zeroSummary(date){
+  return {data:date,turno1:{diaria:0,taxas:0,entregas:0,total:0,fechado:false},turno2:{diaria:0,taxas:0,entregas:0,total:0,fechado:false},total_dia:0,turno_atual:shiftKey()};
+ }
+ function fallbackSummary(date,j,allEs){
+  const out=zeroSummary(date),valid=(allEs||[]).filter(x=>x.status!=='cancelada');
+  const e1=valid.filter(x=>inShift(x.created_at,'10_17'));
+  const e2=valid.filter(x=>inShift(x.created_at,'17_24'));
+  const d1=j?.chegada_at&&inShift(j.chegada_at,'10_17')?Number(j.base_valor||0):0;
+  const d2=j?.chegada_at&&inShift(j.chegada_at,'17_24')?Number(j.base_valor||0):0;
+  const t1=e1.reduce((a,x)=>a+Number(x.valor||0),0),t2=e2.reduce((a,x)=>a+Number(x.valor||0),0);
+  out.turno1={diaria:d1,taxas:t1,entregas:e1.length,total:d1+t1,fechado:shiftKey()==='17_24'};
+  out.turno2={diaria:d2,taxas:t2,entregas:e2.length,total:d2+t2,fechado:false};
+  out.total_dia=out.turno1.total+out.turno2.total;
+  return out;
+ }
 
  let riderDayInstalled=false;
  function installRiderDay(){
@@ -33,11 +48,20 @@
 
   riderDay=async function(date){
    if(!rider?.profile?.id)throw new Error('Perfil do motoboy ainda não carregado.');
-   const j=await sb.from('kh_motoboy_jornadas')
-    .select('id,data,base_valor,chegada_at,chegada_tipo,fechado')
-    .eq('motoboy_id',rider.profile.id).eq('data',date).maybeSingle();
+
+   const [j,shiftRpc]=await Promise.all([
+    sb.from('kh_motoboy_jornadas')
+     .select('id,data,base_valor,chegada_at,chegada_tipo,fechado')
+     .eq('motoboy_id',rider.profile.id).eq('data',date).maybeSingle(),
+    sb.rpc('kh_get_my_shift_totals',{p_data:date})
+   ]);
    if(j.error)throw j.error;
-   if(!j.data)return {j:null,e:[],s:[],total:0,__bmShift:String(date)===String(today())?shiftKey():null};
+
+   let shiftSummary=shiftRpc?.error?null:shiftRpc?.data;
+   if(!j.data){
+    if(!shiftSummary)shiftSummary=zeroSummary(date);
+    return {j:null,e:[],s:[],total:0,shiftSummary,__bmShift:String(date)===String(today())?shiftKey():null};
+   }
 
    const [e,so]=await Promise.all([
     sb.from('kh_motoboy_entregas')
@@ -49,17 +73,50 @@
    ]);
    if(e.error)throw e.error;if(so.error)throw so.error;
 
-   let es=e.data||[],ss=so.data||[],base=j.data.chegada_at?Number(j.data.base_valor||0):0,jornada={...j.data};
+   const allEs=e.data||[],allSs=so.data||[];
+   if(!shiftSummary)shiftSummary=fallbackSummary(date,j.data,allEs);
+
+   let es=allEs,ss=allSs,base=j.data.chegada_at?Number(j.data.base_valor||0):0,jornada={...j.data};
    if(String(date)===String(today())){
     const key=shiftKey();
-    es=es.filter(x=>inShift(x.created_at,key));
-    ss=ss.filter(x=>inShift(x.horario_saida||x.created_at,key));
+    es=allEs.filter(x=>inShift(x.created_at,key));
+    ss=allSs.filter(x=>inShift(x.horario_saida||x.created_at,key));
     base=(j.data.chegada_at&&inShift(j.data.chegada_at,key))?Number(j.data.base_valor||0):0;
     jornada={...j.data,base_valor:base,chegada_at:base?j.data.chegada_at:null};
    }
    if(typeof bmSortRiderNotes==='function')es=bmSortRiderNotes(es);
    const total=base+es.filter(x=>x.status!=='cancelada').reduce((a,x)=>a+Number(x.valor||0),0);
-   return {j:jornada,e:es,s:ss,total,__bmShift:String(date)===String(today())?shiftKey():null};
+   return {j:jornada,e:es,s:ss,total,shiftSummary,__bmShift:String(date)===String(today())?shiftKey():null};
+  };
+  return true;
+ }
+
+ let todayHtmlInstalled=false;
+ function installTodayHtml(){
+  if(todayHtmlInstalled||typeof todayHtml!=='function'||typeof bmRiderNoteCard!=='function'||typeof BRL!=='function')return false;
+  todayHtmlInstalled=true;
+
+  const n=v=>Number(v||0);
+  const shiftCard=(title,x,active)=>`<div class="card" style="border-color:${active?'rgba(49,217,130,.42)':'rgba(255,255,255,.08)'};box-shadow:${active?'0 0 18px rgba(49,217,130,.08)':'none'}"><div class="stat-label">${title}</div><div class="stat-value">${BRL(n(x?.total))}</div><div class="row-sub" style="margin-top:7px">Diária ${BRL(n(x?.diaria))} · Bairros ${BRL(n(x?.taxas))}</div><div class="row-sub">${Number(x?.entregas||0)} entrega${Number(x?.entregas||0)===1?'':'s'}${x?.fechado?' · fechado':''}</div></div>`;
+
+  todayHtml=function(d){
+   const s=d?.shiftSummary||zeroSummary(typeof today==='function'?today():'');
+   const t1=s.turno1||{},t2=s.turno2||{};
+   const current=d?.__bmShift||shiftKey();
+   const valid=typeof bmSortRiderNotes==='function'?bmSortRiderNotes((d?.e||[]).filter(e=>e.status!=='cancelada')):(d?.e||[]).filter(e=>e.status!=='cancelada');
+   const pending=valid.filter(e=>!e.nota_confirmada),confirmed=valid.filter(e=>e.nota_confirmada),list=[...pending,...confirmed];
+   const currentName=current==='17_24'?'Turno 2 · Noite · 17:00–00:00':current==='10_17'?'Turno 1 · Manhã · 10:00–17:00':'Aguardando turno · 10:00';
+   return `<section class="rider-fast-panel">
+    <div class="notice" style="margin-bottom:10px;border-color:#31d98255"><strong>${currentName}</strong><br>Os valores da manhã e da noite ficam separados e o total do dia soma os dois turnos.</div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+     ${shiftCard('TURNO 1 · MANHÃ',t1,current==='10_17')}
+     ${shiftCard('TURNO 2 · NOITE',t2,current==='17_24')}
+    </div>
+    <div class="card" style="margin-top:10px;border-color:rgba(241,166,55,.24)"><div class="stat-label">TOTAL DO DIA</div><div class="stat-value">${BRL(n(s.total_dia))}</div><div class="row-sub" style="margin-top:6px">Manhã ${BRL(n(t1.total))} + Noite ${BRL(n(t2.total))}</div></div>
+    <div class="section-title">Conferir notas · ${current==='17_24'?'Noite':'Manhã'}</div>
+    <div class="notice"><b>${pending.length?`${pending.length} nota${pending.length===1?'':'s'} aguardando confirmação`:'Todas as notas estão confirmadas'}</b><br>Confira o número e o bairro da nota física do turno atual.</div>
+    <div style="margin-top:10px">${list.length?list.map(bmRiderNoteCard).join(''):'<div class="card"><div class="empty">Nenhuma nota lançada neste turno.</div></div>'}</div>
+   </section>`;
   };
   return true;
  }
@@ -69,16 +126,15 @@
   if(renderBusy||!rider?.profile||typeof renderRider!=='function')return;
   if(rider?.active&&rider.active!=='Hoje')return;
   renderBusy=true;
-  try{await renderRider('Hoje')}catch(e){console.warn('rider-sync-v6-render',e?.message||e)}finally{renderBusy=false}
+  try{await renderRider('Hoje')}catch(e){console.warn('rider-sync-v7-render',e?.message||e)}finally{renderBusy=false}
  }
- function scheduleRender(delay=180){
-  clearTimeout(renderTimer);
-  renderTimer=setTimeout(renderHoje,delay);
- }
+ function scheduleRender(delay=180){clearTimeout(renderTimer);renderTimer=setTimeout(renderHoje,delay)}
  function signature(d){
-  const j=d?.j||{};
+  const j=d?.j||{},s=d?.shiftSummary||{},t1=s.turno1||{},t2=s.turno2||{};
   return JSON.stringify([
    shiftKey(),j.base_valor||0,j.chegada_at||null,
+   t1.diaria||0,t1.taxas||0,t1.entregas||0,t1.total||0,!!t1.fechado,
+   t2.diaria||0,t2.taxas||0,t2.entregas||0,t2.total||0,!!t2.fechado,s.total_dia||0,
    ...(d?.e||[]).map(x=>[x.id,x.status,x.valor,!!x.nota_confirmada,x.nota_confirmada_at||null,x.updated_at||null]),
    ...(d?.s||[]).map(x=>[x.id,x.status,x.horario_saida||null,x.updated_at||null])
   ]);
@@ -90,7 +146,7 @@
    const sig=signature(d);
    if(lastSignature===null){lastSignature=sig;return}
    if(sig!==lastSignature){lastSignature=sig;scheduleRender(80)}
-  }catch(e){console.warn('rider-sync-v6-poll',e?.message||e)}
+  }catch(e){console.warn('rider-sync-v7-poll',e?.message||e)}
  }
  function ensureRealtime(){
   if(!rider?.profile?.id||typeof sb==='undefined')return;
@@ -99,23 +155,23 @@
   syncMid=mid;
   if(syncChannel){try{sb.removeChannel(syncChannel)}catch(_){ }}
   try{
-   syncChannel=sb.channel('bm-rider-sync-v6-'+mid+'-'+Date.now())
+   syncChannel=sb.channel('bm-rider-sync-v7-'+mid+'-'+Date.now())
     .on('postgres_changes',{event:'*',schema:'public',table:'kh_motoboy_entregas',filter:`motoboy_id=eq.${mid}`},()=>{lastSignature=null;scheduleRender(120)})
     .on('postgres_changes',{event:'*',schema:'public',table:'kh_motoboy_saidas',filter:`motoboy_id=eq.${mid}`},()=>{lastSignature=null;scheduleRender(120)})
     .on('postgres_changes',{event:'*',schema:'public',table:'kh_motoboy_jornadas',filter:`motoboy_id=eq.${mid}`},()=>{lastSignature=null;scheduleRender(120)})
     .subscribe();
-  }catch(e){console.warn('rider-sync-v6-realtime',e?.message||e)}
+  }catch(e){console.warn('rider-sync-v7-realtime',e?.message||e)}
  }
 
  let lastShift=shiftKey();
  function ensureAll(){
-  installRiderDay();
+  const a=installRiderDay(),b=installTodayHtml();
   ensureRealtime();
   const key=shiftKey();
   if(key!==lastShift){lastShift=key;lastSignature=null;scheduleRender(60)}
+  if(a||b)scheduleRender(60);
  }
 
- /* Não depende do perfil já estar pronto quando a patch carrega. */
  setTimeout(()=>{ensureAll();scheduleRender(0)},250);
  setTimeout(()=>{ensureAll();scheduleRender(0)},1000);
  setTimeout(()=>{ensureAll();scheduleRender(0)},2500);
