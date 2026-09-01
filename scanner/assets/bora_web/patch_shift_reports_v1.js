@@ -66,3 +66,69 @@
  }
  installStyle();const obs=new MutationObserver(installButton);obs.observe(document.documentElement,{childList:true,subtree:true});setTimeout(installButton,0);setTimeout(installButton,350);setTimeout(installButton,1100);
 })();
+
+/* Troca operacional automática às 17:00: o painel passa a mostrar somente o turno atual. */
+(()=>{
+ if(new URLSearchParams(location.search).get('app')==='motoboy')return;
+ if(window.__bmShiftOperationalResetV1)return;window.__bmShiftOperationalResetV1=true;
+ if(typeof entregasOf!=='function'||typeof saidasOf!=='function')return;
+
+ const originalEntregasOf=entregasOf;
+ const originalSaidasOf=saidasOf;
+ const originalMoneyMoto=typeof moneyMoto==='function'?moneyMoto:null;
+
+ function saoPauloParts(date=new Date()){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
+  const o={};for(const p of parts)if(p.type!=='literal')o[p.type]=p.value;
+  return {date:`${o.year}-${o.month}-${o.day}`,mins:Number(o.hour)*60+Number(o.minute)};
+ }
+ function shiftKeyNow(){const p=saoPauloParts();return p.mins>=17*60?'17_24':p.mins>=10*60?'10_17':'pre_10'}
+ function inCurrentShift(iso){
+  if(!iso)return false;
+  const now=saoPauloParts(),p=saoPauloParts(new Date(iso));
+  if(p.date!==now.date)return false;
+  const key=shiftKeyNow();
+  if(key==='17_24')return p.mins>=17*60;
+  if(key==='10_17')return p.mins>=10*60&&p.mins<17*60;
+  return false;
+ }
+ function deliveryTime(x){return x?.created_at||x?.updated_at||null}
+ function outingTime(x){return x?.horario_saida||x?.created_at||null}
+
+ entregasOf=function(mid){return originalEntregasOf(mid).filter(x=>inCurrentShift(deliveryTime(x)))};
+ saidasOf=function(mid){return originalSaidasOf(mid).filter(x=>inCurrentShift(outingTime(x)))};
+ if(originalMoneyMoto){
+  moneyMoto=function(mid){
+   const j=typeof jornadaOf==='function'?jornadaOf(mid):null;
+   const base=j?.chegada_at&&inCurrentShift(j.chegada_at)?Number(j.base_valor||0):0;
+   return base+entregasOf(mid).reduce((a,x)=>a+Number(x.valor||0),0);
+  };
+ }
+
+ function installBadge(){
+  const head=document.querySelector('.admin-head');if(!head)return;
+  let el=document.getElementById('bmCurrentShiftBadge');
+  if(!el){el=document.createElement('span');el.id='bmCurrentShiftBadge';el.style.cssText='display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;border:1px solid rgba(49,217,130,.24);background:rgba(49,217,130,.08);color:#86efb6;font-size:10px;font-weight:900;white-space:nowrap';const firstBtn=head.querySelector('button');if(firstBtn)head.insertBefore(el,firstBtn);else head.appendChild(el)}
+  const key=shiftKeyNow();el.textContent=key==='17_24'?'TURNO 2 · 17:00–00:00':key==='10_17'?'TURNO 1 · 10:00–17:00':'AGUARDANDO TURNO · 10:00';
+ }
+
+ let lastKey=shiftKeyNow();
+ async function checkBoundary(){
+  installBadge();const key=shiftKeyNow();
+  if(key===lastKey)return;
+  lastKey=key;
+  try{
+   const selected=adminState?.selectedMoto||null;
+   if(typeof loadAdmin==='function')await loadAdmin();
+   if(selected&&adminState?.motoboys?.some(m=>m.id===selected))adminState.selectedMoto=selected;
+   if(typeof drawAdmin==='function')drawAdmin();
+   if(typeof toast==='function')toast(key==='17_24'?'Turno 1 fechado. Turno 2 iniciado e zerado às 17:00.':'Novo turno iniciado.');
+  }catch(e){console.warn('shift-boundary',e?.message||e)}
+ }
+
+ const obs=new MutationObserver(installBadge);obs.observe(document.documentElement,{childList:true,subtree:true});
+ setTimeout(()=>{installBadge();if(typeof drawAdmin==='function')drawAdmin()},80);
+ setInterval(checkBoundary,15000);
+ window.addEventListener('focus',checkBoundary);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkBoundary()});
+})();
