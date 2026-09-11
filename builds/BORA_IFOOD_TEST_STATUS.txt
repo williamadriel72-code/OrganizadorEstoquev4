@@ -1,4 +1,5 @@
-FAILED
+OK
 App: Bora Michael - Motoboy TESTE
-Version: 0.1.0-test
-Commit: 3dc9a72955a15507587e8ab7303b4044d21924bf
+Version: 0.3.0-test
+Login: seleção pelo nome do motoboy
+Commit: 0d3a95397a2fec77d8ecf9ce24a4c741552d030a
