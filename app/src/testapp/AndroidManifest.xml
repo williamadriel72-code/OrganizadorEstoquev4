@@ -4,7 +4,7 @@
 
     <application
         android:allowBackup="false"
-        android:label="Bora Michael - Motoboy TESTE"
+        android:label="Bora Michael - TESTE v0.4 POR NOME"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
 
