@@ -20,21 +20,23 @@ w: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/build.
 > Task :app:generateDebugRFile
 > Task :app:checkDebugDuplicateClasses
 > Task :app:desugarDebugFileDependencies
+> Task :app:mergeLibDexDebug
 > Task :app:checkDebugAarMetadata
 > Task :app:mapDebugSourceSetPaths
-> Task :app:mergeLibDexDebug
 > Task :app:compileDebugNavigationResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:processDebugMainManifest
 > Task :app:mergeDebugResources
 > Task :app:processDebugManifest
-> Task :app:processDebugManifestForPackage
 > Task :app:mergeDebugJniLibFolders
+> Task :app:processDebugManifestForPackage
 > Task :app:mergeDebugNativeLibs NO-SOURCE
 > Task :app:stripDebugDebugSymbols NO-SOURCE
 > Task :app:processDebugResources
 > Task :app:mergeExtDexDebug
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
 
 > Task :app:compileDebugKotlin
 e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/LauncherActivity.kt:4:17 Unresolved reference 'activity'.
@@ -1687,9 +1689,9 @@ e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/ma
 e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/SupabaseGate.kt:217:40 Unresolved reference 'Modifier'.
 e: file:///home/runner/work/OrganizadorEstoquev4/OrganizadorEstoquev4/app/src/main/java/com/organizador/estoque/ui/SupabaseGate.kt:220:29 Unresolved reference 'Text'.
 
+> Task :app:writeDebugSigningConfigVersions
 > Task :app:compileDebugKotlin FAILED
-> Task :app:validateSigningDebug
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/android_build-1789134253137.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/android_build-1789135110823.json
 
 FAILURE: Build failed with an exception.
 
@@ -1888,5 +1890,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 54s
-27 actionable tasks: 27 executed
+BUILD FAILED in 51s
+29 actionable tasks: 29 executed

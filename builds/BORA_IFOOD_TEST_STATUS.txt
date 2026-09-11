@@ -1,4 +1,4 @@
 FAILED
 App: Bora Michael - Motoboy TESTE
 Version: 0.1.0-test
-Commit: 1f4f901a2b6e4b70ca7a78f82fa265fa7529d64d
+Commit: 3dc9a72955a15507587e8ab7303b4044d21924bf
