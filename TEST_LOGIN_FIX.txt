@@ -1,0 +1,1 @@
+APK teste deve usar kh-pin-login em vez de kh-motoboy-login.
