@@ -1,8 +1,8 @@
-name: Build Android APK
+name: Build Bora iFood Rider TEST APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "chatgpt-bora-ifood-rider-test" ]
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
-      - name: Build debug APK
+      - name: Build test APK
         id: android_build
         shell: bash
         run: |
@@ -40,28 +40,27 @@ jobs:
         shell: bash
         run: |
           mkdir -p builds
-          rm -f builds/OrganizadorEstoque-v4.0.5.apk builds/BUILD_FAILED.txt
+          rm -f builds/Bora-Michael-iFood-TEST.apk builds/BORA_IFOOD_TEST_BUILD_FAILED.txt
           if [ "${{ steps.android_build.outputs.status }}" = "0" ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk builds/OrganizadorEstoque-v4.0.5.apk
-            printf 'OK\nVersion: 4.0.5\nCommit: %s\n' "$GITHUB_SHA" > builds/BUILD_STATUS.txt
+            cp app/build/outputs/apk/debug/app-debug.apk builds/Bora-Michael-iFood-TEST.apk
+            printf 'OK\nApp: Bora Michael - Motoboy TESTE\nVersion: 0.1.0-test\nCommit: %s\n' "$GITHUB_SHA" > builds/BORA_IFOOD_TEST_STATUS.txt
           else
-            cp android-build.log builds/BUILD_FAILED.txt
-            printf 'FAILED\nVersion: 4.0.5\nCommit: %s\n' "$GITHUB_SHA" > builds/BUILD_STATUS.txt
+            cp android-build.log builds/BORA_IFOOD_TEST_BUILD_FAILED.txt
+            printf 'FAILED\nApp: Bora Michael - Motoboy TESTE\nVersion: 0.1.0-test\nCommit: %s\n' "$GITHUB_SHA" > builds/BORA_IFOOD_TEST_STATUS.txt
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- builds/BUILD_STATUS.txt builds/BUILD_FAILED.txt builds/OrganizadorEstoque-v4.0.5.apk 2>/dev/null || true
-          git add -- builds/BUILD_STATUS.txt
-          if [ -f builds/BUILD_FAILED.txt ]; then git add -- builds/BUILD_FAILED.txt; fi
-          if [ -f builds/OrganizadorEstoque-v4.0.5.apk ]; then git add -- builds/OrganizadorEstoque-v4.0.5.apk; fi
-          git commit -m "Publica APK 4.0.5 [skip ci]"
-          git push
+          git add -- builds/BORA_IFOOD_TEST_STATUS.txt
+          if [ -f builds/BORA_IFOOD_TEST_BUILD_FAILED.txt ]; then git add -- builds/BORA_IFOOD_TEST_BUILD_FAILED.txt; fi
+          if [ -f builds/Bora-Michael-iFood-TEST.apk ]; then git add -- builds/Bora-Michael-iFood-TEST.apk; fi
+          git commit -m "Publica APK Bora iFood TEST [skip ci]" || true
+          git push || true
 
       - name: Upload APK artifact
         if: steps.android_build.outputs.status == '0'
         uses: actions/upload-artifact@v4
         with:
-          name: OrganizadorEstoque-v4.0.5-debug
+          name: Bora-Michael-iFood-TEST
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Fail workflow when Android build fails
