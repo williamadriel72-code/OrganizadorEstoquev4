@@ -31,7 +31,7 @@ jobs:
           mkdir -p .ci-ifood/app/src/main/java/com/boramichael/ifoodtest
           mkdir -p .ci-ifood/app/src/main/res/values
           cp app/src/testapp/AndroidManifest.xml .ci-ifood/app/src/main/AndroidManifest.xml
-          cp app/src/testapp/java/com/boramichael/ifoodtest/MainActivity.java .ci-ifood/app/src/main/java/com/boramichael/ifoodtest/MainActivity.java
+          cp app/src/testapp/java/com/boramichael/ifoodtest/MainActivityV2.java .ci-ifood/app/src/main/java/com/boramichael/ifoodtest/MainActivity.java
           cp app/src/testapp/java/com/boramichael/ifoodtest/FinalizeActivity.java .ci-ifood/app/src/main/java/com/boramichael/ifoodtest/FinalizeActivity.java
           cp app/src/testapp/res/values/styles.xml .ci-ifood/app/src/main/res/values/styles.xml
           cat > .ci-ifood/settings.gradle.kts <<'EOF'
@@ -59,8 +59,8 @@ jobs:
                   applicationId = "com.boramichael.ifoodtest"
                   minSdk = 26
                   targetSdk = 36
-                  versionCode = 1
-                  versionName = "0.1.0-test"
+                  versionCode = 2
+                  versionName = "0.2.0-test"
               }
           }
           EOF
@@ -73,7 +73,7 @@ jobs:
         run: |
           mkdir -p builds
           cp .ci-ifood/app/build/outputs/apk/debug/app-debug.apk builds/Bora-Michael-iFood-TEST.apk
-          printf 'OK\nApp: Bora Michael - Motoboy TESTE\nVersion: 0.1.0-test\nCommit: %s\n' "$GITHUB_SHA" > builds/BORA_IFOOD_TEST_STATUS.txt
+          printf 'OK\nApp: Bora Michael - Motoboy TESTE\nVersion: 0.2.0-test\nCommit: %s\n' "$GITHUB_SHA" > builds/BORA_IFOOD_TEST_STATUS.txt
           rm -f builds/BORA_IFOOD_TEST_BUILD_FAILED.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
