@@ -1,0 +1,88 @@
+name: Build isolated Bora iFood TEST APK
+
+on:
+  push:
+    branches: [ "chatgpt-bora-ifood-rider-test" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Create isolated Android project
+        shell: bash
+        run: |
+          rm -rf .ci-ifood
+          mkdir -p .ci-ifood/app/src/main/java/com/boramichael/ifoodtest
+          mkdir -p .ci-ifood/app/src/main/res/values
+          cp app/src/testapp/AndroidManifest.xml .ci-ifood/app/src/main/AndroidManifest.xml
+          cp app/src/testapp/java/com/boramichael/ifoodtest/MainActivity.java .ci-ifood/app/src/main/java/com/boramichael/ifoodtest/MainActivity.java
+          cp app/src/testapp/java/com/boramichael/ifoodtest/FinalizeActivity.java .ci-ifood/app/src/main/java/com/boramichael/ifoodtest/FinalizeActivity.java
+          cp app/src/testapp/res/values/styles.xml .ci-ifood/app/src/main/res/values/styles.xml
+          cat > .ci-ifood/settings.gradle.kts <<'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "BoraIfoodRiderTest"
+          include(":app")
+          EOF
+          cat > .ci-ifood/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "9.3.0" apply false
+          }
+          EOF
+          cat > .ci-ifood/app/build.gradle.kts <<'EOF'
+          plugins { id("com.android.application") }
+          android {
+              namespace = "com.boramichael.ifoodtest"
+              compileSdk = 36
+              defaultConfig {
+                  applicationId = "com.boramichael.ifoodtest"
+                  minSdk = 26
+                  targetSdk = 36
+                  versionCode = 1
+                  versionName = "0.1.0-test"
+              }
+          }
+          EOF
+
+      - name: Build APK
+        run: gradle -p .ci-ifood :app:assembleDebug --stacktrace
+
+      - name: Publish APK in branch
+        shell: bash
+        run: |
+          mkdir -p builds
+          cp .ci-ifood/app/build/outputs/apk/debug/app-debug.apk builds/Bora-Michael-iFood-TEST.apk
+          printf 'OK\nApp: Bora Michael - Motoboy TESTE\nVersion: 0.1.0-test\nCommit: %s\n' "$GITHUB_SHA" > builds/BORA_IFOOD_TEST_STATUS.txt
+          rm -f builds/BORA_IFOOD_TEST_BUILD_FAILED.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add builds/Bora-Michael-iFood-TEST.apk builds/BORA_IFOOD_TEST_STATUS.txt
+          git add -u builds/BORA_IFOOD_TEST_BUILD_FAILED.txt 2>/dev/null || true
+          git commit -m "Publica APK Bora iFood TEST [skip ci]" || true
+          git push || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bora-Michael-iFood-TEST
+          path: .ci-ifood/app/build/outputs/apk/debug/app-debug.apk
