@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/aws-bora-michael-test.yml"
       - "app/src/main/assets/index.html"
+      - "app/src/main/assets/stock_base_build.html"
       - "build_trigger_aws_bora_test.txt"
   workflow_dispatch:
 
@@ -22,6 +23,9 @@ jobs:
 
       - name: Guardar interface Bora Michael
         run: cp app/src/main/assets/index.html "$RUNNER_TEMP/bora-index.html"
+
+      - name: Carregar base antiga somente para os preparadores
+        run: cp app/src/main/assets/stock_base_build.html app/src/main/assets/index.html
 
       - name: Preparar som do bip
         shell: bash
