@@ -67,6 +67,7 @@ jobs:
               'scanner/assets/bora_web/patch_arrival_rules_v2.js',
               'scanner/assets/bora_web/patch_menu_v1.js',
               'scanner/assets/bora_web/patch_rider_notes_v3.js',
+              'scanner/assets/bora_web/patch_folgas_v1.js',
           ]
           patch = '\n'.join(pathlib.Path(p).read_text(errors='strict') for p in patch_files)
           marker = '\nboot();\n'
@@ -95,6 +96,6 @@ jobs:
       - name: Upload Bora Michael APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bora-Michael-Hi-Hi-v2.6.0
+          name: Bora-Michael-Hi-Hi-v2.7.0
           path: scanner/build/outputs/apk/debug/scanner-debug.apk
           if-no-files-found: error
