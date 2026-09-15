@@ -11,8 +11,8 @@ android {
         applicationId = "com.organizador.estoque"
         minSdk = 26
         targetSdk = 36
-        versionCode = 40005
-        versionName = "4.0.5"
+        versionCode = 50017
+        versionName = "5.1.6-voa-test"
     }
 
     buildFeatures {
