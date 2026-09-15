@@ -1,0 +1,115 @@
+name: Build AWS Bora Michael TESTE
+
+on:
+  push:
+    branches: [ "aws-supabase-apk-v1" ]
+    paths:
+      - ".github/workflows/aws-bora-michael-test.yml"
+      - "app/src/main/assets/index.html"
+      - "build_trigger_aws_bora_test.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preparar recurso de audio exigido pelo app base
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f app/src/main/res/raw/scan_funny.b64 ]; then
+            base64 -d app/src/main/res/raw/scan_funny.b64 > app/src/main/res/raw/scan_funny.ogg
+          fi
+
+      - name: Definir versao de teste
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('app/build.gradle.kts')
+          s=p.read_text()
+          s=re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 50200', s, count=1)
+          s=re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "5.2.0-bora-test"', s, count=1)
+          p.write_text(s)
+          PY
+
+      - name: Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Instalar SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Compilar APK release
+        run: gradle :app:assembleRelease --stacktrace
+
+      - name: Obter chave permanente de assinatura
+        shell: bash
+        run: |
+          set -euo pipefail
+          OIDC_JSON=$(curl -fsSL -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=aws-apk-signing")
+          OIDC_TOKEN=$(echo "$OIDC_JSON" | jq -r '.value')
+          SIGNING_JSON=$(curl -fsSL -H "Authorization: Bearer ${OIDC_TOKEN}" "https://rlgsbtolosxyymosidns.supabase.co/functions/v1/github-apk-signing")
+          STORE_PASS=$(echo "$SIGNING_JSON" | jq -r '.store_password')
+          KEY_ALIAS=$(echo "$SIGNING_JSON" | jq -r '.key_alias')
+          KEY_PASS=$(echo "$SIGNING_JSON" | jq -r '.key_password')
+          echo "$SIGNING_JSON" | jq -r '.keystore_base64' | base64 -d > "$RUNNER_TEMP/aws-estoque-release.jks"
+          echo "::add-mask::$STORE_PASS"
+          echo "::add-mask::$KEY_PASS"
+          echo "STORE_PASS=$STORE_PASS" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "KEY_PASS=$KEY_PASS" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/aws-estoque-release.jks" >> "$GITHUB_ENV"
+
+      - name: Alinhar e assinar APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v1.apk"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign --ks "$KEYSTORE_PATH" --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out "$SIGNED" "$ALIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AWS-Bora-Michael-TESTE-v1
+          path: app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v1.apk
+          if-no-files-found: error
+
+      - name: Publicar APK de teste
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v1.apk"
+          TAG="aws-bora-test-v1"
+          ASSET="AWS-Bora-Michael-TESTE-v1.apk"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "AWS + Bora Michael TESTE v1" --notes "Ambiente de teste: AWS reaproveitado como APK do motoboy integrado ao painel Bora Michael."
+          fi
+          gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
+          gh release upload "$TAG" "$APK"
