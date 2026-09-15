@@ -3,104 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#071a39">
-<title>AWS - Gestão de Estoque</title>
-<link rel="stylesheet" href="styles.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta name="theme-color" content="#07111f">
+<title>AWS • Bora Michael Teste</title>
+<style>
+:root{--bg:#07111f;--panel:#101a29;--card:#162235;--line:#26364d;--txt:#f8fafc;--muted:#91a0b5;--green:#22c55e;--blue:#3b82f6;--amber:#f59e0b;--red:#ef4444}*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt)}button,select{font:inherit}.hidden{display:none!important}.login{min-height:100vh;display:grid;place-items:center;padding:22px;background:radial-gradient(circle at top,#14305a 0,#07111f 55%)}.loginbox{width:min(430px,100%);background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:26px;box-shadow:0 24px 70px #0008}.brand{font-size:27px;font-weight:950}.sub{font-size:12px;color:var(--muted);margin:6px 0 20px}.select{width:100%;background:#09111d;color:#fff;border:1px solid var(--line);border-radius:13px;padding:13px}.btn{border:0;border-radius:12px;padding:12px 14px;font-weight:850;background:#25344a;color:#fff}.btn:disabled{opacity:.5}.primary{background:#16a34a}.blue{background:#2563eb}.ghost{background:transparent;border:1px solid var(--line)}.danger{background:#991b1b}.msg{font-size:12px;color:#fca5a5;margin-top:10px}.top{position:sticky;top:0;z-index:20;background:#07111fea;border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}.topin{padding:13px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px}.who{font-size:17px;font-weight:950}.tiny{font-size:11px;color:var(--muted)}.actions{display:flex;gap:7px}.wrap{padding:12px 12px 100px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px}.stat small{display:block;color:var(--muted);font-size:10px}.stat b{display:block;margin-top:4px;font-size:16px}.money{color:#fbbf24}.sectionTitle{display:flex;justify-content:space-between;align-items:center;margin:16px 2px 8px;font-weight:900}.orders{display:grid;gap:9px}.order{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px}.order.done{opacity:.68}.head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.oid{font-size:18px;font-weight:950}.badge{font-size:10px;padding:5px 8px;border-radius:999px;border:1px solid #22c55e55;background:#22c55e20;color:#86efac;font-weight:900}.done .badge{border-color:#64748b55;background:#64748b22;color:#cbd5e1}.name{margin-top:7px;font-size:13px;font-weight:800}.bairro{margin-top:6px;display:flex;justify-content:space-between;gap:10px;font-size:13px}.addr{margin-top:6px;font-size:12px;color:#cbd5e1;line-height:1.35}.orderBtns{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px}.empty{padding:28px 10px;text-align:center;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:15px}.bottom{position:fixed;left:0;right:0;bottom:0;background:#0b1523ed;border-top:1px solid var(--line);backdrop-filter:blur(12px);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}.bottomin{display:grid;grid-template-columns:1fr 1fr;gap:8px}.route{background:#0f2946;border:1px solid #2563eb55;color:#bfdbfe}.notice{font-size:11px;color:var(--muted);margin:8px 2px 0}@media(min-width:720px){.wrap{max-width:760px;margin:auto}.topin,.bottomin{max-width:760px;margin:auto}}
+</style>
 </head>
 <body>
-<div id="toast" class="toast"></div>
-
-<section id="auth" class="login">
-  <div class="loginbox">
-    <div class="brand"><div class="brandicon">📦</div><h1>AWS</h1><p>Gestão de Estoque</p></div>
-    <div class="authcard">
-      <div class="tabs"><button id="tabLogin" class="tab active">Entrar</button><button id="tabSignup" class="tab">Primeiro acesso</button></div>
-      <form id="loginForm">
-        <div class="field"><label>E-mail</label><input id="loginEmail" type="email" placeholder="Digite seu e-mail" required></div>
-        <div class="field"><label>Senha</label><input id="loginPass" type="password" placeholder="Digite sua senha" required></div>
-        <button class="primary" type="submit">Entrar</button>
-      </form>
-      <form id="signupForm" class="hidden">
-        <div class="field"><label>Nome</label><input id="signupName" placeholder="Seu nome" required></div>
-        <div class="field"><label>E-mail</label><input id="signupEmail" type="email" placeholder="Seu e-mail" required></div>
-        <div class="field"><label>Senha</label><input id="signupPass" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required></div>
-        <button class="primary" type="submit">Criar acesso</button>
-      </form>
-      <div class="note">🔰 Acesso protegido pelo Supabase.</div>
-      <div style="font-size:9px;line-height:1.3;color:#7184a6;text-align:center;margin-top:7px;opacity:.58">Desenvolvido por Adriel William Silva</div>
-    </div>
-  </div>
-</section>
-
-<section id="app" class="hidden">
-  <header class="top">
-    <div class="toprow">
-      <div><small>AWS · Gestão de Estoque</small><h2>Olá, <span id="hello">Usuário</span></h2><p id="role">Carregando perfil...</p></div>
-      <button id="logout" class="logout">Sair</button>
-    </div>
-    <div class="branchwrap"><select id="branch" class="branch"><option value="">Todas as filiais</option></select></div>
-  </header>
-
-  <main class="content">
-    <section id="home">
-      <div class="grid">
-        <button class="action" data-view-open="search"><div class="icon">🔎</div><h3>Busca de produto</h3><p>Código, EAN, estoque, endereço e validade.</p></button>
-        <button class="action" data-soon><div class="icon">📦</div><h3>Reposição</h3><p>Controle de reposição.</p></button>
-        <button class="action" data-soon><div class="icon">🧾</div><h3>Inventário</h3><p>Contagem de estoque.</p></button>
-        <button class="action" data-soon><div class="icon">✅</div><h3>Conferência</h3><p>Conferir mercadorias.</p></button>
-        <button class="action" data-soon><div class="icon">⚠️</div><h3>Avaria</h3><p>Controle de avarias.</p></button>
-        <button class="action" data-soon><div class="icon">🔄</div><h3>Movimentação</h3><p>Entradas, saídas e transferências.</p></button>
-        <button class="action" data-soon><div class="icon">🏷️</div><h3>Endereçamento</h3><p>Localização do produto.</p></button>
-        <button class="action" data-view-open="imports"><div class="icon">📥</div><h3>Importações</h3><p>PDF de estoque e validades.</p></button>
-        <button id="updatesCard" class="action hidden" data-view-open="updates"><div class="icon">⬆️</div><h3>Atualizações do APK</h3><p>Publique uma versão para todos os aparelhos.</p></button>
-        <button class="action wide" data-soon><div class="icon">📅</div><h3>Controle de validade</h3><p>Vencidos, próximos do vencimento e todas as datas do produto.</p></button>
-      </div>
-    </section>
-
-    <section id="search" class="hidden">
-      <div class="head"><button class="back" data-home>←</button><div><h2>Busca de produto</h2><small>Nome, código interno ou EAN</small></div></div>
-      <div class="searchbox"><input id="q" placeholder="Digite o nome, código ou EAN"><button id="scan" class="purple">▥ Bipar código</button></div>
-      <div id="results"><div class="empty">Digite alguma informação para localizar um produto.</div></div>
-    </section>
-
-    <section id="imports" class="hidden">
-      <div class="head"><button class="back" data-home>←</button><div><h2>Importações</h2><small>Produtos, estoque e validades por PDF</small></div></div>
-      <div class="panel"><h3>Filial</h3><p>Escolha a unidade que receberá os dados.</p><select id="importBranch"><option value="">Selecione uma filial</option></select></div>
-      <div class="panel"><h3>Selecionar PDF</h3><p>O PDF de estoque cria/atualiza produtos e quantidades. O PDF de validade apenas vincula datas aos produtos que já estão no estoque.</p><div class="actions"><button id="pickPdf" class="purple">📄 Selecionar PDF</button></div><div id="parseWrap" class="hidden"><div class="progress"><div id="parseBar"></div></div><div id="parseStatus" class="status"></div></div></div>
-      <div id="previewCard" class="panel hidden"><h3 id="previewTitle">Prévia</h3><p id="previewDesc"></p><div class="sum"><div><small>Arquivo</small><b id="sumFile">—</b></div><div><small>Itens reconhecidos</small><b id="sumItems">0</b></div><div><small>Empresa</small><b id="sumCompany">—</b></div></div><div id="previewList" class="preview"></div><div id="uploadWrap" class="hidden"><div class="progress"><div id="uploadBar"></div></div><div id="uploadStatus" class="status"></div></div><div class="actions"><button id="confirmImport" class="purple">✓ Confirmar importação</button><button id="cancelImport" class="secondary">Cancelar</button></div></div>
-    </section>
-
-    <section id="updates" class="hidden">
-      <div class="head"><button class="back" data-home>←</button><div><h2>Atualizações do APK</h2><small>Publicação centralizada para todos os aparelhos</small></div></div>
-      <div class="panel">
-        <div class="latest"><div><b>Última versão publicada</b><small id="latestVersion">Nenhuma versão publicada.</small></div><span>⬆️</span></div>
-        <div class="formgrid">
-          <div><label>Versão</label><input id="pubName" placeholder="Ex.: 5.0.3"></div>
-          <div><label>Código da versão</label><input id="pubCode" type="number" min="1" placeholder="Ex.: 50003"></div>
-          <div class="full"><label>Arquivo APK</label><input id="pubFile" type="file" accept=".apk,application/vnd.android.package-archive"></div>
-          <label class="checkline full"><input id="pubMandatory" type="checkbox"><span><b>Atualização obrigatória</b><br><small>O usuário não poderá continuar sem atualizar.</small></span></label>
-          <div class="full"><label>Notas da versão</label><textarea id="pubNotes" placeholder="O que mudou nesta versão?"></textarea></div>
-        </div>
-        <div class="actions"><button id="publishUpdate" class="purple">⬆️ Publicar atualização</button></div>
-        <div id="publishStatus" class="status"></div>
-      </div>
-    </section>
-  </main>
-  <div style="font-size:9px;line-height:1.3;color:#8a93a3;text-align:center;padding:2px 12px 10px;opacity:.58">Desenvolvido por Adriel William Silva</div>
-</section>
-
-<div id="updateOverlay" class="overlay hidden">
-  <div class="dialog">
-    <div class="dialogicon">⬆️</div>
-    <h2>Atualização disponível</h2>
-    <p id="updateInfo">Existe uma nova versão do aplicativo.</p>
-    <div id="updateNotes" class="updatenotes hidden"></div>
-    <p id="mandatoryInfo" class="hidden"><b>Esta atualização é obrigatória para continuar.</b></p>
-    <div class="dialogactions"><button id="updateNow" class="primary">ATUALIZAR AGORA</button><button id="updateLater" class="secondary">Atualizar depois</button></div>
-  </div>
-</div>
-
-<script src="app.js"></script>
-</body>
-</html>
+<section id="login" class="login"><div class="loginbox"><div class="brand">AWS • Bora Michael</div><div class="sub">AMBIENTE DE TESTE DOS MOTOBOYS</div><label class="tiny">SELECIONE SEU NOME</label><select id="riders" class="select" style="margin-top:7px"><option>Carregando...</option></select><button id="enter" class="btn primary" style="width:100%;margin-top:11px" disabled>Entrar</button><div id="loginMsg" class="msg"></div></div></section>
+<div id="app" class="hidden"><header class="top"><div class="topin"><div><div id="who" class="who">Minhas entregas</div><div class="tiny">AWS TESTE • Bora Michael</div></div><div class="actions"><button id="refresh" class="btn ghost">Atualizar</button><button id="exit" class="btn ghost">Sair</button></div></div></header><main class="wrap"><div class="stats"><div class="stat"><small>EM ROTA</small><b id="runCount">0</b></div><div class="stat"><small>CONCLUÍDAS</small><b id="doneCount">0</b></div><div class="stat"><small>TOTAL</small><b id="totalMoney" class="money">R$ 0</b></div></div><div class="sectionTitle"><span>Em entrega</span><span id="runMoney" class="money">R$ 0,00</span></div><div id="running" class="orders"></div><div class="sectionTitle"><span>Concluídas</span><span id="doneMoney" class="money">R$ 0,00</span></div><div id="completed" class="orders"></div><div class="notice">Os pedidos são recebidos do painel AWS de teste. Bairro e taxa acompanham o despacho.</div></main><footer class="bottom"><div class="bottomin"><button id="route" class="btn route">Rota no Google Maps</button><button id="sync" class="btn primary">Sincronizar</button></div></footer></div>
+<script>
+const U='https://rlgsbtolosxyymosidns.supabase.co';
+const PUB='sb_publishable_cdYfnl879c7gh4WQE27S5g_CxEtVxde';
+const RIDER=U+'/functions/v1/bora-ifood-test-rider';
+const REST=U+'/rest/v1/ifood_test_orders?select=order_id,dispatch_fee&status=in.(dispatched,completed)';
+const $=id=>document.getElementById(id);let token=localStorage.getItem('aws_bora_rider_token')||'',riderName=localStorage.getItem('aws_bora_rider_name')||'',orders=[],fees={};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+async function api(body,auth=''){const h={'content-type':'application/json','apikey':PUB};if(auth)h.authorization='Bearer '+auth;const r=await fetch(RIDER,{method:'POST',headers:h,body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('HTTP '+r.status));return j}
+async function loadRiders(){try{const j=await api({action:'list_riders'});$('riders').innerHTML='<option value="">Escolha seu nome</option>'+j.riders.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.nome)+'</option>').join('');$('enter').disabled=false}catch(e){$('riders').innerHTML='<option>Falha ao carregar</option>';$('loginMsg').textContent=e.message}}
+$('enter').onclick=async()=>{const id=$('riders').value;if(!id)return;$('enter').disabled=true;$('loginMsg').textContent='Entrando...';try{const j=await api({action:'login_name',riderId:id});token=j.session_token;riderName=j.rider.nome;localStorage.setItem('aws_bora_rider_token',token);localStorage.setItem('aws_bora_rider_name',riderName);showApp();await sync()}catch(e){$('loginMsg').textContent=e.message}finally{$('enter').disabled=false}};
+function showApp(){$('login').classList.add('hidden');$('app').classList.remove('hidden');$('who').textContent=riderName||'Minhas entregas'}function showLogin(){$('app').classList.add('hidden');$('login').classList.remove('hidden')}
+async function getFees(){try{const r=await fetch(REST,{headers:{apikey:PUB,authorization:'Bearer '+PUB}});const a=await r.json();fees={};if(Array.isArray(a))a.forEach(x=>fees[x.order_id]=Number(x.dispatch_fee)||0)}catch(e){fees={}}}
+function addr(o){return o.formatted_address||[o.street_name,o.street_number,o.neighborhood,o.city].filter(Boolean).join(', ')||'Endereço não informado'}
+function fee(o){return Number(fees[o.order_id]||o.dispatch_fee||0)}
+function card(o,done){const f=fee(o);return '<article class="order '+(done?'done':'')+'"><div class="head"><div><div class="oid">#'+esc(o.display_id||String(o.order_id).slice(0,8))+'</div><div class="name">'+esc(o.customer_name||'Cliente')+'</div></div><span class="badge">'+(done?'CONCLUÍDO':'EM ENTREGA')+'</span></div><div class="bairro"><span>'+esc(o.neighborhood||'Bairro não informado')+'</span><b class="money">'+brl(f)+'</b></div><div class="addr">'+esc(addr(o))+'</div><div class="orderBtns"><button class="btn ghost" onclick="mapOne('+JSON.stringify(String(o.order_id))+')">Abrir mapa</button>'+(done?'<button class="btn ghost" disabled>Finalizado</button>':'<button class="btn primary" onclick="completeOne('+JSON.stringify(String(o.order_id))+')">Concluir</button>')+'</div></article>'}
+function render(){const run=orders.filter(o=>o.status==='dispatched'),done=orders.filter(o=>o.status==='completed');$('runCount').textContent=run.length;$('doneCount').textContent=done.length;const rm=run.reduce((s,o)=>s+fee(o),0),dm=done.reduce((s,o)=>s+fee(o),0);$('runMoney').textContent=brl(rm);$('doneMoney').textContent=brl(dm);$('totalMoney').textContent=brl(rm+dm);$('running').innerHTML=run.length?run.map(o=>card(o,false)).join(''):'<div class="empty">Nenhuma entrega pendente.</div>';$('completed').innerHTML=done.length?done.map(o=>card(o,true)).join(''):'<div class="empty">Nenhuma entrega concluída.</div>'}
+async function sync(){if(!token)return;const b=$('sync');b.disabled=true;try{await getFees();const j=await api({action:'list_orders'},token);orders=j.orders||[];riderName=j.rider?.nome||riderName;localStorage.setItem('aws_bora_rider_name',riderName);$('who').textContent=riderName;render()}catch(e){if(/sessão|acesso/i.test(e.message)){localStorage.removeItem('aws_bora_rider_token');token='';showLogin();loadRiders()}else alert(e.message)}finally{b.disabled=false}}
+async function completeOne(id){if(!confirm('Confirmar entrega concluída?'))return;try{await api({action:'complete_order',orderId:id},token);await sync()}catch(e){alert(e.message)}}
+function openExternal(url){try{if(window.AndroidApp&&AndroidApp.openUpdateUrl){AndroidApp.openUpdateUrl(url);return}}catch(e){}location.href=url}
+function mapOne(id){const o=orders.find(x=>x.order_id===id);if(!o)return;const q=(o.latitude!=null&&o.longitude!=null)?(o.latitude+','+o.longitude):addr(o);openExternal('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q))}
+function routeAll(){const run=orders.filter(o=>o.status==='dispatched');if(!run.length)return alert('Nenhuma entrega em rota.');const qs=run.map(o=>(o.latitude!=null&&o.longitude!=null)?(o.latitude+','+o.longitude):addr(o));if(qs.length===1)return openExternal('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(qs[0])+'&travelmode=driving');const dest=qs[qs.length-1],wp=qs.slice(0,-1).join('|');let url='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest)+'&travelmode=driving';if(wp)url+='&waypoints='+encodeURIComponent(wp);openExternal(url)}
+$('route').onclick=routeAll;$('sync').onclick=sync;$('refresh').onclick=sync;$('exit').onclick=()=>{localStorage.removeItem('aws_bora_rider_token');localStorage.removeItem('aws_bora_rider_name');token='';riderName='';showLogin();loadRiders()};window.androidBack=()=>{};
+if(token){showApp();sync()}else{showLogin();loadRiders()}
+</script>
+</body></html>
