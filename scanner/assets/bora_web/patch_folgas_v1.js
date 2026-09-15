@@ -24,7 +24,8 @@
    .bm-folga-day small{font-size:9px;color:var(--muted);font-weight:800}
    .bm-folga-day.bm-selected{outline:2px solid var(--gold);background:#2b241a}
    .bm-folga-day.bm-blocked{background:#301b1d;border-color:#ef444455;color:#ff9da5}
-   .bm-folga-day:disabled{opacity:.45;cursor:not-allowed}
+   .bm-folga-day.bm-occupied{background:#26292d;border-color:#ffffff1f;color:#aeb4bd}
+   .bm-folga-day:disabled{opacity:.48;cursor:not-allowed}
    .bm-folga-status{border:1px solid var(--line);border-radius:15px;background:#171a1e;padding:14px;margin-top:10px}
    .bm-folga-status-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
    .bm-folga-badge{font-size:10px;font-weight:950;border-radius:999px;padding:5px 8px;border:1px solid currentColor}
@@ -50,6 +51,26 @@
   return j;
  }
 
+ function hasFutureAvailability(data){
+  if(typeof data?.available==='boolean')return data.available;
+  const base=new Date((data?.today||ymd(new Date()))+'T12:00:00');
+  const blocked=new Set((data?.blocked||[]).map(x=>String(x.data)));
+  const occupied=new Set((data?.occupied||[]).map(x=>String(x.data_folga||x.data||x)));
+  for(let i=1;i<=30;i++){
+   const d=new Date(base);d.setDate(base.getDate()+i);
+   const ds=ymd(d);
+   if(!blocked.has(ds)&&!occupied.has(ds))return true;
+  }
+  return false;
+ }
+
+ function syncNativeAvailability(data){
+  try{
+   const fn=window.AndroidBora?.setFolgaAvailability;
+   if(typeof fn==='function')fn.call(window.AndroidBora,!!hasFutureAvailability(data));
+  }catch(_){}
+ }
+
  function navHtml(active){
   const items=[['Hoje','●'],['Calendário','▦'],['Histórico','≡'],['Relatórios','Σ'],['Taxas','R$'],['Folgas','☼']];
   return `<nav class="nav">${items.map(([n,i])=>`<button data-rnav="${n}" class="${active===n?'active':''}"><b>${i}</b>${n}</button>`).join('')}</nav>`;
@@ -62,14 +83,16 @@
   if(!(state.month instanceof Date)||Number.isNaN(state.month.getTime()))state.month=new Date(now.getFullYear(),now.getMonth(),1);
   const y=state.month.getFullYear(),m=state.month.getMonth();
   const first=new Date(y,m,1),last=new Date(y,m+1,0).getDate(),offset=(first.getDay()+6)%7;
-  const blocked=new Map((data.blocked||[]).map(x=>[x.data,x.motivo||'Data bloqueada']));
+  const blocked=new Map((data.blocked||[]).map(x=>[String(x.data),x.motivo||'Data bloqueada']));
+  const occupied=new Set((data.occupied||[]).map(x=>String(x.data_folga||x.data||x)));
   const todayKey=data.today||ymd(now);
   let cells=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'].map(x=>`<div class="bm-folga-dow">${x}</div>`).join('');
   for(let i=0;i<offset;i++)cells+='<div></div>';
   for(let d=1;d<=last;d++){
    const ds=`${y}-${pad(m+1)}-${pad(d)}`;
-   const past=ds<todayKey, reason=blocked.get(ds), selected=state.selected===ds;
-   cells+=`<button type="button" class="bm-folga-day ${selected?'bm-selected':''} ${reason?'bm-blocked':''}" data-folga-day="${ds}" ${past||reason?'disabled':''}><span>${d}</span><small>${reason?'BLOQUEADA':selected?'SELECIONADA':''}</small></button>`;
+   const past=ds<todayKey, reason=blocked.get(ds), used=occupied.has(ds), selected=state.selected===ds;
+   const label=reason?'BLOQUEADA':used?'OCUPADA':selected?'SELECIONADA':'';
+   cells+=`<button type="button" class="bm-folga-day ${selected?'bm-selected':''} ${reason?'bm-blocked':''} ${used?'bm-occupied':''}" data-folga-day="${ds}" ${past||reason||used?'disabled':''}><span>${d}</span><small>${label}</small></button>`;
   }
   const title=state.month.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   return `<div class="month-head"><button type="button" id="bmFolgaPrev">‹</button><b style="text-transform:capitalize">${title}</b><button type="button" id="bmFolgaNext">›</button></div><div class="bm-folga-calendar">${cells}</div>`;
@@ -93,14 +116,14 @@
   const selected=state.selected;
   return `<section class="bm-folgas">
    <div class="section-title">Folgas</div>
-   <div class="notice"><strong>Solicite sua folga pelo aplicativo.</strong><br>Escolha uma data disponível e acompanhe aqui se foi aprovada ou recusada.</div>
+   <div class="notice"><strong>Solicite sua folga pelo aplicativo.</strong><br>Escolha uma data disponível. A prioridade é de quem confirmar primeiro.</div>
    <div class="card" style="margin-top:12px">
     <div class="stat-label">ESCOLHA O DIA</div>
     <div style="margin-top:12px">${calendarHtml(data)}</div>
     <div id="bmFolgaSelected" class="bm-folga-selected ${selected?'':'hidden'}">${selected?`Data escolhida: <b>${fmt(selected)}</b>`:''}</div>
     <label class="field" style="margin-top:12px"><span>Observação (opcional)</span><textarea id="bmFolgaObs" class="bm-folga-note" maxlength="300" placeholder="Ex.: compromisso, viagem..."></textarea></label>
     <button type="button" id="bmFolgaSend" class="btn green" style="width:100%;margin-top:12px" ${selected?'':'disabled'}>SOLICITAR FOLGA</button>
-    <div class="row-sub" style="margin-top:9px">Limite administrativo atual: ${Number(data.max_per_day||1)} folga(s) aprovada(s) por dia. Mais de um motoboy pode solicitar o mesmo dia.</div>
+    <div class="row-sub" style="margin-top:9px">Assim que uma solicitação for confirmada, aquela data fica ocupada para os demais. Se for cancelada ou recusada, volta a ficar disponível.</div>
    </div>
    <div class="section-title">Minhas solicitações</div>
    <div id="bmFolgaRequests">${requestsHtml(data)}</div>
@@ -152,14 +175,15 @@
    if(!rider.profile)rider.profile=await getRiderProfile();
    const data=reload||!cached?await api({action:'overview'}):cached;
    state.data=data;
+   syncNativeAvailability(data);
    if(!state.selected&&data.today){
     const t=new Date(data.today+'T12:00:00');
-    if(state.month.getFullYear()!==t.getFullYear()&&state.month.getMonth()!==t.getMonth())state.month=new Date(t.getFullYear(),t.getMonth(),1);
+    if(state.month.getFullYear()!==t.getFullYear()||state.month.getMonth()!==t.getMonth())state.month=new Date(t.getFullYear(),t.getMonth(),1);
    }
    rider.active='Folgas';
    $('#root').innerHTML=`<div class="shell">${riderHeader()}${screenHtml(data)}</div>${navHtml('Folgas')}`;
    bind(data);
-   state.sig=JSON.stringify((data.requests||[]).map(x=>[x.id,x.status,x.mensagem_aprovacao,x.updated_at]));
+   state.sig=JSON.stringify([(data.occupied||[]),...(data.requests||[]).map(x=>[x.id,x.status,x.mensagem_aprovacao,x.updated_at])]);
    appReady();
   }catch(e){
    console.error('folgas',e);
@@ -174,11 +198,28 @@
   return previousRenderRider(active);
  };
 
+ async function backgroundAvailabilitySync(){
+  try{
+   if(!rider.profile)rider.profile=await getRiderProfile();
+   if(!rider.profile)return;
+   const d=await api({action:'overview'});
+   syncNativeAvailability(d);
+  }catch(_){}
+ }
+
+ setTimeout(backgroundAvailabilitySync,2500);
+ window.addEventListener('focus',()=>setTimeout(backgroundAvailabilitySync,500));
+
+ if(new URLSearchParams(location.search).get('open')==='folgas'){
+  setTimeout(()=>renderRider('Folgas'),1100);
+ }
+
  setInterval(async()=>{
   if(rider?.active!=='Folgas'||document.visibilityState!=='visible'||state.loading)return;
   try{
    const d=await api({action:'overview'});
-   const sig=JSON.stringify((d.requests||[]).map(x=>[x.id,x.status,x.mensagem_aprovacao,x.updated_at]));
+   syncNativeAvailability(d);
+   const sig=JSON.stringify([(d.occupied||[]),...(d.requests||[]).map(x=>[x.id,x.status,x.mensagem_aprovacao,x.updated_at])]);
    if(sig!==state.sig)await renderFolgas(d,false);
   }catch(_){}
  },30000);
