@@ -6,7 +6,6 @@ on:
     paths:
       - ".github/workflows/aws-bora-michael-test.yml"
       - "app/src/main/assets/index.html"
-      - "app/src/main/assets/stock_base_build.html"
       - "build_trigger_aws_bora_test.txt"
   workflow_dispatch:
 
@@ -21,84 +20,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Guardar interface Bora Michael
-        run: cp app/src/main/assets/index.html "$RUNNER_TEMP/bora-index.html"
-
-      - name: Carregar base antiga somente para os preparadores
-        run: cp app/src/main/assets/stock_base_build.html app/src/main/assets/index.html
-
-      - name: Preparar som do bip
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f app/src/main/res/raw/scan_funny.b64 ]; then
-            base64 -d app/src/main/res/raw/scan_funny.b64 > app/src/main/res/raw/scan_funny.ogg
-            rm app/src/main/res/raw/scan_funny.b64
-          fi
-
-      - name: Tornar bip confiavel
-        run: python scripts/prepare_reliable_bip.py
-
-      - name: Garantir bip com fallback Android
-        run: python scripts/prepare_guaranteed_bip.py
-
-      - name: Preparar estrutura compilavel do app base
-        shell: bash
-        run: |
-          set -euo pipefail
-          python scripts/prepare_single_stock.py
-          python scripts/prepare_operational_modules.py
-          python scripts/refine_operational_modules.py
-          python scripts/restore_auth_bootstrap.py
-          python scripts/prepare_persistent_login.py
-          python scripts/prepare_reposicao_inventario_v2.py
-          python scripts/prepare_internal_updater.py
-          python scripts/prepare_package_installer_session.py
-          python scripts/prepare_validity_control.py
-          python scripts/prepare_background_updater.py
-          python scripts/prepare_product_price.py
-          python scripts/prepare_numeric_users.py
-
-      - name: Restaurar interface AWS Bora Michael
-        run: cp "$RUNNER_TEMP/bora-index.html" app/src/main/assets/index.html
-
-      - name: Definir versao de teste
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('app/build.gradle.kts')
-          s=p.read_text()
-          s=re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 50200', s, count=1)
-          s=re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "5.2.0-bora-test"', s, count=1)
-          p.write_text(s)
-          PY
-
-      - name: Java 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
       - name: Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
 
-      - name: Instalar SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Instalar ferramentas Android
+        run: sdkmanager "build-tools;36.0.0"
 
-      - name: Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.5.0'
-
-      - name: Compilar APK release
+      - name: Baixar APK AWS base 5.1.5
         shell: bash
         run: |
-          set -o pipefail
-          gradle :app:assembleRelease --stacktrace 2>&1 | tee "$RUNNER_TEMP/aws-bora-build.log"
+          set -euo pipefail
+          curl -fL --retry 3 \
+            "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/v5.1.5/AWS-Gestao-Estoque-5.1.5.apk" \
+            -o "$RUNNER_TEMP/aws-base.apk"
+          cp "$RUNNER_TEMP/aws-base.apk" "$RUNNER_TEMP/aws-bora-unsigned.apk"
+
+      - name: Integrar interface Bora Michael no APK AWS
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORK="$RUNNER_TEMP/aws-bora-patch"
+          mkdir -p "$WORK/assets"
+          cp app/src/main/assets/index.html "$WORK/assets/index.html"
+          cd "$RUNNER_TEMP"
+          zip -d aws-bora-unsigned.apk 'META-INF/*' 'assets/index.html' >/dev/null 2>&1 || true
+          cd "$WORK"
+          zip -q -u "$RUNNER_TEMP/aws-bora-unsigned.apk" assets/index.html
+          unzip -p "$RUNNER_TEMP/aws-bora-unsigned.apk" assets/index.html | grep -q "AWS • Bora Michael"
 
       - name: Obter chave permanente de assinatura
         shell: bash
@@ -118,16 +68,22 @@ jobs:
           echo "KEY_PASS=$KEY_PASS" >> "$GITHUB_ENV"
           echo "KEYSTORE_PATH=$RUNNER_TEMP/aws-estoque-release.jks" >> "$GITHUB_ENV"
 
-      - name: Alinhar e assinar APK
+      - name: Alinhar e assinar APK de teste
         shell: bash
         run: |
           set -euo pipefail
-          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
-          ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
+          mkdir -p app/build/outputs/apk/release
+          ALIGNED="$RUNNER_TEMP/aws-bora-aligned.apk"
           SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v1.apk"
-          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
-          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign --ks "$KEYSTORE_PATH" --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out "$SIGNED" "$ALIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/aws-bora-unsigned.apk" "$ALIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:STORE_PASS \
+            --key-pass env:KEY_PASS \
+            --out "$SIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
+          unzip -p "$SIGNED" assets/index.html | grep -q "Rota no Google Maps"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -146,7 +102,7 @@ jobs:
           TAG="aws-bora-test-v1"
           ASSET="AWS-Bora-Michael-TESTE-v1.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "AWS + Bora Michael TESTE v1" --notes "Ambiente de teste: AWS reaproveitado como APK do motoboy integrado ao painel Bora Michael."
+            gh release create "$TAG" --title "AWS + Bora Michael TESTE v1" --notes "APK AWS reaproveitado como ambiente de teste do Bora Michael: pedidos despachados, bairro, taxa, ganhos, mapa e conclusão."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
