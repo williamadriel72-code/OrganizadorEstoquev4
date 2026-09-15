@@ -33,6 +33,7 @@ import androidx.activity.ComponentActivity
 
 private const val APP_URL = "https://bora-michael-hi-hi.vercel.app/?app=motoboy"
 private const val CHANNEL_ID = "bora_michael_updates_v25"
+private const val OPEN_FOLGAS_EXTRA = "open_folgas"
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
@@ -49,6 +50,9 @@ class MainActivity : ComponentActivity() {
             pageReady = true
             runOnUiThread {
                 if (::sticker.isInitialized) sticker.visibility = View.VISIBLE
+                if (intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) {
+                    navigateToFolgas()
+                }
             }
         }
 
@@ -61,6 +65,11 @@ class MainActivity : ComponentActivity() {
                 if (foreground) playHeeHee() else showUpdateNotification()
             }
         }
+
+        @JavascriptInterface
+        fun setFolgaAvailability(available: Boolean) {
+            FolgaReminderScheduler.setAvailability(applicationContext, available)
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -70,6 +79,7 @@ class MainActivity : ComponentActivity() {
         window.navigationBarColor = Color.BLACK
         createNotificationChannel()
         requestNotificationPermissionIfNeeded()
+        FolgaReminderScheduler.scheduleNext(this)
 
         val density = resources.displayMetrics.density
         val root = FrameLayout(this).apply {
@@ -106,7 +116,7 @@ class MainActivity : ComponentActivity() {
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.mediaPlaybackRequiresUserGesture = false
-            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.6.0"
+            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.7.0"
             isVerticalScrollBarEnabled = false
             webChromeClient = WebChromeClient()
             addJavascriptInterface(BoraBridge(), "AndroidBora")
@@ -200,8 +210,18 @@ class MainActivity : ComponentActivity() {
         fallbackLoaded = false
         pageReady = false
         if (::sticker.isInitialized) sticker.visibility = View.GONE
-        val url = "$APP_URL&shell=stock&v=${System.currentTimeMillis()}"
+        val openFolgas = if (intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) "&open=folgas" else ""
+        val url = "$APP_URL&shell=stock$openFolgas&v=${System.currentTimeMillis()}"
         webView.loadUrl(url)
+    }
+
+    private fun navigateToFolgas() {
+        if (!::webView.isInitialized || !pageReady) return
+        intent?.removeExtra(OPEN_FOLGAS_EXTRA)
+        webView.evaluateJavascript(
+            "try{if(typeof renderRider==='function'){renderRider('Folgas');}}catch(e){}",
+            null
+        )
     }
 
     private fun loadFallback() {
@@ -320,6 +340,14 @@ class MainActivity : ComponentActivity() {
             .notify(2501, notification)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(OPEN_FOLGAS_EXTRA, false)) {
+            if (pageReady) navigateToFolgas() else if (::webView.isInitialized) loadLatestOnline()
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         foreground = true
@@ -335,6 +363,9 @@ class MainActivity : ComponentActivity() {
                 "try{window.dispatchEvent(new Event('focus'));window.dispatchEvent(new Event('online'));}catch(e){}",
                 null
             )
+            if (pageReady && intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) {
+                navigateToFolgas()
+            }
         }
     }
 
