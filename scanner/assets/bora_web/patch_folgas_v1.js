@@ -4,7 +4,8 @@
  window.__bmFolgasV1=true;
 
  const ENDPOINT='https://rlgsbtolosxyymosidns.supabase.co/functions/v1/bhhi-folgas';
- const state={data:null,month:new Date(),selected:null,loading:false,sig:''};
+ const state={data:null,month:new Date(),selected:null,loading:false,sig:'',reminderBusy:false};
+ const REMINDER_STORAGE_KEY='bm_folga_last_reminder_v1';
 
  const pad=n=>String(n).padStart(2,'0');
  const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -33,6 +34,12 @@
    .bm-folga-note{width:100%;min-height:86px;resize:vertical;border:1px solid #ffffff1c;background:#111418;color:white;border-radius:12px;padding:12px;outline:none;font:inherit}
    .bm-folga-note:focus{border-color:#f2a33c88}
    .bm-folga-selected{margin-top:12px;padding:12px;border-radius:12px;background:#1f2429;border:1px solid #f2a33c55}
+   .bm-folga-reminder-backdrop{position:fixed;inset:0;z-index:99999;background:#000b;display:flex;align-items:flex-end;justify-content:center;padding:18px}
+   .bm-folga-reminder{width:min(520px,100%);background:#171a1e;border:1px solid #f2a33c66;border-radius:20px;padding:18px;box-shadow:0 20px 70px #000}
+   .bm-folga-reminder h3{margin:0 0 8px;font-size:20px}
+   .bm-folga-reminder p{margin:0;color:#d6d9de;line-height:1.45}
+   .bm-folga-reminder-actions{display:grid;grid-template-columns:1fr auto;gap:9px;margin-top:16px}
+   .bm-folga-reminder-actions button{min-height:44px}
    @media(max-width:420px){.nav button{font-size:8px}.nav button b{font-size:14px}.bm-folga-day{min-height:52px;padding:6px}}
   `;
   document.head.appendChild(st);
@@ -69,6 +76,75 @@
    const fn=window.AndroidBora?.setFolgaAvailability;
    if(typeof fn==='function')fn.call(window.AndroidBora,!!hasFutureAvailability(data));
   }catch(_){}
+ }
+
+ function saoPauloNow(){
+  try{
+   const parts=new Intl.DateTimeFormat('en-CA',{
+    timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',
+    weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+   }).formatToParts(new Date());
+   const o={};parts.forEach(p=>{if(p.type!=='literal')o[p.type]=p.value});
+   const weekMap={Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:0};
+   return {date:`${o.year}-${o.month}-${o.day}`,dow:weekMap[o.weekday]??new Date().getDay(),hour:+o.hour,minute:+o.minute};
+  }catch(_){
+   const d=new Date();
+   return {date:ymd(d),dow:d.getDay(),hour:d.getHours(),minute:d.getMinutes()};
+  }
+ }
+
+ function latestDueReminderSlot(){
+  const n=saoPauloNow();
+  const weekend=n.dow===0||n.dow===6;
+  const slots=weekend?[[10,0],[15,0],[21,30],[23,0]]:[[15,0],[21,30],[23,0]];
+  const nowMinutes=n.hour*60+n.minute;
+  let latest=null;
+  for(const [h,m] of slots){
+   const at=h*60+m;
+   if(at<=nowMinutes)latest={date:n.date,hour:h,minute:m,key:`${n.date}@${pad(h)}${pad(m)}`};
+  }
+  return latest;
+ }
+
+ function closeFolgaReminder(){
+  document.getElementById('bmFolgaReminderBackdrop')?.remove();
+ }
+
+ function showFolgaReminder(slot){
+  if(!slot||document.getElementById('bmFolgaReminderBackdrop'))return;
+  try{localStorage.setItem(REMINDER_STORAGE_KEY,slot.key)}catch(_){}
+  const wrap=document.createElement('div');
+  wrap.id='bmFolgaReminderBackdrop';
+  wrap.className='bm-folga-reminder-backdrop';
+  wrap.innerHTML=`<div class="bm-folga-reminder" role="dialog" aria-modal="true" aria-label="Lembrete de folga">
+   <h3>😴 Tem certeza que você quer trabalhar no próximo turno?</h3>
+   <p>Se quiser descansar, é só agendar sua folga. <b>Ainda tem data disponível!</b></p>
+   <div class="bm-folga-reminder-actions">
+    <button type="button" class="btn green" id="bmFolgaReminderOpen">AGENDAR FOLGA</button>
+    <button type="button" class="btn secondary" id="bmFolgaReminderClose">AGORA NÃO</button>
+   </div>
+  </div>`;
+  document.body.appendChild(wrap);
+  document.getElementById('bmFolgaReminderClose')?.addEventListener('click',closeFolgaReminder);
+  document.getElementById('bmFolgaReminderOpen')?.addEventListener('click',()=>{
+   closeFolgaReminder();
+   try{renderRider('Folgas')}catch(_){location.href=location.pathname+'?app=motoboy&open=folgas'}
+  });
+ }
+
+ async function checkFolgaReminder(data=null){
+  if(state.reminderBusy||document.visibilityState==='hidden')return;
+  const slot=latestDueReminderSlot();
+  if(!slot)return;
+  let last='';try{last=localStorage.getItem(REMINDER_STORAGE_KEY)||''}catch(_){}
+  if(last===slot.key)return;
+  state.reminderBusy=true;
+  try{
+   const d=data||state.data||await api({action:'overview'});
+   state.data=d;
+   syncNativeAvailability(d);
+   if(hasFutureAvailability(d))showFolgaReminder(slot);
+  }catch(_){}finally{state.reminderBusy=false}
  }
 
  function navHtml(active){
@@ -203,12 +279,18 @@
    if(!rider.profile)rider.profile=await getRiderProfile();
    if(!rider.profile)return;
    const d=await api({action:'overview'});
+   state.data=d;
    syncNativeAvailability(d);
+   await checkFolgaReminder(d);
   }catch(_){}
  }
 
  setTimeout(backgroundAvailabilitySync,2500);
  window.addEventListener('focus',()=>setTimeout(backgroundAvailabilitySync,500));
+ document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')setTimeout(backgroundAvailabilitySync,500);
+ });
+ setInterval(()=>checkFolgaReminder(),30000);
 
  if(new URLSearchParams(location.search).get('open')==='folgas'){
   setTimeout(()=>renderRider('Folgas'),1100);
@@ -218,6 +300,7 @@
   if(rider?.active!=='Folgas'||document.visibilityState!=='visible'||state.loading)return;
   try{
    const d=await api({action:'overview'});
+   state.data=d;
    syncNativeAvailability(d);
    const sig=JSON.stringify([(d.occupied||[]),...(d.requests||[]).map(x=>[x.id,x.status,x.mensagem_aprovacao,x.updated_at])]);
    if(sig!==state.sig)await renderFolgas(d,false);
