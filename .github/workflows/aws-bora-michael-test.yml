@@ -74,7 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          java -jar "$RUNNER_TEMP/apktool.jar" b --use-aapt2 "$RUNNER_TEMP/aws-bora-decoded" -o "$RUNNER_TEMP/aws-bora-unsigned.apk"
+          java -jar "$RUNNER_TEMP/apktool.jar" b "$RUNNER_TEMP/aws-bora-decoded" -o "$RUNNER_TEMP/aws-bora-unsigned.apk"
 
       - name: Obter chave permanente de assinatura
         shell: bash
