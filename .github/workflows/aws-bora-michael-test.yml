@@ -26,13 +26,15 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Instalar ferramentas Android e Apktool
+      - name: Instalar ferramentas Android e Apktool moderno
         shell: bash
         run: |
           set -euo pipefail
           sdkmanager "build-tools;36.0.0"
-          sudo apt-get update -qq
-          sudo apt-get install -y apktool
+          curl -fL --retry 3 \
+            "https://github.com/iBotPeaches/Apktool/releases/download/v2.12.1/apktool_2.12.1.jar" \
+            -o "$RUNNER_TEMP/apktool.jar"
+          java -jar "$RUNNER_TEMP/apktool.jar" --version
 
       - name: Baixar APK AWS base 5.1.5
         shell: bash
@@ -47,12 +49,11 @@ jobs:
         run: |
           set -euo pipefail
           WORK="$RUNNER_TEMP/aws-bora-decoded"
-          apktool d -f "$RUNNER_TEMP/aws-base.apk" -o "$WORK"
+          java -jar "$RUNNER_TEMP/apktool.jar" d -f "$RUNNER_TEMP/aws-base.apk" -o "$WORK"
           cp app/src/main/assets/index.html "$WORK/assets/index.html"
           cp app/src/main/assets/bora_auto_update.js "$WORK/assets/bora_auto_update.js"
           python - <<'PY'
           from pathlib import Path
-          p=Path('/tmp')
           import os,re
           work=Path(os.environ['RUNNER_TEMP'])/'aws-bora-decoded'
           idx=work/'assets/index.html'
@@ -73,7 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apktool b "$RUNNER_TEMP/aws-bora-decoded" -o "$RUNNER_TEMP/aws-bora-unsigned.apk"
+          java -jar "$RUNNER_TEMP/apktool.jar" b --use-aapt2 "$RUNNER_TEMP/aws-bora-decoded" -o "$RUNNER_TEMP/aws-bora-unsigned.apk"
 
       - name: Obter chave permanente de assinatura
         shell: bash
