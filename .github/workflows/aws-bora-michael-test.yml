@@ -63,13 +63,13 @@ jobs:
           idx.write_text(s,encoding='utf-8')
           y=work/'apktool.yml'
           t=y.read_text(encoding='utf-8')
-          t=re.sub(r'(?m)^(\s*versionCode:\s*).+$', r'\g<1>50018', t, count=1)
-          t=re.sub(r'(?m)^(\s*versionName:\s*).+$', r'\g<1>5.1.7-bora-test', t, count=1)
+          t=re.sub(r'(?m)^(\s*versionCode:\s*).+$', r'\g<1>50019', t, count=1)
+          t=re.sub(r'(?m)^(\s*versionName:\s*).+$', r'\g<1>5.1.8-bora-test', t, count=1)
           y.write_text(t,encoding='utf-8')
           PY
           grep -q "AWS • Bora Michael" "$WORK/assets/index.html"
           grep -q "bora_auto_update.js" "$WORK/assets/index.html"
-          grep -q "latest-app-version" "$WORK/assets/bora_auto_update.js"
+          grep -q "Atualizar app" "$WORK/assets/bora_auto_update.js"
 
       - name: Reconstruir APK com nova versao
         shell: bash
@@ -101,7 +101,7 @@ jobs:
           set -euo pipefail
           mkdir -p app/build/outputs/apk/release
           ALIGNED="$RUNNER_TEMP/aws-bora-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v3.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v4.apk"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/aws-bora-unsigned.apk" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
@@ -111,28 +111,28 @@ jobs:
             --out "$SIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$SIGNED" | head -n 2 | tee "$RUNNER_TEMP/badging.txt"
-          grep -q "versionCode='50018'" "$RUNNER_TEMP/badging.txt"
+          grep -q "versionCode='50019'" "$RUNNER_TEMP/badging.txt"
           unzip -p "$SIGNED" assets/index.html | grep -q "bora_auto_update.js"
-          unzip -p "$SIGNED" assets/bora_auto_update.js | grep -q "FALLBACK_BUILD_CODE = 50018"
+          unzip -p "$SIGNED" assets/bora_auto_update.js | grep -q "FALLBACK_BUILD_CODE = 50019"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Bora-Michael-TESTE-v3
-          path: app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v3.apk
+          name: AWS-Bora-Michael-TESTE-v4
+          path: app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v4.apk
           if-no-files-found: error
 
-      - name: Publicar APK de teste v3
+      - name: Publicar APK de teste v4
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v3.apk"
-          TAG="aws-bora-test-v3"
-          ASSET="AWS-Bora-Michael-TESTE-v3.apk"
+          APK="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v4.apk"
+          TAG="aws-bora-test-v4"
+          ASSET="AWS-Bora-Michael-TESTE-v4.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "AWS + Bora Michael TESTE v3" --notes "Bora Michael com verificação automática de atualização logo ao abrir, antes de qualquer login ou seleção de motoboy."
+            gh release create "$TAG" --title "AWS + Bora Michael TESTE v4" --notes "Adiciona o botão Atualizar app dentro do APK, mantendo também a verificação automática ao abrir."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
