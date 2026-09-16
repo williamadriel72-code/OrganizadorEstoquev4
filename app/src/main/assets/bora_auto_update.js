@@ -2,7 +2,7 @@
   const SUPA_URL = 'https://rlgsbtolosxyymosidns.supabase.co';
   const SUPA_KEY = 'sb_publishable_cdYfnl879c7gh4WQE27S5g_CxEtVxde';
   const LATEST_URL = SUPA_URL + '/functions/v1/latest-app-version';
-  const FALLBACK_BUILD_CODE = 50019;
+  const FALLBACK_BUILD_CODE = 50020;
   let updateRunning = false;
 
   function currentCode() {
@@ -20,7 +20,7 @@
       if (!el) {
         el = document.createElement('div');
         el.id = 'boraUpdateNotice';
-        el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:82px;z-index:99999;background:#111827;color:#fff;border:1px solid #334155;border-radius:12px;padding:11px 13px;text-align:center;font:600 12px system-ui;box-shadow:0 10px 30px #0008';
+        el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:112px;z-index:99999;background:#111827;color:#fff;border:1px solid #334155;border-radius:12px;padding:11px 13px;text-align:center;font:600 12px system-ui;box-shadow:0 10px 30px #0008';
         document.body.appendChild(el);
       }
       el.textContent = text || '';
@@ -38,28 +38,35 @@
     if (text) showNotice(text);
   }
 
-  function makeButton(id, compact) {
-    if (document.getElementById(id)) return;
+  function makeButton(id, className, text = 'Atualizar app') {
+    if (document.getElementById(id)) return null;
     const b = document.createElement('button');
     b.id = id;
     b.type = 'button';
-    b.textContent = 'Atualizar app';
-    b.className = 'btn ghost';
-    b.style.cssText = compact ? '' : 'width:100%;margin-top:9px;border:1px solid #334155;background:#172033;color:#fff;border-radius:12px;padding:11px 14px;font-weight:850';
+    b.textContent = text;
+    b.className = className;
     b.onclick = () => checkForUpdate(true);
     return b;
   }
 
   function installButtons() {
     try {
-      const actions = document.querySelector('#app .actions');
-      const topBtn = makeButton('boraUpdateTop', true);
-      if (actions && topBtn) actions.insertBefore(topBtn, actions.firstChild);
+      // Garante que nenhuma versão antiga do botão permaneça no cabeçalho.
+      document.getElementById('boraUpdateTop')?.remove();
+
+      const bottom = document.querySelector('#app .bottomin');
+      const sync = document.getElementById('sync');
+      const bottomBtn = makeButton('boraUpdateBottom', 'btn updateBottom', 'Atualizar app');
+      if (bottom && bottomBtn) {
+        if (sync) bottom.insertBefore(bottomBtn, sync);
+        else bottom.appendChild(bottomBtn);
+      }
 
       const loginBox = document.querySelector('#login .loginbox');
       const loginMsg = document.getElementById('loginMsg');
-      const loginBtn = makeButton('boraUpdateLogin', false);
+      const loginBtn = makeButton('boraUpdateLogin', 'btn ghost', 'Atualizar app');
       if (loginBox && loginBtn) {
+        loginBtn.style.cssText = 'width:100%;margin-top:9px;border:1px solid #334155;background:#172033;color:#fff;border-radius:12px;padding:11px 14px;font-weight:850';
         if (loginMsg) loginBox.insertBefore(loginBtn, loginMsg);
         else loginBox.appendChild(loginBtn);
       }
