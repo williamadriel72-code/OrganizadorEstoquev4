@@ -2,7 +2,7 @@
   const SUPA_URL = 'https://rlgsbtolosxyymosidns.supabase.co';
   const SUPA_KEY = 'sb_publishable_cdYfnl879c7gh4WQE27S5g_CxEtVxde';
   const LATEST_URL = SUPA_URL + '/functions/v1/latest-app-version';
-  const FALLBACK_BUILD_CODE = 50020;
+  const FALLBACK_BUILD_CODE = 50021;
   let updateRunning = false;
 
   function currentCode() {
@@ -51,7 +51,6 @@
 
   function installButtons() {
     try {
-      // Garante que nenhuma versão antiga do botão permaneça no cabeçalho.
       document.getElementById('boraUpdateTop')?.remove();
 
       const bottom = document.querySelector('#app .bottomin');
