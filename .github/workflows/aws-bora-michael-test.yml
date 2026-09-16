@@ -44,7 +44,7 @@ jobs:
             "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/v5.1.5/AWS-Gestao-Estoque-5.1.5.apk" \
             -o "$RUNNER_TEMP/aws-base.apk"
 
-      - name: Decodificar APK e integrar Bora Michael
+      - name: Decodificar APK e integrar shell online Bora Michael
         shell: bash
         run: |
           set -euo pipefail
@@ -56,23 +56,15 @@ jobs:
           from pathlib import Path
           import os,re
           work=Path(os.environ['RUNNER_TEMP'])/'aws-bora-decoded'
-          idx=work/'assets/index.html'
-          s=idx.read_text(encoding='utf-8')
-          if 'bora_auto_update.js' not in s:
-              s=s.replace('</body>', '<script src="bora_auto_update.js"></script>\n</body>')
-          idx.write_text(s,encoding='utf-8')
           y=work/'apktool.yml'
           t=y.read_text(encoding='utf-8')
-          t=re.sub(r'(?m)^(\s*versionCode:\s*).+$', r'\g<1>50021', t, count=1)
-          t=re.sub(r'(?m)^(\s*versionName:\s*).+$', r'\g<1>5.2.0-bora-test', t, count=1)
+          t=re.sub(r'(?m)^(\s*versionCode:\s*).+$', r'\g<1>50022', t, count=1)
+          t=re.sub(r'(?m)^(\s*versionName:\s*).+$', r'\g<1>5.2.1-online', t, count=1)
           y.write_text(t,encoding='utf-8')
           PY
           grep -q "AWS • Bora Michael" "$WORK/assets/index.html"
-          grep -q "verify_delivery_code" "$WORK/assets/index.html"
-          grep -q "CÓDIGO DO CLIENTE" "$WORK/assets/index.html"
-          grep -q "bora_auto_update.js" "$WORK/assets/index.html"
-          ! grep -q "Trocar motoboy" "$WORK/assets/index.html"
-          grep -q "boraUpdateBottom" "$WORK/assets/bora_auto_update.js"
+          grep -q "bora-michael-motoboy-vqz606.v2.appdeploy.ai" "$WORK/assets/index.html"
+          grep -q "FALLBACK_BUILD_CODE = 50022" "$WORK/assets/bora_auto_update.js"
 
       - name: Reconstruir APK com nova versao
         shell: bash
@@ -104,7 +96,7 @@ jobs:
           set -euo pipefail
           mkdir -p app/build/outputs/apk/release
           ALIGNED="$RUNNER_TEMP/aws-bora-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v6.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-ONLINE-v7.apk"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/aws-bora-unsigned.apk" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
@@ -114,30 +106,28 @@ jobs:
             --out "$SIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$SIGNED" | head -n 2 | tee "$RUNNER_TEMP/badging.txt"
-          grep -q "versionCode='50021'" "$RUNNER_TEMP/badging.txt"
-          unzip -p "$SIGNED" assets/index.html | grep -q "verify_delivery_code"
-          unzip -p "$SIGNED" assets/index.html | grep -q "CÓDIGO DO CLIENTE"
-          ! unzip -p "$SIGNED" assets/index.html | grep -q "Trocar motoboy"
-          unzip -p "$SIGNED" assets/bora_auto_update.js | grep -q "FALLBACK_BUILD_CODE = 50021"
+          grep -q "versionCode='50022'" "$RUNNER_TEMP/badging.txt"
+          unzip -p "$SIGNED" assets/index.html | grep -q "bora-michael-motoboy-vqz606.v2.appdeploy.ai"
+          unzip -p "$SIGNED" assets/bora_auto_update.js | grep -q "FALLBACK_BUILD_CODE = 50022"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Bora-Michael-TESTE-v6
-          path: app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v6.apk
+          name: AWS-Bora-Michael-ONLINE-v7
+          path: app/build/outputs/apk/release/AWS-Bora-Michael-ONLINE-v7.apk
           if-no-files-found: error
 
-      - name: Publicar APK de teste v6
+      - name: Publicar APK online v7
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v6.apk"
-          TAG="aws-bora-test-v6"
-          ASSET="AWS-Bora-Michael-TESTE-v6.apk"
+          APK="app/build/outputs/apk/release/AWS-Bora-Michael-ONLINE-v7.apk"
+          TAG="aws-bora-online-v7"
+          ASSET="AWS-Bora-Michael-ONLINE-v7.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "AWS + Bora Michael TESTE v6" --notes "Finalização iFood pelo APK: pedido/localizador são identificados automaticamente e o motoboy digita somente o código do cliente. O código é validado diretamente na API do iFood e, quando confirmado, a entrega vai para Concluídas."
+            gh release create "$TAG" --title "Bora Michael ONLINE v7" --notes "APK shell online. A interface e o fluxo do motoboy passam a ser carregados do servidor, permitindo atualizar telas e regras sem reinstalar o APK. Novas instalações ficam necessárias apenas quando houver mudança nativa do Android."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
