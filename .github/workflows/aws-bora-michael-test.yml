@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/aws-bora-michael-test.yml"
       - "app/src/main/assets/index.html"
+      - "app/src/main/assets/bora_auto_update.js"
       - "build_trigger_aws_bora_test.txt"
   workflow_dispatch:
 
@@ -25,8 +26,13 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Instalar ferramentas Android
-        run: sdkmanager "build-tools;36.0.0"
+      - name: Instalar ferramentas Android e Apktool
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager "build-tools;36.0.0"
+          sudo apt-get update -qq
+          sudo apt-get install -y apktool
 
       - name: Baixar APK AWS base 5.1.5
         shell: bash
@@ -35,20 +41,39 @@ jobs:
           curl -fL --retry 3 \
             "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/v5.1.5/AWS-Gestao-Estoque-5.1.5.apk" \
             -o "$RUNNER_TEMP/aws-base.apk"
-          cp "$RUNNER_TEMP/aws-base.apk" "$RUNNER_TEMP/aws-bora-unsigned.apk"
 
-      - name: Integrar interface Bora Michael no APK AWS
+      - name: Decodificar APK e integrar Bora Michael
         shell: bash
         run: |
           set -euo pipefail
-          WORK="$RUNNER_TEMP/aws-bora-patch"
-          mkdir -p "$WORK/assets"
+          WORK="$RUNNER_TEMP/aws-bora-decoded"
+          apktool d -f "$RUNNER_TEMP/aws-base.apk" -o "$WORK"
           cp app/src/main/assets/index.html "$WORK/assets/index.html"
-          cd "$RUNNER_TEMP"
-          zip -d aws-bora-unsigned.apk 'META-INF/*' 'assets/index.html' >/dev/null 2>&1 || true
-          cd "$WORK"
-          zip -q -u "$RUNNER_TEMP/aws-bora-unsigned.apk" assets/index.html
-          unzip -p "$RUNNER_TEMP/aws-bora-unsigned.apk" assets/index.html | grep -q "AWS • Bora Michael"
+          cp app/src/main/assets/bora_auto_update.js "$WORK/assets/bora_auto_update.js"
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp')
+          import os,re
+          work=Path(os.environ['RUNNER_TEMP'])/'aws-bora-decoded'
+          idx=work/'assets/index.html'
+          s=idx.read_text(encoding='utf-8')
+          if 'bora_auto_update.js' not in s:
+              s=s.replace('</body>', '<script src="bora_auto_update.js"></script>\n</body>')
+          idx.write_text(s,encoding='utf-8')
+          y=work/'apktool.yml'
+          t=y.read_text(encoding='utf-8')
+          t=re.sub(r'(?m)^(\s*versionCode:\s*).+$', r'\g<1>50017', t, count=1)
+          t=re.sub(r'(?m)^(\s*versionName:\s*).+$', r'\g<1>5.1.6-bora-test', t, count=1)
+          y.write_text(t,encoding='utf-8')
+          PY
+          grep -q "AWS • Bora Michael" "$WORK/assets/index.html"
+          grep -q "downloadAndInstallUpdate" "$WORK/assets/bora_auto_update.js"
+
+      - name: Reconstruir APK com nova versao
+        shell: bash
+        run: |
+          set -euo pipefail
+          apktool b "$RUNNER_TEMP/aws-bora-decoded" -o "$RUNNER_TEMP/aws-bora-unsigned.apk"
 
       - name: Obter chave permanente de assinatura
         shell: bash
@@ -68,13 +93,13 @@ jobs:
           echo "KEY_PASS=$KEY_PASS" >> "$GITHUB_ENV"
           echo "KEYSTORE_PATH=$RUNNER_TEMP/aws-estoque-release.jks" >> "$GITHUB_ENV"
 
-      - name: Alinhar e assinar APK de teste
+      - name: Alinhar, assinar e validar APK
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p app/build/outputs/apk/release
           ALIGNED="$RUNNER_TEMP/aws-bora-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v1.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v2.apk"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/aws-bora-unsigned.apk" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
@@ -83,26 +108,29 @@ jobs:
             --key-pass env:KEY_PASS \
             --out "$SIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
-          unzip -p "$SIGNED" assets/index.html | grep -q "Rota no Google Maps"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$SIGNED" | head -n 2 | tee "$RUNNER_TEMP/badging.txt"
+          grep -q "versionCode='50017'" "$RUNNER_TEMP/badging.txt"
+          unzip -p "$SIGNED" assets/index.html | grep -q "bora_auto_update.js"
+          unzip -p "$SIGNED" assets/bora_auto_update.js | grep -q "BUILD_CODE = 50017"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Bora-Michael-TESTE-v1
-          path: app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v1.apk
+          name: AWS-Bora-Michael-TESTE-v2
+          path: app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v2.apk
           if-no-files-found: error
 
-      - name: Publicar APK de teste
+      - name: Publicar APK de teste v2
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v1.apk"
-          TAG="aws-bora-test-v1"
-          ASSET="AWS-Bora-Michael-TESTE-v1.apk"
+          APK="app/build/outputs/apk/release/AWS-Bora-Michael-TESTE-v2.apk"
+          TAG="aws-bora-test-v2"
+          ASSET="AWS-Bora-Michael-TESTE-v2.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "AWS + Bora Michael TESTE v1" --notes "APK AWS reaproveitado como ambiente de teste do Bora Michael: pedidos despachados, bairro, taxa, ganhos, mapa e conclusão."
+            gh release create "$TAG" --title "AWS + Bora Michael TESTE v2" --notes "Atualização automática restaurada. O app verifica novas versões sozinho e usa o instalador interno já existente no AWS."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
