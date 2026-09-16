@@ -1,4 +1,4 @@
-commit=1b3f0e4591c516955aafd2f430498d46af98634b
+commit=b6cabfba1590e47ae9e6a3c9a36863e20a907292
 login=failure
 reposicao_inventario=skipped
 updater=skipped
