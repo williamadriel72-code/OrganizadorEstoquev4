@@ -6,7 +6,6 @@ on:
     paths:
       - ".github/workflows/aws-bora-michael-test.yml"
       - "app/src/main/assets/index.html"
-      - "app/src/main/assets/bora_auto_update.js"
       - "build_trigger_aws_bora_test.txt"
   workflow_dispatch:
 
@@ -51,16 +50,10 @@ jobs:
           WORK="$RUNNER_TEMP/aws-bora-decoded"
           java -jar "$RUNNER_TEMP/apktool.jar" d -f "$RUNNER_TEMP/aws-base.apk" -o "$WORK"
           cp app/src/main/assets/index.html "$WORK/assets/index.html"
-          cp app/src/main/assets/bora_auto_update.js "$WORK/assets/bora_auto_update.js"
           python - <<'PY'
           from pathlib import Path
           import os,re
           work=Path(os.environ['RUNNER_TEMP'])/'aws-bora-decoded'
-          idx=work/'assets/index.html'
-          s=idx.read_text(encoding='utf-8')
-          if 'bora_auto_update.js' not in s:
-              s=s.replace('</body>', '<script src="bora_auto_update.js"></script>\n</body>')
-          idx.write_text(s,encoding='utf-8')
           y=work/'apktool.yml'
           t=y.read_text(encoding='utf-8')
           t=re.sub(r'(?m)^(\s*versionCode:\s*).+$', r'\g<1>50017', t, count=1)
@@ -68,7 +61,6 @@ jobs:
           y.write_text(t,encoding='utf-8')
           PY
           grep -q "AWS • Bora Michael" "$WORK/assets/index.html"
-          grep -q "downloadAndInstallUpdate" "$WORK/assets/bora_auto_update.js"
 
       - name: Reconstruir APK com nova versao
         shell: bash
@@ -111,8 +103,7 @@ jobs:
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$SIGNED" | head -n 2 | tee "$RUNNER_TEMP/badging.txt"
           grep -q "versionCode='50017'" "$RUNNER_TEMP/badging.txt"
-          unzip -p "$SIGNED" assets/index.html | grep -q "bora_auto_update.js"
-          unzip -p "$SIGNED" assets/bora_auto_update.js | grep -q "BUILD_CODE = 50017"
+          unzip -p "$SIGNED" assets/index.html | grep -q "AWS • Bora Michael"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -131,7 +122,7 @@ jobs:
           TAG="aws-bora-test-v2"
           ASSET="AWS-Bora-Michael-TESTE-v2.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "AWS + Bora Michael TESTE v2" --notes "Atualização automática restaurada. O app verifica novas versões sozinho e usa o instalador interno já existente no AWS."
+            gh release create "$TAG" --title "AWS + Bora Michael TESTE v2" --notes "Usa o atualizador nativo do AWS: verifica novas versões sozinho, baixa, valida assinatura e solicita a instalação pelo Android quando necessário."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
