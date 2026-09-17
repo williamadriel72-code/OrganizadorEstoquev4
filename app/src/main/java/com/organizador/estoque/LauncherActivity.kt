@@ -10,9 +10,11 @@ import android.media.SoundPool
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.provider.Settings
 import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -46,6 +48,30 @@ class LauncherActivity : ComponentActivity() {
         if (uri != null) parseSelectedPdf(uri) else notifyPdfError("Seleção de PDF cancelada.")
     }
 
+    private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
+    private var cameraPhotoUri: Uri? = null
+
+    private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val callback = fileChooserCallback ?: return@registerForActivityResult
+        val uris = if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val data = result.data
+            when {
+                data?.clipData != null -> {
+                    val clip = data.clipData!!
+                    Array(clip.itemCount) { i -> clip.getItemAt(i).uri }
+                }
+                data?.data != null -> arrayOf(data.data!!)
+                cameraPhotoUri != null -> arrayOf(cameraPhotoUri!!)
+                else -> null
+            }
+        } else {
+            null
+        }
+        callback.onReceiveValue(uris)
+        fileChooserCallback = null
+        cameraPhotoUri = null
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +84,16 @@ class LauncherActivity : ComponentActivity() {
             settings.allowFileAccess = true
             settings.allowContentAccess = true
             webViewClient = WebViewClient()
-            webChromeClient = WebChromeClient()
+            webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    webView: WebView?,
+                    filePathCallback: ValueCallback<Array<Uri>>?,
+                    fileChooserParams: FileChooserParams?
+                ): Boolean {
+                    if (filePathCallback == null) return false
+                    return launchImageChooser(filePathCallback, fileChooserParams)
+                }
+            }
             addJavascriptInterface(AndroidBridge(), "AndroidApp")
             loadUrl("file:///android_asset/index.html")
         }
@@ -70,6 +105,60 @@ class LauncherActivity : ComponentActivity() {
                 webView.evaluateJavascript("window.androidBack && window.androidBack();", null)
             }
         })
+    }
+
+    private fun launchImageChooser(
+        callback: ValueCallback<Array<Uri>>,
+        params: WebChromeClient.FileChooserParams?
+    ): Boolean {
+        fileChooserCallback?.onReceiveValue(null)
+        fileChooserCallback = callback
+
+        val cameraDir = File(cacheDir, "camera").apply { mkdirs() }
+        val photoFile = File(cameraDir, "bora-michael-${System.currentTimeMillis()}.jpg")
+        cameraPhotoUri = FileProvider.getUriForFile(this, "$packageName.updates", photoFile)
+
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+            putExtra(MediaStore.EXTRA_OUTPUT, cameraPhotoUri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        }
+
+        val contentIntent = try {
+            params?.createIntent()?.apply {
+                type = "image/*"
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
+            } ?: Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+            }
+        } catch (_: Throwable) {
+            Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+            }
+        }
+
+        val initialIntents = if (cameraIntent.resolveActivity(packageManager) != null) {
+            arrayOf(cameraIntent)
+        } else {
+            emptyArray()
+        }
+
+        val chooser = Intent(Intent.ACTION_CHOOSER).apply {
+            putExtra(Intent.EXTRA_INTENT, contentIntent)
+            putExtra(Intent.EXTRA_TITLE, "Fotografar ou escolher comanda")
+            putExtra(Intent.EXTRA_INITIAL_INTENTS, initialIntents)
+        }
+
+        return try {
+            fileChooserLauncher.launch(chooser)
+            true
+        } catch (_: Throwable) {
+            fileChooserCallback = null
+            cameraPhotoUri = null
+            callback.onReceiveValue(null)
+            false
+        }
     }
 
     override fun onResume() {
@@ -475,6 +564,9 @@ class LauncherActivity : ComponentActivity() {
         webView.removeJavascriptInterface("AndroidApp")
         webView.destroy()
         pendingImport = null
+        fileChooserCallback?.onReceiveValue(null)
+        fileChooserCallback = null
+        cameraPhotoUri = null
         super.onDestroy()
     }
 }
