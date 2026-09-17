@@ -6,7 +6,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="AWS Gestão de Estoque"
+        android:label="Bora Michael TESTE"
         android:icon="@drawable/ic_inventory"
         android:theme="@style/Theme.OrganizadorEstoque"
         android:usesCleartextTraffic="false">
