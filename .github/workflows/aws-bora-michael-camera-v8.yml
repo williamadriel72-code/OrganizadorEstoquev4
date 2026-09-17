@@ -1,0 +1,114 @@
+name: Build Bora Michael TESTE Camera v8
+
+on:
+  push:
+    branches: [ "aws-supabase-apk-v1" ]
+    paths:
+      - ".github/workflows/aws-bora-michael-camera-v8.yml"
+      - "app/src/main/java/com/organizador/estoque/LauncherActivity.kt"
+      - "app/src/main/AndroidManifest.xml"
+      - "app/src/main/res/xml/update_file_paths.xml"
+      - "app/src/main/assets/index.html"
+      - "app/src/main/assets/bora_auto_update.js"
+      - "app/build.gradle.kts"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Instalar SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Compilar release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle :app:assembleRelease --stacktrace
+          test -f app/build/outputs/apk/release/app-release-unsigned.apk
+
+      - name: Obter chave permanente
+        shell: bash
+        run: |
+          set -euo pipefail
+          OIDC_JSON=$(curl -fsSL -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=aws-apk-signing")
+          OIDC_TOKEN=$(echo "$OIDC_JSON" | jq -r '.value')
+          SIGNING_JSON=$(curl -fsSL -H "Authorization: Bearer ${OIDC_TOKEN}" "https://rlgsbtolosxyymosidns.supabase.co/functions/v1/github-apk-signing")
+          STORE_PASS=$(echo "$SIGNING_JSON" | jq -r '.store_password')
+          KEY_ALIAS=$(echo "$SIGNING_JSON" | jq -r '.key_alias')
+          KEY_PASS=$(echo "$SIGNING_JSON" | jq -r '.key_password')
+          echo "$SIGNING_JSON" | jq -r '.keystore_base64' | base64 -d > "$RUNNER_TEMP/aws-estoque-release.jks"
+          echo "::add-mask::$STORE_PASS"
+          echo "::add-mask::$KEY_PASS"
+          echo "STORE_PASS=$STORE_PASS" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "KEY_PASS=$KEY_PASS" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/aws-estoque-release.jks" >> "$GITHUB_ENV"
+
+      - name: Alinhar assinar e validar
+        shell: bash
+        run: |
+          set -euo pipefail
+          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED="$RUNNER_TEMP/bora-v8-aligned.apk"
+          SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-ONLINE-v8.apk"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$UNSIGNED" "$ALIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:STORE_PASS \
+            --key-pass env:KEY_PASS \
+            --out "$SIGNED" "$ALIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$SIGNED" | head -n 2 | tee "$RUNNER_TEMP/badging.txt"
+          grep -q "versionCode='50023'" "$RUNNER_TEMP/badging.txt"
+          grep -q "versionName='5.2.2-camera'" "$RUNNER_TEMP/badging.txt"
+          unzip -p "$SIGNED" assets/index.html | grep -q "bora-michael-motoboy-vqz606.v2.appdeploy.ai"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AWS-Bora-Michael-ONLINE-v8
+          path: app/build/outputs/apk/release/AWS-Bora-Michael-ONLINE-v8.apk
+          if-no-files-found: error
+
+      - name: Publicar APK v8
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/AWS-Bora-Michael-ONLINE-v8.apk"
+          TAG="aws-bora-online-v8"
+          ASSET="AWS-Bora-Michael-ONLINE-v8.apk"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "Bora Michael ONLINE v8" --notes "Shell online de teste com suporte nativo para câmera/galeria. A câmera permite fotografar a comanda; a interface online faz OCR do endereço e consulta a cascata de mapas."
+          fi
+          gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
+          gh release upload "$TAG" "$APK"
