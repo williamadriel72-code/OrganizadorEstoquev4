@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fL --retry 3 "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/aws-bora-online-v10/Bora-Michael-TESTE-v11.apk" -o "$RUNNER_TEMP/base-v10.apk"
+          curl -fL --retry 3 "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/aws-bora-online-v10/Bora-Michael-TESTE-v10.apk" -o "$RUNNER_TEMP/base-v10.apk"
 
       - name: Mesclar GPS na base estável
         shell: bash
