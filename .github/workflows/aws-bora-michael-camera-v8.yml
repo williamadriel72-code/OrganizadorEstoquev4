@@ -57,7 +57,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fL --retry 3 "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/aws-bora-online-v11/Bora-Michael-TESTE-v12.apk" -o "$RUNNER_TEMP/base-v11.apk"
+          curl -fL --retry 3 "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/aws-bora-online-v11/Bora-Michael-TESTE-v11.apk" -o "$RUNNER_TEMP/base-v11.apk"
 
       - name: Mesclar GPS em segundo plano na base estável
         shell: bash
@@ -157,8 +157,8 @@ jobs:
           set -euo pipefail
           mkdir -p app/build/outputs/apk/release
           ALIGNED="$RUNNER_TEMP/bora-v12-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/Bora-Michael-TESTE-v11.apk"
-          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/bora-v11-unsigned.apk" "$ALIGNED"
+          SIGNED="app/build/outputs/apk/release/Bora-Michael-TESTE-v12.apk"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/bora-v12-unsigned.apk" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
             --ks-key-alias "$KEY_ALIAS" \
@@ -175,7 +175,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Bora-Michael-TESTE-v12
-          path: app/build/outputs/apk/release/Bora-Michael-TESTE-v11.apk
+          path: app/build/outputs/apk/release/Bora-Michael-TESTE-v12.apk
           if-no-files-found: error
 
       - name: Publicar APK v12
@@ -184,7 +184,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/Bora-Michael-TESTE-v11.apk"
+          APK="app/build/outputs/apk/release/Bora-Michael-TESTE-v12.apk"
           TAG="aws-bora-online-v12"
           ASSET="Bora-Michael-TESTE-v12.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
