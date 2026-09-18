@@ -139,8 +139,8 @@ jobs:
           set -euo pipefail
           mkdir -p app/build/outputs/apk/release
           ALIGNED="$RUNNER_TEMP/bora-v11-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/Bora-Michael-TESTE-v10.apk"
-          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/bora-v10-unsigned.apk" "$ALIGNED"
+          SIGNED="app/build/outputs/apk/release/Bora-Michael-TESTE-v11.apk"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/bora-v11-unsigned.apk" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
             --ks-key-alias "$KEY_ALIAS" \
@@ -157,7 +157,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Bora-Michael-TESTE-v11
-          path: app/build/outputs/apk/release/Bora-Michael-TESTE-v10.apk
+          path: app/build/outputs/apk/release/Bora-Michael-TESTE-v11.apk
           if-no-files-found: error
 
       - name: Publicar APK v11
@@ -166,9 +166,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/Bora-Michael-TESTE-v10.apk"
+          APK="app/build/outputs/apk/release/Bora-Michael-TESTE-v11.apk"
           TAG="aws-bora-online-v11"
-          ASSET="Bora-Michael-TESTE-v10.apk"
+          ASSET="Bora-Michael-TESTE-v11.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --target aws-supabase-apk-v1 --title "Bora Michael TESTE v11 GPS" --notes "Adiciona permissão nativa de localização para o GPS do motoboy no APK TESTE. A interface online envia a posição ao Painel TESTE enquanto o aplicativo está aberto, mantendo as funções MultiFoto e rotas da v10."
           fi
