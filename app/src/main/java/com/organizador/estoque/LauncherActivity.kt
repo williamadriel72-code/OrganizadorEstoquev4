@@ -1,5 +1,6 @@
 package com.organizador.estoque
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
@@ -14,6 +15,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.provider.Settings
+import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -22,6 +24,7 @@ import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
@@ -53,6 +56,22 @@ class LauncherActivity : ComponentActivity() {
     private var cameraPhotoUri: Uri? = null
     private val cameraBatchUris = mutableListOf<Uri>()
     private var cameraBatchMode = false
+
+    private var pendingGeoOrigin: String? = null
+    private var pendingGeoCallback: GeolocationPermissions.Callback? = null
+    private val locationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            val allowed =
+                result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                    result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+            val origin = pendingGeoOrigin
+            val callback = pendingGeoCallback
+            pendingGeoOrigin = null
+            pendingGeoCallback = null
+            if (origin != null && callback != null) {
+                callback.invoke(origin, allowed, false)
+            }
+        }
 
     private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         fileChooserCallback ?: return@registerForActivityResult
@@ -97,6 +116,7 @@ class LauncherActivity : ComponentActivity() {
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
             settings.allowContentAccess = true
+            settings.setGeolocationEnabled(true)
             webViewClient = WebViewClient()
             webChromeClient = object : WebChromeClient() {
                 override fun onShowFileChooser(
@@ -106,6 +126,38 @@ class LauncherActivity : ComponentActivity() {
                 ): Boolean {
                     if (filePathCallback == null) return false
                     return launchImageChooser(filePathCallback, fileChooserParams)
+                }
+
+                override fun onGeolocationPermissionsShowPrompt(
+                    origin: String?,
+                    callback: GeolocationPermissions.Callback?
+                ) {
+                    if (origin.isNullOrBlank() || callback == null) return
+
+                    val fineGranted =
+                        ContextCompat.checkSelfPermission(
+                            this@LauncherActivity,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+                    val coarseGranted =
+                        ContextCompat.checkSelfPermission(
+                            this@LauncherActivity,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+
+                    if (fineGranted || coarseGranted) {
+                        callback.invoke(origin, true, false)
+                        return
+                    }
+
+                    pendingGeoOrigin = origin
+                    pendingGeoCallback = callback
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
                 }
             }
             addJavascriptInterface(AndroidBridge(), "AndroidApp")
@@ -633,6 +685,9 @@ class LauncherActivity : ComponentActivity() {
         cameraPhotoUri = null
         cameraBatchMode = false
         cameraBatchUris.clear()
+        pendingGeoCallback?.invoke(pendingGeoOrigin, false, false)
+        pendingGeoOrigin = null
+        pendingGeoCallback = null
         super.onDestroy()
     }
 }
