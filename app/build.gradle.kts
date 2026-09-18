@@ -11,8 +11,8 @@ android {
         applicationId = "com.organizador.estoque"
         minSdk = 26
         targetSdk = 36
-        versionCode = 50023
-        versionName = "5.2.2-camera"
+        versionCode = 50025
+        versionName = "5.2.4-batch-camera"
     }
 
     buildFeatures {
