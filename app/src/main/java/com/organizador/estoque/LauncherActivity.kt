@@ -1,6 +1,7 @@
 package com.organizador.estoque
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
@@ -50,26 +51,39 @@ class LauncherActivity : ComponentActivity() {
 
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
     private var cameraPhotoUri: Uri? = null
+    private val cameraBatchUris = mutableListOf<Uri>()
+    private var cameraBatchMode = false
 
     private val fileChooserLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val callback = fileChooserCallback ?: return@registerForActivityResult
-        val uris = if (result.resultCode == android.app.Activity.RESULT_OK) {
+        fileChooserCallback ?: return@registerForActivityResult
+
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
             val data = result.data
             when {
                 data?.clipData != null -> {
                     val clip = data.clipData!!
-                    Array(clip.itemCount) { i -> clip.getItemAt(i).uri }
+                    completeFileChooser(Array(clip.itemCount) { i -> clip.getItemAt(i).uri })
                 }
-                data?.data != null -> arrayOf(data.data!!)
-                cameraPhotoUri != null -> arrayOf(cameraPhotoUri!!)
-                else -> null
+                data?.data != null -> {
+                    completeFileChooser(arrayOf(data.data!!))
+                }
+                cameraBatchMode && cameraPhotoUri != null -> {
+                    cameraBatchUris.add(cameraPhotoUri!!)
+                    cameraPhotoUri = null
+                    showCameraBatchDialog()
+                }
+                cameraPhotoUri != null -> {
+                    completeFileChooser(arrayOf(cameraPhotoUri!!))
+                }
+                else -> completeFileChooser(null)
             }
         } else {
-            null
+            if (cameraBatchMode && cameraBatchUris.isNotEmpty()) {
+                completeFileChooser(cameraBatchUris.toTypedArray())
+            } else {
+                completeFileChooser(null)
+            }
         }
-        callback.onReceiveValue(uris)
-        fileChooserCallback = null
-        cameraPhotoUri = null
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -113,9 +127,53 @@ class LauncherActivity : ComponentActivity() {
     ): Boolean {
         fileChooserCallback?.onReceiveValue(null)
         fileChooserCallback = callback
+        cameraBatchUris.clear()
+        cameraBatchMode = false
+        cameraPhotoUri = null
 
+        if (params?.isCaptureEnabled == true) {
+            cameraBatchMode = true
+            return launchNextCameraCapture()
+        }
+
+        val contentIntent = try {
+            params?.createIntent()?.apply {
+                type = "image/*"
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            } ?: Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            }
+        } catch (_: Throwable) {
+            Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            }
+        }
+
+        val chooser = Intent(Intent.ACTION_CHOOSER).apply {
+            putExtra(Intent.EXTRA_INTENT, contentIntent)
+            putExtra(Intent.EXTRA_TITLE, "Selecione várias fotos das comandas")
+        }
+
+        return try {
+            fileChooserLauncher.launch(chooser)
+            true
+        } catch (_: Throwable) {
+            completeFileChooser(null)
+            false
+        }
+    }
+
+    private fun launchNextCameraCapture(): Boolean {
+        val callback = fileChooserCallback ?: return false
         val cameraDir = File(cacheDir, "camera").apply { mkdirs() }
-        val photoFile = File(cameraDir, "bora-michael-${System.currentTimeMillis()}.jpg")
+        val photoFile = File(
+            cameraDir,
+            "bora-michael-${System.currentTimeMillis()}-${cameraBatchUris.size + 1}.jpg"
+        )
         cameraPhotoUri = FileProvider.getUriForFile(this, "$packageName.updates", photoFile)
 
         val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
@@ -123,42 +181,48 @@ class LauncherActivity : ComponentActivity() {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
         }
 
-        val contentIntent = try {
-            params?.createIntent()?.apply {
-                type = "image/*"
-                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
-            } ?: Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = "image/*"
-                addCategory(Intent.CATEGORY_OPENABLE)
-            }
-        } catch (_: Throwable) {
-            Intent(Intent.ACTION_GET_CONTENT).apply {
-                type = "image/*"
-                addCategory(Intent.CATEGORY_OPENABLE)
-            }
-        }
-
-        val initialIntents = if (cameraIntent.resolveActivity(packageManager) != null) {
-            arrayOf(cameraIntent)
-        } else {
-            emptyArray()
-        }
-
-        val chooser = Intent(Intent.ACTION_CHOOSER).apply {
-            putExtra(Intent.EXTRA_INTENT, contentIntent)
-            putExtra(Intent.EXTRA_TITLE, "Fotografar ou escolher comanda")
-            putExtra(Intent.EXTRA_INITIAL_INTENTS, initialIntents)
-        }
-
         return try {
-            fileChooserLauncher.launch(chooser)
-            true
+            if (cameraIntent.resolveActivity(packageManager) == null) {
+                callback.onReceiveValue(null)
+                fileChooserCallback = null
+                cameraPhotoUri = null
+                cameraBatchMode = false
+                false
+            } else {
+                fileChooserLauncher.launch(cameraIntent)
+                true
+            }
         } catch (_: Throwable) {
-            fileChooserCallback = null
-            cameraPhotoUri = null
-            callback.onReceiveValue(null)
+            completeFileChooser(if (cameraBatchUris.isEmpty()) null else cameraBatchUris.toTypedArray())
             false
         }
+    }
+
+    private fun showCameraBatchDialog() {
+        if (fileChooserCallback == null) return
+        AlertDialog.Builder(this)
+            .setTitle("${cameraBatchUris.size} foto(s) tirada(s)")
+            .setMessage("Quer tirar outra comanda ou concluir as fotos?")
+            .setPositiveButton("Tirar outra") { _, _ ->
+                launchNextCameraCapture()
+            }
+            .setNegativeButton("Concluir") { _, _ ->
+                completeFileChooser(cameraBatchUris.toTypedArray())
+            }
+            .setNeutralButton("Cancelar tudo") { _, _ ->
+                cameraBatchUris.clear()
+                completeFileChooser(null)
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun completeFileChooser(uris: Array<Uri>?) {
+        fileChooserCallback?.onReceiveValue(uris)
+        fileChooserCallback = null
+        cameraPhotoUri = null
+        cameraBatchMode = false
+        cameraBatchUris.clear()
     }
 
     override fun onResume() {
@@ -567,6 +631,8 @@ class LauncherActivity : ComponentActivity() {
         fileChooserCallback?.onReceiveValue(null)
         fileChooserCallback = null
         cameraPhotoUri = null
+        cameraBatchMode = false
+        cameraBatchUris.clear()
         super.onDestroy()
     }
 }
