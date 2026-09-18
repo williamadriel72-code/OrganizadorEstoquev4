@@ -657,6 +657,38 @@ class LauncherActivity : ComponentActivity() {
         }
 
         @JavascriptInterface
+        fun startBackgroundGps(token: String, riderName: String): Boolean {
+            if (token.isBlank()) return false
+            val fineGranted =
+                ContextCompat.checkSelfPermission(
+                    this@LauncherActivity,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+            val coarseGranted =
+                ContextCompat.checkSelfPermission(
+                    this@LauncherActivity,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+            if (!fineGranted && !coarseGranted) return false
+
+            val intent = Intent(this@LauncherActivity, RiderLocationService::class.java).apply {
+                action = RiderLocationService.ACTION_START
+                putExtra(RiderLocationService.EXTRA_TOKEN, token)
+                putExtra(RiderLocationService.EXTRA_RIDER_NAME, riderName)
+            }
+            ContextCompat.startForegroundService(this@LauncherActivity, intent)
+            return true
+        }
+
+        @JavascriptInterface
+        fun stopBackgroundGps() {
+            val intent = Intent(this@LauncherActivity, RiderLocationService::class.java).apply {
+                action = RiderLocationService.ACTION_STOP
+            }
+            startService(intent)
+        }
+
+        @JavascriptInterface
         fun openUpdateUrl(url: String) {
             runOnUiThread {
                 try {
