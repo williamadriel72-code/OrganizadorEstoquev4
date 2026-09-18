@@ -1,10 +1,13 @@
-name: Build Bora Michael TESTE Camera Safe v9
+name: Build Bora Michael TESTE MultiFoto v10
 
 on:
   push:
     branches: [ "aws-supabase-apk-v1" ]
     paths:
       - ".github/workflows/aws-bora-michael-camera-v8.yml"
+      - "app/src/main/java/com/organizador/estoque/LauncherActivity.kt"
+      - "app/src/main/res/xml/update_file_paths.xml"
+      - "app/build.gradle.kts"
   workflow_dispatch:
 
 permissions:
@@ -18,65 +21,88 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
 
-      - name: Instalar ferramentas
+      - name: Instalar ferramentas Android
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager "build-tools;36.0.0"
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
           curl -fL --retry 3 "https://github.com/iBotPeaches/Apktool/releases/download/v2.12.1/apktool_2.12.1.jar" -o "$RUNNER_TEMP/apktool.jar"
 
-      - name: Baixar bases v7 e v8
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Compilar suporte MultiFoto atual
         shell: bash
         run: |
           set -euo pipefail
-          curl -fL --retry 3 "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/aws-bora-online-v7/AWS-Bora-Michael-ONLINE-v7.apk" -o "$RUNNER_TEMP/v7.apk"
-          curl -fL --retry 3 "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/aws-bora-online-v8/AWS-Bora-Michael-ONLINE-v8.apk" -o "$RUNNER_TEMP/v8.apk"
+          gradle :app:assembleRelease --stacktrace
+          test -f app/build/outputs/apk/release/app-release-unsigned.apk
 
-      - name: Mesclar somente suporte de camera na base estavel
+      - name: Baixar base estável v9
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 "https://github.com/williamadriel72-code/OrganizadorEstoquev4/releases/download/aws-bora-online-v9/AWS-Bora-Michael-ONLINE-v9.apk" -o "$RUNNER_TEMP/base-v9.apk"
+
+      - name: Mesclar MultiFoto na base estável
         shell: bash
         run: |
           set -euo pipefail
           BASE="$RUNNER_TEMP/base"
-          CAM="$RUNNER_TEMP/cam"
-          java -jar "$RUNNER_TEMP/apktool.jar" d -f "$RUNNER_TEMP/v7.apk" -o "$BASE"
-          java -jar "$RUNNER_TEMP/apktool.jar" d -f "$RUNNER_TEMP/v8.apk" -o "$CAM"
+          SRC="$RUNNER_TEMP/src"
+          java -jar "$RUNNER_TEMP/apktool.jar" d -f "$RUNNER_TEMP/base-v9.apk" -o "$BASE"
+          java -jar "$RUNNER_TEMP/apktool.jar" d -f app/build/outputs/apk/release/app-release-unsigned.apk -o "$SRC"
 
           find "$BASE" -path '*/com/organizador/estoque/LauncherActivity*.smali' -delete
 
           COPIED=0
-          while IFS= read -r SRC; do
-            REL="${SRC#"$CAM"/}"
+          while IFS= read -r SRCFILE; do
+            REL="${SRCFILE#"$SRC"/}"
             DEST="$BASE/$REL"
             mkdir -p "$(dirname "$DEST")"
-            cp "$SRC" "$DEST"
+            cp "$SRCFILE" "$DEST"
             COPIED=$((COPIED+1))
-          done < <(find "$CAM" -path '*/com/organizador/estoque/LauncherActivity*.smali' -type f)
+          done < <(find "$SRC" -path '*/com/organizador/estoque/LauncherActivity*.smali' -type f)
 
           if [ "$COPIED" -eq 0 ]; then
-            echo "LauncherActivity nao encontrada"
+            echo "LauncherActivity não encontrada"
             exit 1
           fi
 
-          if [ -f "$CAM/res/xml/update_file_paths.xml" ]; then
-            cp "$CAM/res/xml/update_file_paths.xml" "$BASE/res/xml/update_file_paths.xml"
+          if [ -f "$SRC/res/xml/update_file_paths.xml" ]; then
+            cp "$SRC/res/xml/update_file_paths.xml" "$BASE/res/xml/update_file_paths.xml"
           fi
 
           python - <<'PY'
           from pathlib import Path
           import os,re
-          y=Path(os.environ['RUNNER_TEMP'])/'base'/'apktool.yml'
+          base=Path(os.environ['RUNNER_TEMP'])/'base'
+          y=base/'apktool.yml'
           t=y.read_text(encoding='utf-8')
-          t=re.sub(r'(?m)^(\s*versionCode:\s*).+$', r'\g<1>50024', t, count=1)
-          t=re.sub(r'(?m)^(\s*versionName:\s*).+$', r'\g<1>5.2.3-camera-safe', t, count=1)
+          t=re.sub(r'(?m)^(\s*versionCode:\s*).+$', r'\g<1>50025', t, count=1)
+          t=re.sub(r'(?m)^(\s*versionName:\s*).+$', r'\g<1>5.2.4-batch-camera', t, count=1)
           y.write_text(t, encoding='utf-8')
+
+          manifest=base/'AndroidManifest.xml'
+          mt=manifest.read_text(encoding='utf-8')
+          mt=re.sub(r'android:label="[^"]+"', 'android:label="Bora Michael TESTE"', mt, count=1)
+          manifest.write_text(mt, encoding='utf-8')
           PY
 
-          java -jar "$RUNNER_TEMP/apktool.jar" b "$BASE" -o "$RUNNER_TEMP/bora-v9-unsigned.apk"
+          java -jar "$RUNNER_TEMP/apktool.jar" b "$BASE" -o "$RUNNER_TEMP/bora-v10-unsigned.apk"
 
       - name: Obter chave permanente
         shell: bash
@@ -101,9 +127,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p app/build/outputs/apk/release
-          ALIGNED="$RUNNER_TEMP/bora-v9-aligned.apk"
-          SIGNED="app/build/outputs/apk/release/AWS-Bora-Michael-ONLINE-v9.apk"
-          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/bora-v9-unsigned.apk" "$ALIGNED"
+          ALIGNED="$RUNNER_TEMP/bora-v10-aligned.apk"
+          SIGNED="app/build/outputs/apk/release/Bora-Michael-TESTE-v10.apk"
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -f -p 4 "$RUNNER_TEMP/bora-v10-unsigned.apk" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
             --ks-key-alias "$KEY_ALIAS" \
@@ -112,28 +138,28 @@ jobs:
             --out "$SIGNED" "$ALIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$SIGNED"
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/aapt" dump badging "$SIGNED" | head -n 2 | tee "$RUNNER_TEMP/badging.txt"
-          grep -q "versionCode='50024'" "$RUNNER_TEMP/badging.txt"
-          grep -q "versionName='5.2.3-camera-safe'" "$RUNNER_TEMP/badging.txt"
+          grep -q "versionCode='50025'" "$RUNNER_TEMP/badging.txt"
+          grep -q "versionName='5.2.4-batch-camera'" "$RUNNER_TEMP/badging.txt"
           unzip -p "$SIGNED" assets/index.html | grep -q "bora-michael-motoboy-vqz606.v2.appdeploy.ai"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AWS-Bora-Michael-ONLINE-v9
-          path: app/build/outputs/apk/release/AWS-Bora-Michael-ONLINE-v9.apk
+          name: Bora-Michael-TESTE-v10
+          path: app/build/outputs/apk/release/Bora-Michael-TESTE-v10.apk
           if-no-files-found: error
 
-      - name: Publicar APK v9
+      - name: Publicar APK v10
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          APK="app/build/outputs/apk/release/AWS-Bora-Michael-ONLINE-v9.apk"
-          TAG="aws-bora-online-v9"
-          ASSET="AWS-Bora-Michael-ONLINE-v9.apk"
+          APK="app/build/outputs/apk/release/Bora-Michael-TESTE-v10.apk"
+          TAG="aws-bora-online-v10"
+          ASSET="Bora-Michael-TESTE-v10.apk"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --target aws-supabase-apk-v1 --title "Bora Michael ONLINE v9" --notes "Correcao de inicializacao. Usa a mesma base estavel da v7 e adiciona somente o suporte nativo de camera/galeria."
+            gh release create "$TAG" --target aws-supabase-apk-v1 --title "Bora Michael TESTE v10" --notes "Seleção múltipla da galeria e sessão nativa para tirar várias fotos de comandas antes de concluir. Após concluir, a interface online processa uma por uma e organiza as rotas automaticamente."
           fi
           gh release delete-asset "$TAG" "$ASSET" -y >/dev/null 2>&1 || true
           gh release upload "$TAG" "$APK"
