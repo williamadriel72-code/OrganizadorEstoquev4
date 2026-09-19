@@ -239,31 +239,59 @@
  setInterval(()=>{if(!document.hidden&&document.querySelector('.admin-main'))load(true)},REFRESH);
 })();
 
-/* AVISO DE ATUALIZAÇÃO — aparece uma única vez por navegador/máquina */
+/* AVISO DE ATUALIZAÇÃO — versionado e reabrível */
 (function(){
  if(new URLSearchParams(location.search).get('app')==='motoboy')return;
- const KEY='bm_update_notice_2026_09_19_v2';
- let seen='';try{seen=localStorage.getItem(KEY)||''}catch(_){}
- if(seen==='1')return;
- if(window.__bmUpdateNoticeV2)return;window.__bmUpdateNoticeV2=true;
+ if(window.__bmUpdateNoticeV3)return;window.__bmUpdateNoticeV3=true;
 
- function escNotice(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
- function install(){
-   if(document.getElementById('bmUpdateNotice'))return;
-   const s=document.createElement('style');s.id='bmUpdateNoticeStyle';s.textContent=`
-   .bm-update-back{position:fixed;inset:0;z-index:200000;background:rgba(2,6,12,.82);backdrop-filter:blur(9px);display:grid;place-items:center;padding:18px}
+ const VERSION='2026-09-19-v3';
+ const KEY='bm_update_notice_version';
+
+ function installStyle(){
+   if(document.getElementById('bmUpdateNoticeStyleV3'))return;
+   const s=document.createElement('style');s.id='bmUpdateNoticeStyleV3';s.textContent=`
+   .bm-update-back{position:fixed;inset:0;z-index:200000;background:rgba(2,6,12,.84);backdrop-filter:blur(9px);display:grid;place-items:center;padding:18px}
    .bm-update-card{width:min(560px,96vw);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#111922,#0a1016);border:1px solid #ffffff18;border-radius:22px;box-shadow:0 28px 90px #0009;padding:22px;color:#fff}
    .bm-update-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.bm-update-kicker{font-size:9px;font-weight:950;letter-spacing:.13em;color:#57e59c}.bm-update-card h2{margin:6px 0 4px;font-size:25px}.bm-update-card p{margin:0;color:#9da8b4;font-size:12px;line-height:1.5}.bm-update-close{border:0;background:#252d36;color:#fff;border-radius:10px;width:36px;height:36px;font-size:20px;cursor:pointer}
    .bm-update-list{display:grid;gap:8px;margin:17px 0}.bm-update-item{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;padding:11px 12px;border:1px solid #ffffff0f;border-radius:13px;background:#0d151d}.bm-update-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#153323;color:#7aefb0;font-weight:950}.bm-update-item b{display:block;font-size:12px}.bm-update-item span{display:block;margin-top:3px;color:#8895a2;font-size:10px;line-height:1.4}
    .bm-update-ok{width:100%;border:0;border-radius:12px;padding:12px;background:#19b968;color:#fff;font-weight:950;cursor:pointer}.bm-update-foot{margin-top:9px;text-align:center;color:#6f7c88;font-size:9px}
+   #bmNewsBtn{width:auto!important;margin:0 8px 0 0!important;background:#18212b!important;border:1px solid rgba(255,255,255,.09)!important;color:#fff!important}
    `;document.head.appendChild(s);
-   const back=document.createElement('div');back.id='bmUpdateNotice';back.className='bm-update-back';
-   back.innerHTML=`<div class="bm-update-card"><div class="bm-update-top"><div><div class="bm-update-kicker">NOVIDADES DO BORA MICHAEL</div><h2>Painel atualizado</h2><p>Esta máquina está abrindo a nova versão do painel pela primeira vez. Veja rapidamente o que mudou.</p></div><button id="bmUpdateX" class="bm-update-close" type="button">×</button></div><div class="bm-update-list"><div class="bm-update-item"><div class="bm-update-icon">GPS</div><div><b>GPS dos motoboys</b><span>Localização ao vivo, centralização individual e atualização automática a cada 20 segundos.</span></div></div><div class="bm-update-item"><div class="bm-update-icon">MAP</div><div><b>Mapas ativos</b><span>Escolha entre Ruas HD e Satélite. O último mapa utilizado fica salvo nesta máquina.</span></div></div><div class="bm-update-item"><div class="bm-update-icon">R$</div><div><b>Resumo dos motoboys</b><span>Filtros de Hoje, Semana, Mês e Período com nome, comandas e valor total.</span></div></div><div class="bm-update-item"><div class="bm-update-icon">CP</div><div><b>Copiar resumo</b><span>Copie todos os motoboys de uma vez ou copie somente um nome individualmente.</span></div></div><div class="bm-update-item"><div class="bm-update-icon">24h</div><div><b>Turnos oficiais</b><span>Os resumos históricos seguem manhã e noite e não contam comandas de teste fora dos turnos.</span></div></div></div><button id="bmUpdateOk" class="bm-update-ok" type="button">ENTENDI, ABRIR PAINEL</button><div class="bm-update-foot">Este aviso aparece somente uma vez por navegador/máquina.</div></div>`;
-   document.body.appendChild(back);
-   const close=()=>{try{localStorage.setItem(KEY,'1')}catch(_){}back.remove()};
-   document.getElementById('bmUpdateOk').onclick=close;document.getElementById('bmUpdateX').onclick=close;
  }
- let tries=0;const timer=setInterval(()=>{tries++;if(document.querySelector('.admin-main')){clearInterval(timer);setTimeout(install,350)}else if(tries>120)clearInterval(timer)},100);
+
+ function markSeen(){try{localStorage.setItem(KEY,VERSION)}catch(_){}}
+ function seen(){try{return localStorage.getItem(KEY)===VERSION}catch(_){return false}}
+
+ function openNotice(force=false){
+   if(!force&&seen())return;
+   if(document.getElementById('bmUpdateNotice'))return;
+   installStyle();
+   const back=document.createElement('div');back.id='bmUpdateNotice';back.className='bm-update-back';
+   back.innerHTML=`<div class="bm-update-card"><div class="bm-update-top"><div><div class="bm-update-kicker">NOVIDADES DO BORA MICHAEL</div><h2>Painel atualizado</h2><p>Esta é a primeira abertura desta versão neste navegador. Veja rapidamente o que mudou.</p></div><button id="bmUpdateX" class="bm-update-close" type="button">×</button></div><div class="bm-update-list"><div class="bm-update-item"><div class="bm-update-icon">GPS</div><div><b>GPS dos motoboys</b><span>Localização ao vivo, centralização individual e atualização automática a cada 20 segundos.</span></div></div><div class="bm-update-item"><div class="bm-update-icon">MAP</div><div><b>Mapas ativos</b><span>Ruas HD e Satélite disponíveis diretamente no painel.</span></div></div><div class="bm-update-item"><div class="bm-update-icon">R$</div><div><b>Resumo dos motoboys</b><span>Filtros de Hoje, Semana, Mês e Período com nome, comandas e valor total.</span></div></div><div class="bm-update-item"><div class="bm-update-icon">CP</div><div><b>Copiar resumo</b><span>Copie todos os motoboys de uma vez ou somente um motoboy.</span></div></div><div class="bm-update-item"><div class="bm-update-icon">24h</div><div><b>Turnos oficiais</b><span>O histórico considera manhã e noite e ignora comandas de teste fora dos turnos.</span></div></div></div><button id="bmUpdateOk" class="bm-update-ok" type="button">ENTENDI, ABRIR PAINEL</button><div class="bm-update-foot">O aviso automático aparece uma vez por versão neste navegador. O botão Novidades permite abrir novamente.</div></div>`;
+   document.body.appendChild(back);
+   const close=()=>{markSeen();back.remove()};
+   document.getElementById('bmUpdateOk').onclick=close;
+   document.getElementById('bmUpdateX').onclick=close;
+ }
+
+ function installNewsButton(){
+   installStyle();
+   const head=document.querySelector('.admin-head');
+   if(!head||document.getElementById('bmNewsBtn'))return;
+   const btn=document.createElement('button');btn.id='bmNewsBtn';btn.type='button';btn.className='btn secondary small';btn.textContent='Novidades';
+   btn.onclick=()=>openNotice(true);
+   const logout=document.getElementById('logout');
+   if(logout)head.insertBefore(btn,logout);else head.appendChild(btn);
+ }
+
+ function boot(){
+   installNewsButton();
+   openNotice(false);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,300),{once:true});
+ else setTimeout(boot,300);
+ setTimeout(installNewsButton,1200);
+ setTimeout(()=>openNotice(false),1500);
 })();
 
 async function bmRefreshAdminPanel(){
