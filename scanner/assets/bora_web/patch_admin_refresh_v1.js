@@ -174,10 +174,15 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
   return true;
  }
  function redrawShell(){
-  const old=document.getElementById('bmGpsPanel');
-  if(!old){mountShell();return}
-  const wrap=document.createElement('div');wrap.innerHTML=shellHtml();const next=wrap.firstElementChild;
-  old.replaceWith(next);bindUi();ensureMap(true);
+  const panel=document.getElementById('bmGpsPanel');
+  if(!panel){mountShell();return}
+  const wrap=document.createElement('div');wrap.innerHTML=shellHtml();const fresh=wrap.firstElementChild;
+  const list=panel.querySelector('#bmGpsList'),freshList=fresh?.querySelector('#bmGpsList');
+  const online=panel.querySelector('.bm-gps-online'),freshOnline=fresh?.querySelector('.bm-gps-online');
+  if(list&&freshList)list.innerHTML=freshList.innerHTML;
+  if(online&&freshOnline)online.textContent=freshOnline.textContent;
+  const btn=panel.querySelector('#bmGpsRefresh');if(btn){btn.disabled=false;btn.textContent='↻ Atualizar GPS'}
+  bindUi();ensureMap(true);
  }
  function bindUi(){
   const r=document.getElementById('bmGpsRefresh');if(r)r.onclick=()=>loadGps(false);
