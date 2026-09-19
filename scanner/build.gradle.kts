@@ -11,8 +11,8 @@ android {
         applicationId = "com.boramichael.hihi"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28
-        versionName = "2.7.0"
+        versionCode = 33
+        versionName = "2.7.1-GPS"
     }
 
     buildFeatures {
