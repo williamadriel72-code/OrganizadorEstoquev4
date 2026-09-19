@@ -165,12 +165,12 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
  function mountShell(){
   gpsCss();
   if(document.getElementById('bmGpsPanel'))return true;
-  const ov=document.querySelector('.bm-overview');
-  if(!ov)return false;
+  const main=document.querySelector('.admin-main');
+  if(!main)return false;
   const holder=document.createElement('div');holder.innerHTML=shellHtml();
   const node=holder.firstElementChild;
-  const grid=ov.querySelector('.bm-ov-grid');
-  if(grid)ov.insertBefore(node,grid);else ov.appendChild(node);
+  const workspace=main.querySelector('.moto-workspace');
+  if(workspace)main.insertBefore(node,workspace);else main.appendChild(node);
   bindUi();ensureMap();
   return true;
  }
@@ -249,7 +249,7 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
  }
  function schedule(){
   if(timer)clearInterval(timer);
-  timer=setInterval(()=>{if(!document.hidden&&document.querySelector('.bm-overview'))loadGps(true)},REFRESH_MS);
+  timer=setInterval(()=>{if(!document.hidden&&document.querySelector('.admin-main'))loadGps(true)},REFRESH_MS);
  }
  let tries=0;
  const wait=setInterval(()=>{
@@ -258,7 +258,7 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
   clearInterval(wait);
   const prevBind=bindAdmin;
   bindAdmin=function(){prevBind();setTimeout(()=>{if(mountShell()){ensureMap(true);if(!(state.motoboys||[]).length)loadGps(true)}},0)};
-  const obs=new MutationObserver(()=>{if(document.querySelector('.bm-overview'))setTimeout(()=>{if(mountShell())ensureMap(true)},0)});
+  const obs=new MutationObserver(()=>{if(document.querySelector('.admin-main'))setTimeout(()=>{if(mountShell())ensureMap(true)},0)});
   obs.observe(document.documentElement,{childList:true,subtree:true});
   mountShell();loadGps(true);schedule();
  },100);
