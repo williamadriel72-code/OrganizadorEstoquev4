@@ -48,7 +48,7 @@
  const REFRESH=20000;
  const TILE=256;
  let state={motoboys:[],locations:[],loading:false,error:''};
- let view={lat:-22.37,lng:-41.79,zoom:13};
+ let view={lat:-22.37,lng:-41.79,zoom:15};
  let dragging=null,resizeObs=null,lastTileSig='';
 
  function escGps(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -80,7 +80,7 @@
    const lm=byId(),online=(state.motoboys||[]).filter(m=>status(lm.get(String(m.id))).k==='live').length;
    const rows=(state.motoboys||[]).map(m=>{const l=lm.get(String(m.id)),st=status(l),ok=l&&Number.isFinite(Number(l.latitude))&&Number.isFinite(Number(l.longitude));return `
      <div class="g3row"><div><div class="g3name">${escGps(m.nome||'Motoboy')}</div><span class="g3badge ${st.k}">${st.t}</span><div class="g3meta">${escGps(last(l))}<br>${escGps(acc(l))} · ${escGps(speed(l))}</div></div><button class="g3center" data-g3="${escGps(m.id)}" ${ok?'':'disabled'}>Centralizar</button></div>`}).join('');
-   return `<section id="bmGpsPanelV3"><div class="g3h"><div><b>⌖ GPS DOS MOTOBOYS</b><small>LOCALIZAÇÃO EM TEMPO REAL · SEM ROTAS</small></div><div><span id="g3online" style="color:#94a3b8;font-size:11px;margin-right:8px">${online} online · atualiza a cada 20s</span><button id="g3refresh" class="g3btn">↻ Atualizar GPS</button></div></div><div class="g3body"><div class="g3list">${state.error?'<div class="g3err">'+escGps(state.error)+'</div>':(rows||'<div class="g3empty">Nenhum motoboy ativo.</div>')}</div><div class="g3map" id="g3map"><div class="g3canvas" id="g3canvas"></div><div class="g3hint">Arraste para mover o mapa</div><div class="g3zoom"><button id="g3plus">+</button><button id="g3minus">−</button></div><div class="g3attr">© OpenStreetMap</div></div></div></section>`;
+   return `<section id="bmGpsPanelV3"><div class="g3h"><div><b>⌖ GPS DOS MOTOBOYS</b><small>LOCALIZAÇÃO EM TEMPO REAL · SEM ROTAS</small></div><div><span id="g3online" style="color:#94a3b8;font-size:11px;margin-right:8px">${online} online · atualiza a cada 20s</span><button id="g3refresh" class="g3btn">↻ Atualizar GPS</button></div></div><div class="g3body"><div class="g3list">${state.error?'<div class="g3err">'+escGps(state.error)+'</div>':(rows||'<div class="g3empty">Nenhum motoboy ativo.</div>')}</div><div class="g3map" id="g3map"><div class="g3canvas" id="g3canvas"></div><div class="g3hint">Arraste para mover o mapa</div><div class="g3zoom"><button id="g3plus">+</button><button id="g3minus">−</button></div><div class="g3attr">© OpenStreetMap · © CARTO</div></div></div></section>`;
  }
 
  function mount(){
@@ -147,8 +147,9 @@
        for(let tx=minX;tx<=maxX;tx++){
          const wrapped=((tx%maxTile)+maxTile)%maxTile;
          const px=tx*TILE-left,py=ty*TILE-top;
-         const src='https://tile.openstreetmap.org/'+view.zoom+'/'+wrapped+'/'+ty+'.png';
-         tiles+='<img class="g3tile" draggable="false" style="left:'+Math.round(px)+'px;top:'+Math.round(py)+'px" src="'+src+'">';
+         const src='https://a.basemaps.cartocdn.com/rastertiles/voyager/'+view.zoom+'/'+wrapped+'/'+ty+'@2x.png';
+         const fallback='https://tile.openstreetmap.org/'+view.zoom+'/'+wrapped+'/'+ty+'.png';
+         tiles+='<img class="g3tile" draggable="false" style="left:'+Math.round(px)+'px;top:'+Math.round(py)+'px" src="'+src+'" onerror="if(this.dataset.fb!==\'1\'){this.dataset.fb=\'1\';this.src=\''+fallback+'\'}">';
        }
      }
      tileLayer.innerHTML=tiles;
