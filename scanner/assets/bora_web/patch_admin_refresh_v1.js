@@ -38,6 +38,54 @@
   setTimeout(sync,4000);
 })();
 
+/* GUARDA DE SESSÃO ADMIN — renova ou volta ao login */
+(function(){
+ if(new URLSearchParams(location.search).get('app')==='motoboy')return;
+ if(window.__bmAdminSessionGuardV1)return;window.__bmAdminSessionGuardV1=true;
+ let redirecting=false,checking=false;
+
+ async function validSession(){
+   try{
+     const first=(await sb.auth.getSession())?.data?.session||null;
+     if(first?.access_token)return first;
+     const refreshed=await sb.auth.refreshSession();
+     return refreshed?.data?.session||null;
+   }catch(_){return null}
+ }
+
+ async function recover(showLogin=true){
+   if(checking)return null;checking=true;
+   try{
+     const session=await validSession();
+     if(session)return session;
+     if(showLogin&&!redirecting&&typeof adminLoginView==='function'){
+       redirecting=true;
+       try{await sb.auth.signOut({scope:'local'})}catch(_){}
+       adminLoginView();
+       setTimeout(()=>{redirecting=false},700);
+     }
+     return null;
+   }finally{checking=false}
+ }
+
+ window.bmEnsureAdminSession=recover;
+
+ try{
+   sb.auth.onAuthStateChange((event,session)=>{
+     if(event==='SIGNED_OUT'&&!session)recover(true);
+     if(event==='TOKEN_REFRESHED'&&session&&document.querySelector('.login')&&typeof renderAdmin==='function')renderAdmin();
+   });
+ }catch(_){}
+
+ setInterval(()=>{
+   if(document.hidden||document.querySelector('.login'))return;
+   recover(true);
+ },60000);
+
+ window.addEventListener('focus',()=>{if(!document.querySelector('.login'))recover(true)});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!document.querySelector('.login'))recover(true)});
+})();
+
 /* GPS PANEL V4 — estável, somente Ruas HD e Satélite */
 (function(){
  if(new URLSearchParams(location.search).get('app')==='motoboy') return;
@@ -224,9 +272,18 @@
    if(state.loading)return;state.loading=true;
    try{
      if(typeof sb==='undefined')throw new Error('Supabase ainda não carregou.');
-     const sess=(await sb.auth.getSession())?.data?.session;if(!sess?.access_token)throw new Error('Sessão administrativa expirada.');
+     let sess=(await sb.auth.getSession())?.data?.session||null;
+     if(!sess?.access_token&&typeof window.bmEnsureAdminSession==='function')sess=await window.bmEnsureAdminSession(false);
+     if(!sess?.access_token){
+       if(typeof window.bmEnsureAdminSession==='function')setTimeout(()=>window.bmEnsureAdminSession(true),0);
+       throw new Error('Faça login novamente para carregar o GPS.');
+     }
      const r=await fetch(ENDPOINT,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+sess.access_token},body:JSON.stringify({action:'list'})});
-     const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+     const j=await r.json().catch(()=>({}));
+     if(!r.ok){
+       if((r.status===401||r.status===403)&&typeof window.bmEnsureAdminSession==='function')setTimeout(()=>window.bmEnsureAdminSession(true),0);
+       throw new Error(j.error||('HTTP '+r.status));
+     }
      const first=!(state.locations||[]).length;
      state.motoboys=j.motoboys||[];state.locations=j.locations||[];state.error='';
      if(first&&state.locations.length)fitAll();
