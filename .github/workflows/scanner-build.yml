@@ -9,6 +9,10 @@ on:
       - 'build.gradle.kts'
       - '.github/workflows/scanner-build.yml'
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build-scanner:
     runs-on: ubuntu-latest
@@ -99,12 +103,59 @@ jobs:
             ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 scanner/src/main/res/raw/heehee.ogg
           fi
 
-      - name: Build Bora Michael APK
-        run: gradle :scanner:assembleDebug --no-daemon
+      - name: Build Bora Michael release
+        run: gradle :scanner:assembleRelease --no-daemon
+
+      - name: Sign Bora Michael with permanent key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/bora-signing scanner/build/outputs/apk/signed
+
+          OIDC_JSON="$(curl -fsSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=bora-michael-signing-v1")"
+          OIDC_TOKEN="$(printf '%s' "$OIDC_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')"
+
+          KEY_JSON="$(curl -fsSL -X POST             -H "Authorization: Bearer $OIDC_TOKEN"             "https://rlgsbtolosxyymosidns.supabase.co/functions/v1/bora-signing-key")"
+
+          printf '%s' "$KEY_JSON" > /tmp/bora-signing/key.json
+          python3 - <<'PY'
+          import base64, json, pathlib
+          data=json.loads(pathlib.Path('/tmp/bora-signing/key.json').read_text())
+          assert data.get('ok') is True, data.get('error','signing key unavailable')
+          pathlib.Path('/tmp/bora-signing/bora-michael.p12').write_bytes(base64.b64decode(data['keystore_b64']))
+          pathlib.Path('/tmp/bora-signing/storepass').write_text(data['store_password'])
+          pathlib.Path('/tmp/bora-signing/keypass').write_text(data['key_password'])
+          pathlib.Path('/tmp/bora-signing/alias').write_text(data['key_alias'])
+          print('Permanent signing key loaded:', data['cert_sha256'])
+          PY
+
+          STOREPASS="$(cat /tmp/bora-signing/storepass)"
+          KEYPASS="$(cat /tmp/bora-signing/keypass)"
+          ALIAS="$(cat /tmp/bora-signing/alias)"
+          echo "::add-mask::$STOREPASS"
+          echo "::add-mask::$KEYPASS"
+
+          UNSIGNED="scanner/build/outputs/apk/release/scanner-release-unsigned.apk"
+          if [ ! -f "$UNSIGNED" ]; then
+            UNSIGNED="$(find scanner/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)"
+          fi
+          test -n "$UNSIGNED"
+          test -f "$UNSIGNED"
+
+          ZIPALIGN="$ANDROID_HOME/build-tools/36.0.0/zipalign"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          ALIGNED="/tmp/bora-signing/bora-aligned.apk"
+          SIGNED="scanner/build/outputs/apk/signed/Bora-Michael-Hi-Hi-v2.8.0.apk"
+
+          "$ZIPALIGN" -f 4 "$UNSIGNED" "$ALIGNED"
+          "$APKSIGNER" sign             --ks /tmp/bora-signing/bora-michael.p12             --ks-type PKCS12             --ks-key-alias "$ALIAS"             --ks-pass "pass:$STOREPASS"             --key-pass "pass:$KEYPASS"             --v1-signing-enabled true             --v2-signing-enabled true             --v3-signing-enabled true             --out "$SIGNED"             "$ALIGNED"
+
+          "$APKSIGNER" verify --verbose --print-certs "$SIGNED"
+          rm -rf /tmp/bora-signing
 
       - name: Upload Bora Michael APK
         uses: actions/upload-artifact@v4
         with:
-          name: Bora-Michael-Hi-Hi-v2.8.0
-          path: scanner/build/outputs/apk/debug/scanner-debug.apk
+          name: Bora-Michael-Hi-Hi-v2.8.0-PERMANENTE
+          path: scanner/build/outputs/apk/signed/Bora-Michael-Hi-Hi-v2.8.0.apk
           if-no-files-found: error
