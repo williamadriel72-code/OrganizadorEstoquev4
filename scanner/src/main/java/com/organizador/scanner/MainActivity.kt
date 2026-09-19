@@ -256,12 +256,27 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadLatestOnline() {
-        fallbackLoaded = false
+        fallbackLoaded = true
         pageReady = false
         if (::sticker.isInitialized) sticker.visibility = View.GONE
-        val openFolgas = if (intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) "&open=folgas" else ""
-        val url = "$APP_URL&shell=stock$openFolgas&v=${System.currentTimeMillis()}"
-        webView.loadUrl(url)
+        runOnUiThread {
+            try {
+                val html = assets.open("bora_fallback.html").bufferedReader().use { it.readText() }
+                val openFolgas = if (intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) "&open=folgas" else ""
+                webView.loadDataWithBaseURL(
+                    "https://bora-michael-hi-hi.vercel.app/?app=motoboy&shell=stock$openFolgas&local=1",
+                    html,
+                    "text/html",
+                    "UTF-8",
+                    null
+                )
+            } catch (_: Exception) {
+                fallbackLoaded = false
+                val openFolgas = if (intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) "&open=folgas" else ""
+                val url = "$APP_URL&shell=stock$openFolgas&v=${System.currentTimeMillis()}"
+                webView.loadUrl(url)
+            }
+        }
     }
 
     private fun navigateToFolgas() {
