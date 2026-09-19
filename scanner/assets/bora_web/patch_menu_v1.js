@@ -1,3 +1,16 @@
+
+/* Restaura o módulo Folgas no APK mesmo quando o loader público ainda usa a lista antiga. */
+(function bmLoadFolgasModule(){
+ if(new URLSearchParams(location.search).get('app')!=='motoboy')return;
+ if(window.__bmFolgasLoaderV1)return;
+ window.__bmFolgasLoaderV1=true;
+ const src='https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/patch_folgas_v1.js?v='+Date.now();
+ fetch(src,{cache:'no-store'})
+  .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
+  .then(code=>(0,eval)(code))
+  .catch(e=>console.warn('folgas-module',e?.message||e));
+})();
+
 function bmInstallMainMenuButton(){
  const head=document.querySelector('.admin-head');
  if(!head||document.getElementById('bmMainMenu'))return;
