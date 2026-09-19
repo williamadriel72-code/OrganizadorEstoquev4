@@ -14,6 +14,8 @@ import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -33,6 +35,7 @@ import androidx.activity.ComponentActivity
 
 private const val APP_URL = "https://bora-michael-hi-hi.vercel.app/?app=motoboy"
 private const val CHANNEL_ID = "bora_michael_updates_v25"
+private const val LOCATION_PERMISSION_REQUEST = 2603
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
@@ -42,6 +45,13 @@ class MainActivity : ComponentActivity() {
     private var lastNotifyAt = 0L
     private var fallbackLoaded = false
     private var pageReady = false
+    private val gpsSyncHandler = Handler(Looper.getMainLooper())
+    private val gpsSyncRunnable = object : Runnable {
+        override fun run() {
+            syncGpsSessionFromWeb()
+            gpsSyncHandler.postDelayed(this, 30_000L)
+        }
+    }
 
     inner class BoraBridge {
         @JavascriptInterface
@@ -49,6 +59,7 @@ class MainActivity : ComponentActivity() {
             pageReady = true
             runOnUiThread {
                 if (::sticker.isInitialized) sticker.visibility = View.VISIBLE
+                gpsSyncHandler.postDelayed({ syncGpsSessionFromWeb() }, 1_000L)
             }
         }
 
@@ -60,6 +71,28 @@ class MainActivity : ComponentActivity() {
             runOnUiThread {
                 if (foreground) playHeeHee() else showUpdateNotification()
             }
+        }
+
+        @JavascriptInterface
+        fun setRiderGpsSession(accessToken: String?, riderId: String?, riderName: String?) {
+            val token = accessToken?.trim().orEmpty()
+            val id = riderId?.trim().orEmpty()
+            if (token.isBlank() || id.isBlank()) return
+            RiderGpsManager.bindWebSession(
+                applicationContext,
+                token,
+                id,
+                riderName?.trim().orEmpty()
+            )
+            runOnUiThread {
+                ensureLocationPermission()
+                RiderGpsManager.startIfReady(applicationContext)
+            }
+        }
+
+        @JavascriptInterface
+        fun clearRiderGpsSession() {
+            RiderGpsManager.clearForLogout(applicationContext)
         }
     }
 
@@ -227,6 +260,57 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun ensureLocationPermission() {
+        if (RiderGpsManager.hasLocationPermission(this)) {
+            RiderGpsManager.startIfReady(applicationContext)
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                LOCATION_PERMISSION_REQUEST
+            )
+        }
+    }
+
+    private fun syncGpsSessionFromWeb() {
+        if (!::webView.isInitialized || !pageReady) return
+        val js = """
+            (async()=>{
+              try{
+                if(typeof sb==='undefined' || !sb?.auth) return;
+                const session=(await sb.auth.getSession())?.data?.session||null;
+                const profile=(typeof rider!=='undefined' && rider && rider.profile)?rider.profile:null;
+                if(session?.access_token && profile?.id){
+                  window.AndroidBora?.setRiderGpsSession?.(
+                    String(session.access_token),
+                    String(profile.id),
+                    String(profile.nome||'')
+                  );
+                }else if(session===null){
+                  window.AndroidBora?.clearRiderGpsSession?.();
+                }
+              }catch(e){}
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(js, null)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == LOCATION_PERMISSION_REQUEST && RiderGpsManager.hasLocationPermission(this)) {
+            RiderGpsManager.startIfReady(applicationContext)
+            gpsSyncHandler.postDelayed({ syncGpsSessionFromWeb() }, 500L)
+        }
+    }
+
     private fun createHeeHeePlayer(): MediaPlayer? = try {
         MediaPlayer.create(this, R.raw.heehee)?.apply {
             setVolume(1f, 1f)
@@ -323,6 +407,9 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         foreground = true
+        RiderGpsManager.startIfReady(applicationContext)
+        gpsSyncHandler.removeCallbacks(gpsSyncRunnable)
+        gpsSyncHandler.postDelayed(gpsSyncRunnable, 1_500L)
     }
 
     override fun onResume() {
@@ -345,6 +432,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         foreground = false
+        gpsSyncHandler.removeCallbacks(gpsSyncRunnable)
         super.onStop()
     }
 
@@ -354,6 +442,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        gpsSyncHandler.removeCallbacksAndMessages(null)
         try {
             heeHeePlayer?.release()
         } catch (_: Exception) {
