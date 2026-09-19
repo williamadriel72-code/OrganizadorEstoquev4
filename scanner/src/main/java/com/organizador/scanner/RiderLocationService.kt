@@ -40,6 +40,25 @@ object RiderGpsManager {
             context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     }
 
+    fun isUserEnabled(context: Context): Boolean {
+        return context.applicationContext
+            .getSharedPreferences(GPS_PREFS, Context.MODE_PRIVATE)
+            .getBoolean("user_enabled", true)
+    }
+
+    fun setUserEnabled(context: Context, enabled: Boolean) {
+        val app = context.applicationContext
+        app.getSharedPreferences(GPS_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("user_enabled", enabled)
+            .apply()
+        if (enabled) {
+            startIfReady(app)
+        } else {
+            stop(app, clearSession = false)
+        }
+    }
+
     fun bindWebSession(
         context: Context,
         accessToken: String,
@@ -93,6 +112,7 @@ object RiderGpsManager {
 
     fun startIfReady(context: Context) {
         val app = context.applicationContext
+        if (!isUserEnabled(app)) return
         if (!hasLocationPermission(app)) return
         val prefs = app.getSharedPreferences(GPS_PREFS, Context.MODE_PRIVATE)
         val token = prefs.getString("gps_token", "") ?: ""
@@ -182,7 +202,7 @@ class RiderLocationService : Service(), LocationListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (!RiderGpsManager.hasLocationPermission(this)) {
+        if (!RiderGpsManager.isUserEnabled(this) || !RiderGpsManager.hasLocationPermission(this)) {
             stopSelf()
             return START_NOT_STICKY
         }
