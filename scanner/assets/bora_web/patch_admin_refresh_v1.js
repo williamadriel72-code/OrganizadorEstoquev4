@@ -49,7 +49,7 @@
  const TILE=256;
  let state={motoboys:[],locations:[],loading:false,error:''};
  let view={lat:-22.37,lng:-41.79,zoom:13};
- let dragging=null,resizeObs=null;
+ let dragging=null,resizeObs=null,lastTileSig='';
 
  function escGps(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  function age(v){const n=new Date(v||0).getTime();return Number.isFinite(n)?Date.now()-n:Infinity}
@@ -87,14 +87,18 @@
    css();
    const main=document.querySelector('.admin-main');
    if(!main)return false;
+   let created=false;
    if(!document.getElementById('bmGpsPanelV3')){
      document.getElementById('bmGpsPanelV2')?.remove();
      document.getElementById('bmGpsPanel')?.remove();
      const d=document.createElement('div');d.innerHTML=html();const node=d.firstElementChild;
      const ws=main.querySelector('.moto-workspace');
      if(ws)main.insertBefore(node,ws);else main.appendChild(node);
+     created=true;
    }
-   bind();renderMap();return true;
+   bind();
+   if(created)requestAnimationFrame(()=>renderMap(true));
+   return true;
  }
 
  function repaint(){
@@ -123,36 +127,44 @@
    return {lat,lng};
  }
 
- function renderMap(){
+ function renderMap(forceTiles=false){
    const el=document.getElementById('g3map'),canvas=document.getElementById('g3canvas');
    if(!el||!canvas)return;
    const w=Math.max(320,el.clientWidth||600),h=Math.max(300,el.clientHeight||365);
-   const c=worldPx(view.lat,view.lng,view.zoom),left=c.x-w/2,top=c.y-h/2;
+   const center=worldPx(view.lat,view.lng,view.zoom),left=center.x-w/2,top=center.y-h/2;
    const minX=Math.floor(left/TILE)-1,maxX=Math.floor((left+w)/TILE)+1,minY=Math.floor(top/TILE)-1,maxY=Math.floor((top+h)/TILE)+1;
    const maxTile=Math.pow(2,view.zoom);
-   let html='';
-   for(let ty=minY;ty<=maxY;ty++){
-     if(ty<0||ty>=maxTile)continue;
-     for(let tx=minX;tx<=maxX;tx++){
-       const wrapped=((tx%maxTile)+maxTile)%maxTile;
-       const px=tx*TILE-left,py=ty*TILE-top;
-       const src='https://tile.openstreetmap.org/'+view.zoom+'/'+wrapped+'/'+ty+'.png';
-       const fb='https://a.basemaps.cartocdn.com/light_all/'+view.zoom+'/'+wrapped+'/'+ty+'.png';
-       html+='<img class="g3tile" draggable="false" style="left:'+Math.round(px)+'px;top:'+Math.round(py)+'px" src="'+src+'" onerror="if(this.dataset.fallback!==\'1\'){this.dataset.fallback=\'1\';this.src=\''+fb+'\'}">';
+   const tileSig=[view.zoom,Math.round(left),Math.round(top),Math.round(w),Math.round(h)].join('|');
+   let tileLayer=canvas.querySelector('.g3tiles');
+   let markerLayer=canvas.querySelector('.g3markers');
+   if(!tileLayer){tileLayer=document.createElement('div');tileLayer.className='g3tiles';tileLayer.style.cssText='position:absolute;inset:0;overflow:hidden';canvas.appendChild(tileLayer)}
+   if(!markerLayer){markerLayer=document.createElement('div');markerLayer.className='g3markers';markerLayer.style.cssText='position:absolute;inset:0;pointer-events:none';canvas.appendChild(markerLayer)}
+   if(forceTiles||tileSig!==lastTileSig){
+     lastTileSig=tileSig;
+     let tiles='';
+     for(let ty=minY;ty<=maxY;ty++){
+       if(ty<0||ty>=maxTile)continue;
+       for(let tx=minX;tx<=maxX;tx++){
+         const wrapped=((tx%maxTile)+maxTile)%maxTile;
+         const px=tx*TILE-left,py=ty*TILE-top;
+         const src='https://tile.openstreetmap.org/'+view.zoom+'/'+wrapped+'/'+ty+'.png';
+         tiles+='<img class="g3tile" draggable="false" style="left:'+Math.round(px)+'px;top:'+Math.round(py)+'px" src="'+src+'">';
+       }
      }
+     tileLayer.innerHTML=tiles;
    }
    const lm=byId();
+   let markers='';
    (state.motoboys||[]).forEach(m=>{
      const l=lm.get(String(m.id)),lat=Number(l?.latitude),lng=Number(l?.longitude);
      if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
      const p=worldPx(lat,lng,view.zoom),x=p.x-left,y=p.y-top;
      if(x<-40||x>w+40||y<-40||y>h+40)return;
      const st=status(l);
-     html+='<div class="g3marker '+st.k+'" style="left:'+Math.round(x)+'px;top:'+Math.round(y)+'px"><div class="g3label">'+escGps(m.nome||'Motoboy')+'</div><div class="g3dot"></div></div>';
+     markers+='<div class="g3marker '+st.k+'" style="left:'+Math.round(x)+'px;top:'+Math.round(y)+'px"><div class="g3label">'+escGps(m.nome||'Motoboy')+'</div><div class="g3dot"></div></div>';
    });
-   canvas.innerHTML=html;
+   markerLayer.innerHTML=markers;
  }
-
  function fitAll(){
    const lm=byId(),pts=[];
    (state.motoboys||[]).forEach(m=>{const l=lm.get(String(m.id)),lat=Number(l?.latitude),lng=Number(l?.longitude);if(Number.isFinite(lat)&&Number.isFinite(lng))pts.push({lat,lng})});
@@ -179,7 +191,7 @@
      el.addEventListener('pointermove',e=>{if(!dragging)return;const dx=e.clientX-dragging.x,dy=e.clientY-dragging.y;const ll=latLngFromWorld(dragging.cx-dx,dragging.cy-dy,view.zoom);view.lat=ll.lat;view.lng=ll.lng;renderMap()});
      const end=()=>{dragging=null};el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
    }
-   if(el&&!resizeObs&&window.ResizeObserver){resizeObs=new ResizeObserver(()=>renderMap());resizeObs.observe(el)}
+   if(el&&!resizeObs&&window.ResizeObserver){resizeObs=new ResizeObserver(()=>renderMap(true));resizeObs.observe(el)}
  }
 
  function center(id){
