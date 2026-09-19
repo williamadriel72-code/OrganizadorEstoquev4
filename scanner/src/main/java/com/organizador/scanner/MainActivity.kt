@@ -59,6 +59,7 @@ class MainActivity : ComponentActivity() {
             pageReady = true
             runOnUiThread {
                 if (::sticker.isInitialized) sticker.visibility = View.VISIBLE
+                injectGpsPanel()
                 gpsSyncHandler.postDelayed({ syncGpsSessionFromWeb() }, 1_000L)
             }
         }
@@ -257,6 +258,16 @@ class MainActivity : ComponentActivity() {
                     "UTF-8"
                 )
             }
+        }
+    }
+
+    private fun injectGpsPanel() {
+        if (!::webView.isInitialized) return
+        try {
+            val script = assets.open("gps_panel.js").bufferedReader().use { it.readText() }
+            webView.evaluateJavascript(script, null)
+        } catch (_: Exception) {
+            // O Bora Michael original continua funcionando mesmo se o add-on do GPS falhar.
         }
     }
 
