@@ -49,9 +49,9 @@
  const TILE=256;
  let state={motoboys:[],locations:[],loading:false,error:''};
  let view={lat:-22.37,lng:-41.79,zoom:16};
- let dragging=null,resizeObs=null,lastTileSig='';
+ let dragging=null,resizeObs=null,lastTileSig='',modernMap=null,modernLib=null,modernMarkers=[],modernLoading=null;
  let savedMapMode='';try{savedMapMode=localStorage.getItem('bm_gps_map_mode')||''}catch(_){savedMapMode=''}
- let mapMode=savedMapMode==='sat'?'sat':'street';
+ let mapMode=['modern','street','sat'].includes(savedMapMode)?savedMapMode:'modern';
 
  function escGps(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  function age(v){const n=new Date(v||0).getTime();return Number.isFinite(n)?Date.now()-n:Infinity}
@@ -73,7 +73,7 @@
    #bmGpsPanelV3{margin:0 0 14px;border:1px solid #ffffff16;border-radius:18px;overflow:hidden;background:linear-gradient(145deg,#10171f,#0a1016);box-shadow:0 18px 55px #0003}
    .g3h{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid #ffffff10}.g3h b{font-size:17px}.g3h small{display:block;color:#8e9aa6;margin-top:2px}.g3btn{border:1px solid #ffffff16;background:#252b32;color:#fff;border-radius:10px;padding:8px 11px;font-weight:800;cursor:pointer}
    .g3mapbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid #ffffff0d;background:#0b1117}.g3mapbar>span{font-size:9px;font-weight:950;letter-spacing:.1em;color:#7f8c99;margin-right:2px}.g3mode{border:1px solid #ffffff18;background:#17202a;color:#aeb9c4;border-radius:9px;padding:7px 10px;font-size:9px;font-weight:950;cursor:pointer}.g3mode.active{border-color:#39d98a66;background:#153323;color:#7aefb0;box-shadow:inset 0 0 0 1px #39d98a16}.g3mode-status{margin-left:auto;color:#8f9ca9;font-size:9px;white-space:nowrap}.g3mode-status b{color:#fff}.g3mode-status:before{content:'●';color:#2bd180;margin-right:5px;filter:drop-shadow(0 0 4px #2bd180)}
-   .g3body{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:365px}.g3list{padding:10px;border-right:1px solid #ffffff10;max-height:430px;overflow:auto;background:#0c1218}.g3map{position:relative;min-height:365px;background:#d8dee2;overflow:hidden;touch-action:none;user-select:none}.g3canvas{position:absolute;inset:0;overflow:hidden;background:#d8dee2}.g3tile{position:absolute;width:256px!important;height:256px!important;max-width:none!important;max-height:none!important;object-fit:cover;user-select:none;pointer-events:none}.g3marker{position:absolute;z-index:30;transform:translate(-50%,-50%);pointer-events:none}.g3dot{width:15px;height:15px;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px #0009}.g3marker.live .g3dot{background:#19c875}.g3marker.stale .g3dot{background:#f59e0b}.g3marker.none .g3dot{background:#64748b}.g3label{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);white-space:nowrap;padding:4px 7px;border-radius:7px;background:#111c;color:#fff;font-size:10px;font-weight:900;box-shadow:0 2px 8px #0008}.g3zoom{position:absolute;z-index:50;right:10px;top:10px;display:grid;gap:5px}.g3zoom button{width:34px;height:34px;border:1px solid #0002;border-radius:8px;background:#fff;color:#111;font-size:20px;font-weight:900;box-shadow:0 2px 8px #0003}.g3attr{position:absolute;z-index:40;right:4px;bottom:3px;padding:2px 5px;border-radius:4px;background:#fffd;color:#333;font-size:9px}.g3hint{position:absolute;z-index:35;left:10px;top:10px;padding:5px 8px;border-radius:8px;background:#0b1220cc;color:#dbe4ee;font-size:9px}
+   .g3body{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:365px}.g3list{padding:10px;border-right:1px solid #ffffff10;max-height:430px;overflow:auto;background:#0c1218}.g3map{position:relative;min-height:365px;background:#d8dee2;overflow:hidden;touch-action:none;user-select:none}.g3canvas{position:absolute;inset:0;overflow:hidden;background:#d8dee2}.g3modern{position:absolute;inset:0;z-index:5}.g3modern.hidden{display:none}.g3modern-marker{display:flex;align-items:center;gap:6px;transform:translateY(-8px)}.g3modern-dot{width:15px;height:15px;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 10px #0008}.g3modern-dot.live{background:#19c875}.g3modern-dot.stale{background:#f59e0b}.g3modern-dot.none{background:#64748b}.g3modern-name{padding:4px 7px;border-radius:7px;background:#111d;color:#fff;font-size:10px;font-weight:900;box-shadow:0 2px 8px #0007;white-space:nowrap}.g3tilt{position:absolute;z-index:55;right:10px;bottom:12px;border:1px solid #ffffff55;background:#101820e8;color:#fff;border-radius:9px;padding:7px 9px;font-size:9px;font-weight:900;cursor:pointer}.g3tile{position:absolute;width:256px!important;height:256px!important;max-width:none!important;max-height:none!important;object-fit:cover;user-select:none;pointer-events:none}.g3marker{position:absolute;z-index:30;transform:translate(-50%,-50%);pointer-events:none}.g3dot{width:15px;height:15px;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px #0009}.g3marker.live .g3dot{background:#19c875}.g3marker.stale .g3dot{background:#f59e0b}.g3marker.none .g3dot{background:#64748b}.g3label{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);white-space:nowrap;padding:4px 7px;border-radius:7px;background:#111c;color:#fff;font-size:10px;font-weight:900;box-shadow:0 2px 8px #0008}.g3zoom{position:absolute;z-index:50;right:10px;top:10px;display:grid;gap:5px}.g3zoom button{width:34px;height:34px;border:1px solid #0002;border-radius:8px;background:#fff;color:#111;font-size:20px;font-weight:900;box-shadow:0 2px 8px #0003}.g3attr{position:absolute;z-index:40;right:4px;bottom:3px;padding:2px 5px;border-radius:4px;background:#fffd;color:#333;font-size:9px}.g3hint{position:absolute;z-index:35;left:10px;top:10px;padding:5px 8px;border-radius:8px;background:#0b1220cc;color:#dbe4ee;font-size:9px}
    .g3row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px;margin-bottom:8px;border:1px solid #ffffff0d;border-radius:12px;background:#121a22}.g3name{font-weight:900}.g3meta{margin-top:4px;color:#8f9ca9;font-size:10px;line-height:1.45}.g3badge{display:inline-flex;margin-top:6px;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:950}.g3badge.live{background:#143924;color:#6ee7a7}.g3badge.stale{background:#3a2a11;color:#f8c866}.g3badge.none{background:#242a31;color:#9ca7b2}.g3center{align-self:center;border:1px solid #ffffff16;background:#2a3037;color:#fff;border-radius:9px;padding:7px 9px;font-size:10px;font-weight:800}.g3center:disabled{opacity:.35}.g3err{padding:14px;color:#fca5a5;font-size:11px}.g3empty{padding:24px;text-align:center;color:#7f8b96;font-size:11px}
    @media(max-width:900px){.g3h{align-items:flex-start}.g3h>div:last-child{display:flex;align-items:flex-end;flex-direction:column;gap:6px}.g3mapbar{position:sticky;top:0;z-index:60}.g3mode-status{width:100%;margin-left:0}.g3body{grid-template-columns:1fr}.g3list{border-right:0;border-bottom:1px solid #ffffff10;max-height:250px}.g3map{min-height:340px}}
    `;document.head.appendChild(s);
@@ -83,7 +83,7 @@
    const lm=byId(),online=(state.motoboys||[]).filter(m=>status(lm.get(String(m.id))).k==='live').length;
    const rows=(state.motoboys||[]).map(m=>{const l=lm.get(String(m.id)),st=status(l),ok=l&&Number.isFinite(Number(l.latitude))&&Number.isFinite(Number(l.longitude));return `
      <div class="g3row"><div><div class="g3name">${escGps(m.nome||'Motoboy')}</div><span class="g3badge ${st.k}">${st.t}</span><div class="g3meta">${escGps(last(l))}<br>${escGps(acc(l))} · ${escGps(speed(l))}</div></div><button class="g3center" data-g3="${escGps(m.id)}" ${ok?'':'disabled'}>Centralizar</button></div>`}).join('');
-   return `<section id="bmGpsPanelV3"><div class="g3h"><div><b>⌖ GPS DOS MOTOBOYS</b><small>LOCALIZAÇÃO EM TEMPO REAL · SEM ROTAS</small></div><div><span id="g3online" style="color:#94a3b8;font-size:11px;margin-right:8px">${online} online · atualiza a cada 20s</span><button id="g3refresh" class="g3btn">↻ Atualizar GPS</button></div></div><div class="g3mapbar"><span>MAPAS ATIVOS</span><button id="g3street" class="g3mode ${mapMode==='street'?'active':''}">Ruas HD</button><button id="g3sat" class="g3mode ${mapMode==='sat'?'active':''}">Satélite</button><div id="g3activeMap" class="g3mode-status">Ativo: <b>${mapMode==='sat'?'Satélite':'Ruas HD'}</b></div></div><div class="g3body"><div class="g3list">${state.error?'<div class="g3err">'+escGps(state.error)+'</div>':(rows||'<div class="g3empty">Nenhum motoboy ativo.</div>')}</div><div class="g3map" id="g3map"><div class="g3canvas" id="g3canvas"></div><div class="g3hint">Arraste para mover o mapa</div><div class="g3zoom"><button id="g3plus">+</button><button id="g3minus">−</button></div><div class="g3attr">© Esri · HERE · Garmin · OpenStreetMap contributors</div></div></div></section>`;
+   return `<section id="bmGpsPanelV3"><div class="g3h"><div><b>⌖ GPS DOS MOTOBOYS</b><small>LOCALIZAÇÃO EM TEMPO REAL · MAPA VETORIAL 3D</small></div><div><span id="g3online" style="color:#94a3b8;font-size:11px;margin-right:8px">${online} online · atualiza a cada 20s</span><button id="g3refresh" class="g3btn">↻ Atualizar GPS</button></div></div><div class="g3mapbar"><span>MAPAS ATIVOS</span><button id="g3modernBtn" class="g3mode ${mapMode==='modern'?'active':''}">3D Moderno</button><button id="g3street" class="g3mode ${mapMode==='street'?'active':''}">Ruas HD</button><button id="g3sat" class="g3mode ${mapMode==='sat'?'active':''}">Satélite</button><div id="g3activeMap" class="g3mode-status">Ativo: <b>${mapMode==='modern'?'3D Moderno':mapMode==='sat'?'Satélite':'Ruas HD'}</b></div></div><div class="g3body"><div class="g3list">${state.error?'<div class="g3err">'+escGps(state.error)+'</div>':(rows||'<div class="g3empty">Nenhum motoboy ativo.</div>')}</div><div class="g3map" id="g3map"><div class="g3canvas" id="g3canvas"></div><div class="g3modern ${mapMode==='modern'?'':'hidden'}" id="g3modern"></div><div class="g3hint" id="g3hint">${mapMode==='modern'?'Arraste · incline · gire o mapa':'Arraste para mover o mapa'}</div><div class="g3zoom"><button id="g3plus">+</button><button id="g3minus">−</button></div><button id="g3tilt" class="g3tilt" type="button">3D</button><div class="g3attr" id="g3attr">${mapMode==='modern'?'© OpenFreeMap · OpenStreetMap · MapLibre':'© Esri · HERE · Garmin · OpenStreetMap contributors'}</div></div></div></section>`;
  }
 
  function mount(){
@@ -130,9 +130,91 @@
    return {lat,lng};
  }
 
+ async function loadModernLib(){
+   if(modernLib)return modernLib;
+   if(modernLoading)return modernLoading;
+   modernLoading=(async()=>{
+     if(!document.querySelector('link[data-bm-maplibre]')){
+       const l=document.createElement('link');l.rel='stylesheet';l.dataset.bmMaplibre='1';l.href='https://unpkg.com/maplibre-gl@^6.10.0/dist/maplibre-gl.css';document.head.appendChild(l);
+     }
+     const mod=await import('https://unpkg.com/maplibre-gl@^6.10.0/dist/maplibre-gl.mjs');
+     modernLib=mod;return mod;
+   })();
+   try{return await modernLoading}finally{modernLoading=null}
+ }
+ function clearModernMarkers(){modernMarkers.forEach(m=>{try{m.remove()}catch(_){}});modernMarkers=[]}
+ function addModernBuildings(){
+   if(!modernMap||!modernMap.isStyleLoaded?.())return;
+   if(modernMap.getLayer('bm-3d-buildings'))return;
+   const layers=modernMap.getStyle()?.layers||[];
+   const ref=layers.find(l=>l?.['source-layer']==='building'&&l?.source&&l.type==='fill')||layers.find(l=>String(l?.id||'').toLowerCase().includes('building')&&l?.source&&l?.['source-layer']);
+   if(!ref)return;
+   try{
+     modernMap.addLayer({
+       id:'bm-3d-buildings',type:'fill-extrusion',source:ref.source,'source-layer':ref['source-layer'],minzoom:14,
+       filter:ref.filter||undefined,
+       paint:{
+         'fill-extrusion-color':['interpolate',['linear'],['zoom'],14,'#cfd6df',17,'#f2f5f8'],
+         'fill-extrusion-height':['coalesce',['to-number',['get','render_height']],['to-number',['get','height']],['*',['coalesce',['to-number',['get','building:levels']],3],3],8],
+         'fill-extrusion-base':['coalesce',['to-number',['get','render_min_height']],['to-number',['get','min_height']],0],
+         'fill-extrusion-opacity':0.78
+       }
+     });
+   }catch(e){console.warn('bm-3d-buildings',e?.message||e)}
+ }
+ function syncModernMarkers(){
+   if(!modernMap||!modernLib)return;
+   clearModernMarkers();
+   const lm=byId();
+   (state.motoboys||[]).forEach(m=>{
+     const l=lm.get(String(m.id)),lat=Number(l?.latitude),lng=Number(l?.longitude);
+     if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+     const st=status(l),el=document.createElement('div');el.className='g3modern-marker';
+     el.innerHTML='<div class="g3modern-dot '+st.k+'"></div><div class="g3modern-name">'+escGps(m.nome||'Motoboy')+'</div>';
+     try{modernMarkers.push(new modernLib.Marker({element:el,anchor:'bottom'}).setLngLat([lng,lat]).addTo(modernMap))}catch(_){}
+   });
+ }
+ async function ensureModernMap(){
+   if(mapMode!=='modern')return;
+   const host=document.getElementById('g3modern');if(!host)return;
+   host.classList.remove('hidden');
+   try{
+     const ml=await loadModernLib();
+     if(mapMode!=='modern')return;
+     if(!modernMap){
+       modernMap=new ml.Map({
+         container:host,
+         style:'https://tiles.openfreemap.org/styles/liberty',
+         center:[view.lng,view.lat],zoom:view.zoom,pitch:55,bearing:-18,
+         attributionControl:false,maxPitch:75
+       });
+       modernMap.addControl(new ml.NavigationControl({visualizePitch:true}),'top-right');
+       modernMap.on('load',()=>{addModernBuildings();syncModernMarkers()});
+       modernMap.on('styledata',()=>addModernBuildings());
+       modernMap.on('moveend',()=>{const cc=modernMap.getCenter();view.lng=cc.lng;view.lat=cc.lat;view.zoom=modernMap.getZoom()});
+     }else{
+       modernMap.resize();syncModernMarkers();
+     }
+   }catch(e){
+     console.warn('bm-modern-map',e?.message||e);
+     const h=document.getElementById('g3hint');if(h)h.textContent='Mapa 3D indisponível · use Ruas HD ou Satélite';
+   }
+ }
+ function setModernVisibility(){
+   const modern=document.getElementById('g3modern'),canvas=document.getElementById('g3canvas');
+   const hint=document.getElementById('g3hint'),attr=document.getElementById('g3attr'),tilt=document.getElementById('g3tilt');
+   if(modern)modern.classList.toggle('hidden',mapMode!=='modern');
+   if(canvas)canvas.style.display=mapMode==='modern'?'none':'block';
+   if(hint)hint.textContent=mapMode==='modern'?'Arraste · incline · gire o mapa':'Arraste para mover o mapa';
+   if(attr)attr.textContent=mapMode==='modern'?'© OpenFreeMap · OpenStreetMap · MapLibre':'© Esri · HERE · Garmin · OpenStreetMap contributors';
+   if(tilt)tilt.style.display=mapMode==='modern'?'block':'none';
+   if(mapMode==='modern')void ensureModernMap();
+ }
  function renderMap(forceTiles=false){
    const el=document.getElementById('g3map'),canvas=document.getElementById('g3canvas');
    if(!el||!canvas)return;
+   setModernVisibility();
+   if(mapMode==='modern'){if(modernMap){modernMap.resize();syncModernMarkers()}return;}
    const w=Math.max(320,el.clientWidth||600),h=Math.max(300,el.clientHeight||365);
    const center=worldPx(view.lat,view.lng,view.zoom),left=center.x-w/2,top=center.y-h/2;
    const minX=Math.floor(left/TILE)-1,maxX=Math.floor((left+w)/TILE)+1,minY=Math.floor(top/TILE)-1,maxY=Math.floor((top+h)/TILE)+1;
@@ -190,33 +272,36 @@
    const r=document.getElementById('g3refresh');if(r)r.onclick=()=>load(false);
    document.querySelectorAll('[data-g3]').forEach(b=>b.onclick=()=>center(b.dataset.g3));
    const plus=document.getElementById('g3plus'),minus=document.getElementById('g3minus');
-   if(plus)plus.onclick=e=>{e.stopPropagation();view.zoom=Math.min(19,view.zoom+1);renderMap(true)};
-   if(minus)minus.onclick=e=>{e.stopPropagation();view.zoom=Math.max(5,view.zoom-1);renderMap(true)};
-   const streetBtn=document.getElementById('g3street'),satBtn=document.getElementById('g3sat'),activeMap=document.getElementById('g3activeMap');
+   if(plus)plus.onclick=e=>{e.stopPropagation();if(mapMode==='modern'&&modernMap){modernMap.zoomIn();return}view.zoom=Math.min(19,view.zoom+1);renderMap(true)};
+   if(minus)minus.onclick=e=>{e.stopPropagation();if(mapMode==='modern'&&modernMap){modernMap.zoomOut();return}view.zoom=Math.max(5,view.zoom-1);renderMap(true)};
+   const modernBtn=document.getElementById('g3modernBtn'),streetBtn=document.getElementById('g3street'),satBtn=document.getElementById('g3sat'),activeMap=document.getElementById('g3activeMap');
    const setMode=mode=>{
-     mapMode=mode==='sat'?'sat':'street';lastTileSig='';
+     mapMode=['modern','sat'].includes(mode)?mode:'street';lastTileSig='';
      try{localStorage.setItem('bm_gps_map_mode',mapMode)}catch(_){}
+     modernBtn?.classList.toggle('active',mapMode==='modern');
      streetBtn?.classList.toggle('active',mapMode==='street');
      satBtn?.classList.toggle('active',mapMode==='sat');
-     if(activeMap)activeMap.innerHTML='Ativo: <b>'+(mapMode==='sat'?'Satélite':'Ruas HD')+'</b>';
-     renderMap(true);
+     if(activeMap)activeMap.innerHTML='Ativo: <b>'+(mapMode==='modern'?'3D Moderno':mapMode==='sat'?'Satélite':'Ruas HD')+'</b>';
+     setModernVisibility();renderMap(true);
    };
+   if(modernBtn){modernBtn.classList.toggle('active',mapMode==='modern');modernBtn.onclick=e=>{e.stopPropagation();setMode('modern')}}
    if(streetBtn){streetBtn.classList.toggle('active',mapMode==='street');streetBtn.onclick=e=>{e.stopPropagation();setMode('street')}}
    if(satBtn){satBtn.classList.toggle('active',mapMode==='sat');satBtn.onclick=e=>{e.stopPropagation();setMode('sat')}}
    const el=document.getElementById('g3map');
    if(el&&!el.dataset.dragBound){
      el.dataset.dragBound='1';
-     el.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const c=worldPx(view.lat,view.lng,view.zoom);dragging={x:e.clientX,y:e.clientY,cx:c.x,cy:c.y};el.setPointerCapture?.(e.pointerId)});
-     el.addEventListener('pointermove',e=>{if(!dragging)return;const dx=e.clientX-dragging.x,dy=e.clientY-dragging.y;const ll=latLngFromWorld(dragging.cx-dx,dragging.cy-dy,view.zoom);view.lat=ll.lat;view.lng=ll.lng;renderMap()});
+     el.addEventListener('pointerdown',e=>{if(mapMode==='modern'||e.target.closest('button'))return;const c=worldPx(view.lat,view.lng,view.zoom);dragging={x:e.clientX,y:e.clientY,cx:c.x,cy:c.y};el.setPointerCapture?.(e.pointerId)});
+     el.addEventListener('pointermove',e=>{if(mapMode==='modern'||!dragging)return;const dx=e.clientX-dragging.x,dy=e.clientY-dragging.y;const ll=latLngFromWorld(dragging.cx-dx,dragging.cy-dy,view.zoom);view.lat=ll.lat;view.lng=ll.lng;renderMap()});
      const end=()=>{dragging=null};el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
    }
+   const tilt=document.getElementById('g3tilt');if(tilt)tilt.onclick=e=>{e.stopPropagation();if(!modernMap)return;const p=modernMap.getPitch();modernMap.easeTo({pitch:p>20?0:58,bearing:p>20?0:-18,duration:500})};
    if(el&&!resizeObs&&window.ResizeObserver){resizeObs=new ResizeObserver(()=>renderMap(true));resizeObs.observe(el)}
  }
 
  function center(id){
    const l=byId().get(String(id)),lat=Number(l?.latitude),lng=Number(l?.longitude);
    if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
-   view.lat=lat;view.lng=lng;view.zoom=16;renderMap();
+   view.lat=lat;view.lng=lng;view.zoom=16;if(mapMode==='modern'&&modernMap){modernMap.flyTo({center:[lng,lat],zoom:17,pitch:55,bearing:-18,duration:800});return}renderMap();
  }
 
  async function load(silent=true){
@@ -229,6 +314,7 @@
      const first=!(state.locations||[]).length;
      state.motoboys=j.motoboys||[];state.locations=j.locations||[];state.error='';
      if(first&&state.locations.length)fitAll();
+     if(mapMode==='modern'&&modernMap)syncModernMarkers();
    }catch(e){state.error=e?.message||'Não foi possível atualizar o GPS.'}
    finally{state.loading=false;repaint()}
  }
