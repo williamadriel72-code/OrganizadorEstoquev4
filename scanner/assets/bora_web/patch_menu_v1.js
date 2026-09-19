@@ -1,4 +1,64 @@
 
+/* Botão persistente de GPS no APK do motoboy. */
+(function bmInstallGpsQuickToggle(){
+ if(new URLSearchParams(location.search).get('app')!=='motoboy')return;
+ if(window.__bmGpsQuickToggleV1)return;
+ window.__bmGpsQuickToggleV1=true;
+
+ if(!document.getElementById('bmGpsQuickToggleStyle')){
+  const s=document.createElement('style');
+  s.id='bmGpsQuickToggleStyle';
+  s.textContent=`
+   #bmGpsQuickToggle{position:fixed;z-index:9997;left:max(14px,env(safe-area-inset-left));top:max(76px,calc(env(safe-area-inset-top) + 42px));border:1px solid #ffffff18;border-radius:999px;padding:9px 12px;background:#17201b;color:#68e7a1;font-size:11px;font-weight:950;box-shadow:0 8px 22px #0005;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+   #bmGpsQuickToggle.off{background:#281818;color:#ff9b9b}
+   #bmGpsQuickToggle.unsupported{background:#2a2415;color:#ffd36a}
+   #bmGpsQuickToggle:active{transform:scale(.96)}
+  `;
+  document.head.appendChild(s);
+ }
+
+ function bridgeState(){
+  const b=window.AndroidBora;
+  const supported=!!(b&&typeof b.setRiderGpsEnabled==='function'&&typeof b.isRiderGpsEnabled==='function');
+  if(!supported)return {supported:false,enabled:false};
+  let enabled=true;
+  try{enabled=!!b.isRiderGpsEnabled()}catch(_){}
+  return {supported:true,enabled};
+ }
+
+ function render(){
+  let btn=document.getElementById('bmGpsQuickToggle');
+  if(!btn){
+   btn=document.createElement('button');
+   btn.id='bmGpsQuickToggle';btn.type='button';
+   document.body.appendChild(btn);
+  }
+  const st=bridgeState();
+  btn.className='';
+  if(!st.supported){
+   btn.classList.add('unsupported');
+   btn.textContent='GPS · ATUALIZE O APP';
+   btn.disabled=true;
+   return;
+  }
+  btn.disabled=false;
+  btn.classList.toggle('off',!st.enabled);
+  btn.textContent=st.enabled?'GPS LIGADO · DESLIGAR':'GPS DESLIGADO · LIGAR';
+  btn.onclick=()=>{
+   const now=bridgeState();
+   if(!now.supported)return;
+   try{window.AndroidBora.setRiderGpsEnabled(!now.enabled)}catch(_){return}
+   setTimeout(render,180);
+  };
+ }
+
+ const mo=new MutationObserver(render);
+ mo.observe(document.documentElement,{childList:true,subtree:true});
+ setInterval(render,2500);
+ setTimeout(render,300);
+})();
+
+
 /* Restaura o módulo Folgas no APK mesmo quando o loader público ainda usa a lista antiga. */
 (function bmLoadFolgasModule(){
  if(new URLSearchParams(location.search).get('app')!=='motoboy')return;
