@@ -1,3 +1,42 @@
+/* GPS ORIGINAL — sincroniza a sessão do motoboy diretamente com a ponte Android */
+(function bmSyncOriginalRiderGpsBridge(){
+  if(new URLSearchParams(location.search).get('app')!=='motoboy') return;
+  if(window.__bmOriginalGpsBridgeSyncV1) return;
+  window.__bmOriginalGpsBridgeSyncV1=true;
+
+  let lastKey='';
+  async function sync(){
+    try{
+      if(typeof sb==='undefined' || typeof rider==='undefined' || !rider?.profile?.id) return;
+      const bridge=window.AndroidBora;
+      if(!bridge || typeof bridge.setRiderGpsSession!=='function') return;
+
+      const session=(await sb.auth.getSession())?.data?.session||null;
+      if(!session?.access_token) return;
+
+      const key=String(rider.profile.id)+'|'+String(session.access_token).slice(-24);
+      if(key===lastKey) return;
+      lastKey=key;
+
+      bridge.setRiderGpsSession(
+        String(session.access_token),
+        String(rider.profile.id),
+        String(rider.profile.nome||'')
+      );
+    }catch(e){
+      console.warn('bm-original-gps-bridge-sync',e?.message||e);
+    }
+  }
+
+  const timer=setInterval(sync,2000);
+  window.addEventListener('focus',sync);
+  window.addEventListener('online',sync);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
+  setTimeout(sync,300);
+  setTimeout(sync,1500);
+  setTimeout(sync,4000);
+})();
+
 /* GPS PANEL V3 — mapa nativo por tiles, sem Leaflet */
 (function(){
  if(new URLSearchParams(location.search).get('app')==='motoboy') return;
