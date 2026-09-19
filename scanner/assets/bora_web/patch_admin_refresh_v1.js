@@ -1,3 +1,37 @@
+/* DIAGNÓSTICO GPS ORIGINAL — mostra se o APK instalado possui a ponte nativa */
+(function bmGpsNativeDiagnostic(){
+  if(new URLSearchParams(location.search).get('app')!=='motoboy') return;
+  if(window.__bmGpsNativeDiagnosticV1) return;
+  window.__bmGpsNativeDiagnosticV1=true;
+
+  function status(){
+    const bridge=window.AndroidBora;
+    const nativeGps=!!(bridge && typeof bridge.setRiderGpsSession==='function');
+    return nativeGps;
+  }
+
+  function render(){
+    try{
+      const root=document.querySelector('.shell');
+      if(!root) return;
+      let box=document.getElementById('bmGpsNativeDiag');
+      if(!box){
+        box=document.createElement('div');
+        box.id='bmGpsNativeDiag';
+        box.style.cssText='margin:10px 16px 0;padding:10px 12px;border-radius:12px;font-size:12px;font-weight:800;border:1px solid #ffffff18;background:#151a1f;color:#d6dde5;';
+        const header=root.querySelector('.top');
+        if(header?.nextSibling) root.insertBefore(box,header.nextSibling); else root.prepend(box);
+      }
+      const ok=status();
+      box.innerHTML=ok
+        ? '<span style="color:#35d07f">GPS NATIVO DETECTADO</span> · aguardando permissão/localização do Android'
+        : '<span style="color:#ffcc66">GPS NATIVO NÃO DETECTADO</span> · este APK precisa ser atualizado para a versão com GPS';
+    }catch(e){}
+  }
+
+  setInterval(render,1500);
+  setTimeout(render,300);
+})();
 /* GPS ORIGINAL — sincroniza a sessão do motoboy diretamente com a ponte Android */
 (function bmSyncOriginalRiderGpsBridge(){
   if(new URLSearchParams(location.search).get('app')!=='motoboy') return;
