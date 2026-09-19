@@ -36,7 +36,7 @@
  }
  function ensureRow(map,m){
   const key=String(m?.id||norm(m?.nome));
-  if(!map.has(key))map.set(key,{id:m?.id||null,nome:String(m?.nome||'Motoboy'),comandas:0,total:0});
+  if(!map.has(key))map.set(key,{id:m?.id||null,nome:String(m?.nome||'Motoboy'),comandas:0,total:0,worked:false});
   return map.get(key);
  }
  function rowForDetail(map,d){
@@ -48,16 +48,28 @@
   const range=rangeFor(period),map=new Map();
   for(const m of (adminState?.motoboys||[]))ensureRow(map,m);
 
-  const q=await sb.from('kh_motoboy_relatorios_turnos')
-   .select('data,turno,detalhes')
-   .gte('data',range.start).lte('data',range.end)
-   .order('data',{ascending:true}).order('turno',{ascending:true}).limit(500);
-  if(q.error)throw q.error;
+  const [q,jq]=await Promise.all([
+   sb.from('kh_motoboy_relatorios_turnos')
+    .select('data,turno,detalhes')
+    .gte('data',range.start).lte('data',range.end)
+    .order('data',{ascending:true}).order('turno',{ascending:true}).limit(500),
+   sb.from('kh_motoboy_jornadas')
+    .select('motoboy_id,data,chegada_at,chegada_tipo')
+    .gte('data',range.start).lte('data',range.end)
+    .limit(3000)
+  ]);
+  if(q.error)throw q.error;if(jq.error)throw jq.error;
   const reports=q.data||[];
+  for(const j of (jq.data||[])){
+   if(!j?.chegada_at||j?.chegada_tipo==='nao_compareceu')continue;
+   const m=(adminState?.motoboys||[]).find(x=>String(x.id)===String(j.motoboy_id));
+   if(m)ensureRow(map,m).worked=true;
+  }
   for(const rep of reports){
    for(const d of (Array.isArray(rep.detalhes)?rep.detalhes:[])){
     const r=rowForDetail(map,d);if(!r)continue;
     const resumo=d?.resumo||{};
+    r.worked=true;
     r.comandas+=Number(resumo.entregas||0);
     r.total+=Number(d?.diaria||0)+Number(resumo.taxas||0);
    }
@@ -72,6 +84,7 @@
      const all=typeof entregasOf==='function'?entregasOf(m.id):[];
      const es=(all||[]).filter(e=>e?.status!=='cancelada'&&inShift(e?.created_at||e?.updated_at,today,shift));
      const j=typeof jornadaOf==='function'?jornadaOf(m.id):null;
+     if(j?.chegada_at&&j?.chegada_tipo!=='nao_compareceu')r.worked=true;
      const base=j?.chegada_at&&inShift(j.chegada_at,today,shift)?Number(j.base_valor||0):0;
      r.comandas+=es.length;
      r.total+=base+es.reduce((a,e)=>a+Number(e.valor||0),0);
@@ -79,7 +92,9 @@
    }
   }
 
-  const rows=[...map.values()].sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR'));
+  const rows=[...map.values()]
+   .filter(r=>period==='today'?r.worked:(r.worked||r.comandas>0||r.total>0))
+   .sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR'));
   return {range,rows,totalComandas:rows.reduce((a,x)=>a+x.comandas,0),totalValor:rows.reduce((a,x)=>a+x.total,0)};
  }
 
@@ -94,10 +109,11 @@
    .bm-rs-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:13px 0}.bm-rs-tab{border:1px solid rgba(255,255,255,.09);background:#151d25;color:#a9b3bd;border-radius:10px;padding:8px 10px;font-size:10px;font-weight:900;cursor:pointer}.bm-rs-tab.active{background:#173224;color:#82efb1;border-color:#2bd18055}
    .bm-rs-custom{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;margin-bottom:12px}.bm-rs-custom input{min-width:0;background:#101820;color:#fff;border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:9px}.bm-rs-custom button{border:0;border-radius:10px;background:#27313b;color:#fff;padding:9px 12px;font-weight:900;cursor:pointer}
    .bm-rs-period{margin:5px 0 9px;color:#9aa5b0;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
-   .bm-rs-list{display:grid;gap:6px}.bm-rs-row{display:grid;grid-template-columns:minmax(0,1fr) 105px 120px;gap:8px;align-items:center;background:#121a22;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:11px 12px}.bm-rs-name{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bm-rs-count{color:#a6b0ba;text-align:right;font-size:11px}.bm-rs-value{text-align:right;color:#63e99f;font-weight:950;white-space:nowrap}
-   .bm-rs-total{display:grid;grid-template-columns:minmax(0,1fr) 105px 120px;gap:8px;margin-top:10px;padding:12px;border-top:1px solid rgba(255,255,255,.1);font-weight:950}.bm-rs-total .bm-rs-count,.bm-rs-total .bm-rs-value{font-size:13px}
+   .bm-rs-actions{display:flex;justify-content:flex-end;margin:0 0 9px}.bm-rs-copy-all,.bm-rs-copy-one{border:1px solid rgba(43,209,128,.28);background:rgba(43,209,128,.09);color:#82efb1;border-radius:9px;font-weight:900;cursor:pointer}.bm-rs-copy-all{padding:8px 11px;font-size:10px}.bm-rs-copy-one{padding:6px 8px;font-size:8px}
+   .bm-rs-list{display:grid;gap:6px}.bm-rs-row{display:grid;grid-template-columns:minmax(0,1fr) 105px 120px 62px;gap:8px;align-items:center;background:#121a22;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:11px 12px}.bm-rs-name{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bm-rs-count{color:#a6b0ba;text-align:right;font-size:11px}.bm-rs-value{text-align:right;color:#63e99f;font-weight:950;white-space:nowrap}
+   .bm-rs-total{display:grid;grid-template-columns:minmax(0,1fr) 105px 120px 62px;gap:8px;margin-top:10px;padding:12px;border-top:1px solid rgba(255,255,255,.1);font-weight:950}.bm-rs-total .bm-rs-count,.bm-rs-total .bm-rs-value{font-size:13px}
    .bm-rs-empty{padding:28px;text-align:center;color:#8b96a1}.bm-rs-loading{padding:24px;text-align:center;color:#9aa5b0}
-   @media(max-width:560px){.bm-rs-row,.bm-rs-total{grid-template-columns:minmax(0,1fr) 78px 100px}.bm-rs-modal{padding:12px}.bm-rs-head{top:-12px}.bm-rs-custom{grid-template-columns:1fr 1fr}.bm-rs-custom button{grid-column:1/-1}.bm-rs-count{font-size:9px}.bm-rs-value{font-size:11px}}
+   @media(max-width:560px){.bm-rs-row,.bm-rs-total{grid-template-columns:minmax(0,1fr) 62px 82px 54px;gap:5px}.bm-rs-modal{padding:12px}.bm-rs-head{top:-12px}.bm-rs-custom{grid-template-columns:1fr 1fr}.bm-rs-custom button{grid-column:1/-1}.bm-rs-count{font-size:8px}.bm-rs-value{font-size:10px}.bm-rs-copy-one{padding:5px 6px;font-size:7px}}
   `;document.head.appendChild(s);
  }
  function close(){if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null}document.getElementById('bmRiderSummaryOverlay')?.remove()}
@@ -112,12 +128,28 @@
   paintTabs();void render();refreshTimer=setInterval(()=>{if(document.getElementById('bmRiderSummaryOverlay'))void render(true)},30000);
  }
  function paintTabs(){document.querySelectorAll('[data-rs-period]').forEach(b=>b.classList.toggle('active',b.dataset.rsPeriod===period));const custom=document.getElementById('bmRsCustom');if(custom)custom.style.display=period==='custom'?'grid':'none'}
+ async function copyText(text,msg='Resumo copiado.'){
+  try{await navigator.clipboard.writeText(text)}
+  catch(_){
+   const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+  }
+  if(typeof toast==='function')toast(msg);
+ }
+ function summaryText(x){
+  const lines=[`RESUMO DOS MOTOBOYS — ${x.range.label}`,''];
+  for(const r of x.rows)lines.push(`${r.nome} — ${r.comandas} comandas — ${money(r.total)}`);
+  lines.push('',`Total de comandas: ${x.totalComandas}`,`Valor geral: ${money(x.totalValor)}`);
+  return lines.join('\n');
+ }
  async function render(silent=false){
   const body=document.getElementById('bmRsBody');if(!body)return;if(!silent)body.innerHTML='<div class="bm-rs-loading">Atualizando...</div>';
   try{
    const x=await collect();
-   const rows=x.rows.map(r=>`<div class="bm-rs-row"><div class="bm-rs-name">${safe(r.nome)}</div><div class="bm-rs-count">${r.comandas} comandas</div><div class="bm-rs-value">${money(r.total)}</div></div>`).join('');
-   body.innerHTML=`<div class="bm-rs-period">${safe(x.range.label)}</div><div class="bm-rs-list">${rows||'<div class="bm-rs-empty">Nenhum motoboy encontrado.</div>'}</div><div class="bm-rs-total"><div>TOTAL</div><div class="bm-rs-count">${x.totalComandas} comandas</div><div class="bm-rs-value">${money(x.totalValor)}</div></div>`;
+   const rows=x.rows.map((r,i)=>`<div class="bm-rs-row"><div class="bm-rs-name">${safe(r.nome)}</div><div class="bm-rs-count">${r.comandas} comandas</div><div class="bm-rs-value">${money(r.total)}</div><button class="bm-rs-copy-one" data-rs-copy="${i}">COPIAR</button></div>`).join('');
+   body.innerHTML=`<div class="bm-rs-period">${safe(x.range.label)}</div><div class="bm-rs-actions"><button id="bmRsCopyAll" class="bm-rs-copy-all">📋 COPIAR TUDO</button></div><div class="bm-rs-list">${rows||'<div class="bm-rs-empty">Nenhum motoboy trabalhou neste período.</div>'}</div><div class="bm-rs-total"><div>TOTAL</div><div class="bm-rs-count">${x.totalComandas} comandas</div><div class="bm-rs-value">${money(x.totalValor)}</div><div></div></div>`;
+   document.getElementById('bmRsCopyAll').onclick=()=>copyText(summaryText(x),'Resumo copiado.');
+   body.querySelectorAll('[data-rs-copy]').forEach(btn=>btn.onclick=()=>{const r=x.rows[Number(btn.dataset.rsCopy)];if(r)copyText(`${r.nome} — ${r.comandas} comandas — ${money(r.total)}`,`${r.nome} copiado.`)});
+
   }catch(e){console.error('rider-summary',e);body.innerHTML=`<div class="bm-rs-empty">Não foi possível carregar o resumo: ${safe(e?.message||'erro')}</div>`}
  }
  function installButton(){
