@@ -152,24 +152,41 @@
    try{return await modernLoading}finally{modernLoading=null}
  }
  function clearModernMarkers(){modernMarkers.forEach(m=>{try{m.remove()}catch(_){}});modernMarkers=[]}
- function addModernBuildings(){
-   if(!modernMap||!modernMap.isStyleLoaded?.())return;
-   if(modernMap.getLayer('bm-3d-buildings'))return;
-   const layers=modernMap.getStyle()?.layers||[];
-   const ref=layers.find(l=>l?.['source-layer']==='building'&&l?.source&&l.type==='fill')||layers.find(l=>String(l?.id||'').toLowerCase().includes('building')&&l?.source&&l?.['source-layer']);
-   if(!ref)return;
-   try{
-     modernMap.addLayer({
-       id:'bm-3d-buildings',type:'fill-extrusion',source:ref.source,'source-layer':ref['source-layer'],minzoom:14,
-       filter:ref.filter||undefined,
-       paint:{
-         'fill-extrusion-color':['interpolate',['linear'],['zoom'],14,'#cfd6df',17,'#f2f5f8'],
-         'fill-extrusion-height':['coalesce',['to-number',['get','render_height']],['to-number',['get','height']],['*',['coalesce',['to-number',['get','building:levels']],3],3],8],
-         'fill-extrusion-base':['coalesce',['to-number',['get','render_min_height']],['to-number',['get','min_height']],0],
-         'fill-extrusion-opacity':0.78
+ function modernStyle(){
+   return {
+     version:8,
+     sources:{
+       'bm-base':{
+         type:'raster',
+         tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'],
+         tileSize:256,
+         attribution:'Tiles © Esri'
+       },
+       'bm-buildings':{
+         type:'vector',
+         url:'https://tiles.openfreemap.org/planet',
+         attribution:'© OpenStreetMap contributors · OpenFreeMap'
        }
-     });
-   }catch(e){console.warn('bm-3d-buildings',e?.message||e)}
+     },
+     layers:[
+       {id:'bm-bg',type:'background',paint:{'background-color':'#d7dde2'}},
+       {id:'bm-raster-base',type:'raster',source:'bm-base',paint:{'raster-opacity':1}},
+       {
+         id:'bm-3d-buildings',
+         type:'fill-extrusion',
+         source:'bm-buildings',
+         'source-layer':'building',
+         minzoom:14,
+         filter:['!=',['get','hide_3d'],true],
+         paint:{
+           'fill-extrusion-color':['interpolate',['linear'],['zoom'],14,'#c9d2dc',17,'#eef3f7'],
+           'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,15.5,['coalesce',['to-number',['get','render_height']],['to-number',['get','height']],8]],
+           'fill-extrusion-base':['coalesce',['to-number',['get','render_min_height']],['to-number',['get','min_height']],0],
+           'fill-extrusion-opacity':0.82
+         }
+       }
+     ]
+   };
  }
  function syncModernMarkers(){
    if(!modernMap||!modernLib)return;
@@ -205,13 +222,13 @@
        let loaded=false;
        modernMap=new ml.Map({
          container:host,
-         style:'https://tiles.openfreemap.org/styles/liberty',
+         style:modernStyle(),
          center:[view.lng,view.lat],zoom:view.zoom,pitch:55,bearing:-18,
-         attributionControl:false,maxPitch:75
+         attributionControl:false,maxPitch:75,
+         canvasContextAttributes:{antialias:true}
        });
        const timeout=setTimeout(()=>{if(!loaded&&mapMode==='modern')fallbackModern(new Error('Tempo esgotado ao carregar o 3D.'))},12000);
-       modernMap.on('load',()=>{loaded=true;clearTimeout(timeout);addModernBuildings();syncModernMarkers();modernMap.resize()});
-       modernMap.on('styledata',()=>addModernBuildings());
+       modernMap.on('load',()=>{loaded=true;clearTimeout(timeout);syncModernMarkers();modernMap.resize()});
        modernMap.on('moveend',()=>{const cc=modernMap.getCenter();view.lng=cc.lng;view.lat=cc.lat;view.zoom=modernMap.getZoom()});
        modernMap.on('error',ev=>{
          const msg=String(ev?.error?.message||'');
@@ -228,7 +245,7 @@
    if(modern)modern.classList.toggle('hidden',mapMode!=='modern');
    if(canvas)canvas.style.display=mapMode==='modern'?'none':'block';
    if(hint)hint.textContent=mapMode==='modern'?'Arraste · incline · gire o mapa':'Arraste para mover o mapa';
-   if(attr)attr.textContent=mapMode==='modern'?'© OpenFreeMap · OpenStreetMap · MapLibre':'© Esri · HERE · Garmin · OpenStreetMap contributors';
+   if(attr)attr.textContent=mapMode==='modern'?'© Esri · OpenFreeMap · OpenStreetMap · MapLibre':'© Esri · HERE · Garmin · OpenStreetMap contributors';
    if(tilt)tilt.style.display=mapMode==='modern'?'block':'none';
    if(mapMode==='modern')void ensureModernMap();
  }
