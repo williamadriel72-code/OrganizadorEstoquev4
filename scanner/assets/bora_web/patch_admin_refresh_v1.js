@@ -346,6 +346,18 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
   return {start:today,end:today,label:'HOJE'};
  }
  function currentShift(){const p=spNow();return p.mins>=17*60?'17_24':p.mins>=10*60?'10_17':'pre_10'}
+ function spParts(v){
+  if(!v)return null;const d=v instanceof Date?v:new Date(v);if(!Number.isFinite(d.getTime()))return null;
+  const ps=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);
+  const o={};for(const p of ps)if(p.type!=='literal')o[p.type]=p.value;
+  return {date:`${o.year}-${o.month}-${o.day}`,mins:Number(o.hour)*60+Number(o.minute)};
+ }
+ function inShift(iso,date,shift){
+  const p=spParts(iso);if(!p||p.date!==date)return false;
+  if(shift==='10_17')return p.mins>=10*60&&p.mins<17*60;
+  if(shift==='17_24')return p.mins>=17*60;
+  return false;
+ }
  function ensureRow(map,m){
   const key=String(m?.id||norm(m?.nome));
   if(!map.has(key))map.set(key,{id:m?.id||null,nome:String(m?.nome||'Motoboy'),comandas:0,total:0});
@@ -381,14 +393,12 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
    if(!alreadyClosed){
     for(const m of (adminState?.motoboys||[])){
      const r=ensureRow(map,m);
-     const es=(typeof entregasOf==='function'?entregasOf(m.id):[]).filter(e=>e?.status!=='cancelada');
+     const all=typeof entregasOf==='function'?entregasOf(m.id):[];
+     const es=(all||[]).filter(e=>e?.status!=='cancelada'&&inShift(e?.created_at||e?.updated_at,today,shift));
+     const j=typeof jornadaOf==='function'?jornadaOf(m.id):null;
+     const base=j?.chegada_at&&inShift(j.chegada_at,today,shift)?Number(j.base_valor||0):0;
      r.comandas+=es.length;
-     if(typeof moneyMoto==='function')r.total+=Number(moneyMoto(m.id)||0);
-     else{
-      const j=typeof jornadaOf==='function'?jornadaOf(m.id):null;
-      const base=j?.chegada_at?Number(j.base_valor||0):0;
-      r.total+=base+es.reduce((a,e)=>a+Number(e.valor||0),0);
-     }
+     r.total+=base+es.reduce((a,e)=>a+Number(e.valor||0),0);
     }
    }
   }
