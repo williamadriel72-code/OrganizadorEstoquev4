@@ -80,7 +80,7 @@ jobs:
               'scanner/assets/bora_web/patch_menu_v1.js',
               'scanner/assets/bora_web/patch_rider_notes_v3.js',
               'scanner/assets/bora_web/patch_folgas_v1.js',
-              'scanner/assets/bora_web/patch_admin_refresh_v1.js',
+              'scanner/assets/bora_web/patch_gps_panel_v1.js',
           ]
           patch = '\n'.join(pathlib.Path(p).read_text(errors='strict') for p in patch_files)
           marker = '\nboot();\n'
