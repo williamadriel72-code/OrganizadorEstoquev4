@@ -132,14 +132,23 @@
 
  async function loadModernLib(){
    if(modernLib)return modernLib;
+   if(window.maplibregl){modernLib=window.maplibregl;return modernLib}
    if(modernLoading)return modernLoading;
-   modernLoading=(async()=>{
+   modernLoading=new Promise((resolve,reject)=>{
      if(!document.querySelector('link[data-bm-maplibre]')){
-       const l=document.createElement('link');l.rel='stylesheet';l.dataset.bmMaplibre='1';l.href='https://unpkg.com/maplibre-gl@^6.10.0/dist/maplibre-gl.css';document.head.appendChild(l);
+       const l=document.createElement('link');l.rel='stylesheet';l.dataset.bmMaplibre='1';l.href='https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css';document.head.appendChild(l);
      }
-     const mod=await import('https://unpkg.com/maplibre-gl@^6.10.0/dist/maplibre-gl.mjs');
-     modernLib=mod;return mod;
-   })();
+     const existing=document.querySelector('script[data-bm-maplibre]');
+     if(existing){
+       const poll=setInterval(()=>{if(window.maplibregl){clearInterval(poll);modernLib=window.maplibregl;resolve(modernLib)}},80);
+       setTimeout(()=>{clearInterval(poll);if(!window.maplibregl)reject(new Error('MapLibre não carregou.'))},10000);
+       return;
+     }
+     const s=document.createElement('script');s.src='https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js';s.async=true;s.dataset.bmMaplibre='1';
+     s.onload=()=>{if(window.maplibregl){modernLib=window.maplibregl;resolve(modernLib)}else reject(new Error('MapLibre indisponível.'))};
+     s.onerror=()=>reject(new Error('Falha ao carregar o mapa 3D.'));
+     document.head.appendChild(s);
+   });
    try{return await modernLoading}finally{modernLoading=null}
  }
  function clearModernMarkers(){modernMarkers.forEach(m=>{try{m.remove()}catch(_){}});modernMarkers=[]}
@@ -174,6 +183,17 @@
      try{modernMarkers.push(new modernLib.Marker({element:el,anchor:'bottom'}).setLngLat([lng,lat]).addTo(modernMap))}catch(_){}
    });
  }
+ function fallbackModern(reason){
+   console.warn('bm-modern-map',reason?.message||reason||'falha');
+   mapMode='street';lastTileSig='';
+   try{localStorage.setItem('bm_gps_map_mode_v2','street')}catch(_){}
+   document.getElementById('g3modernBtn')?.classList.remove('active');
+   document.getElementById('g3street')?.classList.add('active');
+   document.getElementById('g3sat')?.classList.remove('active');
+   const active=document.getElementById('g3activeMap');if(active)active.innerHTML='Ativo: <b>Ruas HD</b>';
+   const h=document.getElementById('g3hint');if(h)h.textContent='3D indisponível neste navegador · Ruas HD ativado';
+   setModernVisibility();renderMap(true);
+ }
  async function ensureModernMap(){
    if(mapMode!=='modern')return;
    const host=document.getElementById('g3modern');if(!host)return;
@@ -182,22 +202,25 @@
      const ml=await loadModernLib();
      if(mapMode!=='modern')return;
      if(!modernMap){
+       let loaded=false;
        modernMap=new ml.Map({
          container:host,
          style:'https://tiles.openfreemap.org/styles/liberty',
          center:[view.lng,view.lat],zoom:view.zoom,pitch:55,bearing:-18,
          attributionControl:false,maxPitch:75
        });
-       modernMap.on('load',()=>{addModernBuildings();syncModernMarkers()});
+       const timeout=setTimeout(()=>{if(!loaded&&mapMode==='modern')fallbackModern(new Error('Tempo esgotado ao carregar o 3D.'))},12000);
+       modernMap.on('load',()=>{loaded=true;clearTimeout(timeout);addModernBuildings();syncModernMarkers();modernMap.resize()});
        modernMap.on('styledata',()=>addModernBuildings());
        modernMap.on('moveend',()=>{const cc=modernMap.getCenter();view.lng=cc.lng;view.lat=cc.lat;view.zoom=modernMap.getZoom()});
+       modernMap.on('error',ev=>{
+         const msg=String(ev?.error?.message||'');
+         if(!loaded&&/style|source|webgl|worker|fetch|network/i.test(msg))fallbackModern(ev.error||new Error(msg));
+       });
      }else{
        modernMap.resize();syncModernMarkers();
      }
-   }catch(e){
-     console.warn('bm-modern-map',e?.message||e);
-     const h=document.getElementById('g3hint');if(h)h.textContent='Mapa 3D indisponível · use Ruas HD ou Satélite';
-   }
+   }catch(e){fallbackModern(e)}
  }
  function setModernVisibility(){
    const modern=document.getElementById('g3modern'),canvas=document.getElementById('g3canvas');
