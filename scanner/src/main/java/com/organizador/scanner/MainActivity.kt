@@ -95,6 +95,22 @@ class MainActivity : ComponentActivity() {
         fun clearRiderGpsSession() {
             RiderGpsManager.clearForLogout(applicationContext)
         }
+
+        @JavascriptInterface
+        fun setRiderGpsEnabled(enabled: Boolean) {
+            RiderGpsManager.setUserEnabled(applicationContext, enabled)
+            if (enabled) {
+                runOnUiThread {
+                    ensureLocationPermission()
+                    RiderGpsManager.startIfReady(applicationContext)
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun isRiderGpsEnabled(): Boolean {
+            return RiderGpsManager.isUserEnabled(applicationContext)
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
