@@ -26,6 +26,15 @@
  function css(){
    if(document.getElementById('bmGpsV2Style'))return;
    const s=document.createElement('style');s.id='bmGpsV2Style';s.textContent=`
+   /* Leaflet essencial embutido para o mapa funcionar mesmo se o CSS externo falhar */
+   .leaflet-container{overflow:hidden;outline:0;background:#dfe5e8;font:12px/1.5 Arial,Helvetica,sans-serif}
+   .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas{position:absolute;left:0;top:0}
+   .leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+   .leaflet-control{position:relative;z-index:800;pointer-events:auto}.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+   .leaflet-control-zoom{margin:10px}.leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;background:#fff;color:#111;text-decoration:none;border-bottom:1px solid #ccc;font-size:18px}.leaflet-control-zoom a:first-child{border-radius:5px 5px 0 0}.leaflet-control-zoom a:last-child{border-radius:0 0 5px 5px}
+   .leaflet-tile{filter:inherit;visibility:hidden}.leaflet-tile-loaded{visibility:inherit}.leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}
+   .leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}.leaflet-popup-content-wrapper{padding:1px;text-align:left;border-radius:10px;background:#fff;color:#111;box-shadow:0 3px 14px #0006}.leaflet-popup-content{margin:12px 16px;line-height:1.4}.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-left:-20px;overflow:hidden;pointer-events:none}.leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;transform:rotate(45deg);background:#fff;box-shadow:3px 3px 15px #0003}
+   .leaflet-control-attribution{padding:0 5px;background:#fffc;color:#333;font-size:10px}
    #bmGpsPanelV2{margin:0 0 14px;border:1px solid #ffffff16;border-radius:18px;overflow:hidden;background:linear-gradient(145deg,#10171f,#0a1016);box-shadow:0 18px 55px #0003}
    .g2h{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid #ffffff10}.g2h b{font-size:17px}.g2h small{display:block;color:#8e9aa6;margin-top:2px}.g2btn{border:1px solid #ffffff16;background:#252b32;color:#fff;border-radius:10px;padding:8px 11px;font-weight:800;cursor:pointer}
    .g2body{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:365px}.g2list{padding:10px;border-right:1px solid #ffffff10;max-height:430px;overflow:auto;background:#0c1218}.g2map{position:relative;min-height:365px;background:#dfe5e8}.g2mapin{position:absolute;inset:0}.g2row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px;margin-bottom:8px;border:1px solid #ffffff0d;border-radius:12px;background:#121a22}.g2name{font-weight:900}.g2meta{margin-top:4px;color:#8f9ca9;font-size:10px;line-height:1.45}.g2badge{display:inline-flex;margin-top:6px;padding:4px 7px;border-radius:999px;font-size:9px;font-weight:950}.g2badge.live{background:#143924;color:#6ee7a7}.g2badge.stale{background:#3a2a11;color:#f8c866}.g2badge.none{background:#242a31;color:#9ca7b2}.g2center{align-self:center;border:1px solid #ffffff16;background:#2a3037;color:#fff;border-radius:9px;padding:7px 9px;font-size:10px;font-weight:800}.g2center:disabled{opacity:.35}.g2err{padding:14px;color:#fca5a5;font-size:11px}.g2empty{padding:24px;text-align:center;color:#7f8b96;font-size:11px}
@@ -68,16 +77,33 @@
    if(window.L)return Promise.resolve();
    if(leafletPromise)return leafletPromise;
    leafletPromise=new Promise((res,rej)=>{
-     if(!document.querySelector('link[data-g2leaf]')){const l=document.createElement('link');l.rel='stylesheet';l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';l.dataset.g2leaf='1';document.head.appendChild(l)}
-     const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.onload=res;s.onerror=()=>rej(new Error('Não foi possível carregar o mapa.'));document.head.appendChild(s);
+     if(!document.querySelector('link[data-g2leaf]')){const l=document.createElement('link');l.rel='stylesheet';l.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';l.dataset.g2leaf='1';document.head.appendChild(l)}
+     const tryScript=(src,fallback)=>{
+       const s=document.createElement('script');s.src=src;s.async=true;
+       s.onload=()=>window.L?res():fallback?fallback():rej(new Error('Leaflet não inicializou.'));
+       s.onerror=()=>fallback?fallback():rej(new Error('Não foi possível carregar o mapa.'));
+       document.head.appendChild(s);
+     };
+     tryScript('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',()=>tryScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'));
    });return leafletPromise;
  }
  async function ensureMap(){
    const el=document.getElementById('g2map');if(!el)return;
    try{
      await loadLeaflet(); if(!document.getElementById('g2map'))return;
-     if(!map){map=L.map('g2map').setView([-22.37,-41.79],12);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map)}
-     setTimeout(()=>map?.invalidateSize(),100);draw();
+     if(!map){
+       map=L.map('g2map',{zoomControl:true,attributionControl:true}).setView([-22.37,-41.79],12);
+       const primary=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors',crossOrigin:true});
+       let fallbackUsed=false;
+       primary.on('tileerror',()=>{
+         if(fallbackUsed||!map)return;
+         fallbackUsed=true;
+         try{map.removeLayer(primary)}catch(_){}
+         L.tileLayer('https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',{maxZoom:20,attribution:'© OpenStreetMap © CARTO',crossOrigin:true}).addTo(map);
+       });
+       primary.addTo(map);
+     }
+     setTimeout(()=>{map?.invalidateSize(true);draw()},250);
    }catch(e){state.error=e?.message||'Mapa indisponível.';repaint()}
  }
  function draw(){
