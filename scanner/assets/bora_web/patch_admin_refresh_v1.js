@@ -50,7 +50,7 @@
  let state={motoboys:[],locations:[],loading:false,error:''};
  let view={lat:-22.37,lng:-41.79,zoom:16};
  let dragging=null,resizeObs=null,lastTileSig='',modernMap=null,modernLib=null,modernMarkers=[],modernLoading=null;
- let savedMapMode='';try{savedMapMode=localStorage.getItem('bm_gps_map_mode')||''}catch(_){savedMapMode=''}
+ let savedMapMode='';try{savedMapMode=localStorage.getItem('bm_gps_map_mode_v2')||''}catch(_){savedMapMode=''}
  let mapMode=['modern','street','sat'].includes(savedMapMode)?savedMapMode:'modern';
 
  function escGps(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -188,7 +188,6 @@
          center:[view.lng,view.lat],zoom:view.zoom,pitch:55,bearing:-18,
          attributionControl:false,maxPitch:75
        });
-       modernMap.addControl(new ml.NavigationControl({visualizePitch:true}),'top-right');
        modernMap.on('load',()=>{addModernBuildings();syncModernMarkers()});
        modernMap.on('styledata',()=>addModernBuildings());
        modernMap.on('moveend',()=>{const cc=modernMap.getCenter();view.lng=cc.lng;view.lat=cc.lat;view.zoom=modernMap.getZoom()});
@@ -277,7 +276,7 @@
    const modernBtn=document.getElementById('g3modernBtn'),streetBtn=document.getElementById('g3street'),satBtn=document.getElementById('g3sat'),activeMap=document.getElementById('g3activeMap');
    const setMode=mode=>{
      mapMode=['modern','sat'].includes(mode)?mode:'street';lastTileSig='';
-     try{localStorage.setItem('bm_gps_map_mode',mapMode)}catch(_){}
+     try{localStorage.setItem('bm_gps_map_mode_v2',mapMode)}catch(_){}
      modernBtn?.classList.toggle('active',mapMode==='modern');
      streetBtn?.classList.toggle('active',mapMode==='street');
      satBtn?.classList.toggle('active',mapMode==='sat');
