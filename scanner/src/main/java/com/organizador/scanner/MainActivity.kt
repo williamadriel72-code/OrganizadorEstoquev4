@@ -33,7 +33,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.ComponentActivity
 
-private const val APP_URL = "https://bora-michael-motoboy-vqz606.v2.appdeploy.ai/"
+private const val APP_URL = "https://bora-michael-hi-hi.vercel.app/?app=motoboy"
 private const val CHANNEL_ID = "bora_michael_updates_v25"
 private const val OPEN_FOLGAS_EXTRA = "open_folgas"
 private const val LOCATION_PERMISSION_REQUEST = 2603
@@ -264,7 +264,7 @@ class MainActivity : ComponentActivity() {
                 val html = assets.open("bora_fallback.html").bufferedReader().use { it.readText() }
                 val openFolgas = if (intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) "&open=folgas" else ""
                 webView.loadDataWithBaseURL(
-                    "https://bora-michael-motoboy-vqz606.v2.appdeploy.ai/&shell=stock$openFolgas&local=1",
+                    "https://bora-michael-hi-hi.vercel.app/?app=motoboy&shell=stock$openFolgas&local=1",
                     html,
                     "text/html",
                     "UTF-8",
@@ -346,7 +346,7 @@ class MainActivity : ComponentActivity() {
             try {
                 val html = assets.open("bora_fallback.html").bufferedReader().use { it.readText() }
                 webView.loadDataWithBaseURL(
-                    "https://bora-michael-motoboy-vqz606.v2.appdeploy.ai/&fallback=1",
+                    "https://bora-michael-hi-hi.vercel.app/?app=motoboy&fallback=1",
                     html,
                     "text/html",
                     "UTF-8",
