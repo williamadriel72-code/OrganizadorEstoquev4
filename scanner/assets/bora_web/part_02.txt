@@ -15,6 +15,7 @@ const K='sb_publishable_cdYfnl879c7gh4WQE27S5g_CxEtVxde';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const sb=window.supabase.createClient(U,K,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'bora-michael-session'}});
 const appMode=new URLSearchParams(location.search).get('app')==='motoboy';
+if(appMode){location.replace('https://bora-michael-motoboy-vqz606.v2.appdeploy.ai/');}
 const BRL=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const isoDate=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
