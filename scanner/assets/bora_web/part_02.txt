@@ -60,6 +60,19 @@ rm:translateX(-50%);z-index:200;background:#111418;color:white;border:1px solid 
 @media(max-width:800px){.online-orders-grid{grid-template-columns:1fr;max-height:260px}.online-order-address,.online-order-card .row-sub{white-space:normal}.online-dispatch-fields{grid-template-columns:1fr 1fr!important}}
 @media(max-width:560px){.online-dispatch-fields{grid-template-columns:1fr!important}.online-orders-grid{max-height:240px}}
 
+
+/* Layout compacto final: Pedidos Online em meia tela */
+@media(min-width:901px){
+ .online-orders{width:50%!important;max-width:760px!important;min-width:560px}
+ .online-orders-grid{grid-template-columns:1fr!important;max-height:260px!important}
+ .online-dispatch-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+ .online-dispatch-fields .online-fee{min-width:0}
+ .online-dispatch-fields .online-dispatch{width:100%}
+}
+@media(max-width:900px){
+ .online-orders{width:100%!important;max-width:none!important;min-width:0!important}
+}
+
 </style>
 </head>
 <body>
