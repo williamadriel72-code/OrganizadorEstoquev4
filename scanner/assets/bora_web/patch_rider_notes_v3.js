@@ -53,12 +53,33 @@ function bmRiderNoteCard(e){
  </div>`;
 }
 
+function bmRiderSpParts(date=new Date()){
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date);
+ const o={};for(const p of parts)if(p.type!=='literal')o[p.type]=p.value;
+ return {date:`${o.year}-${o.month}-${o.day}`,mins:Number(o.hour)*60+Number(o.minute)};
+}
+function bmRiderCurrentShift(){
+ const p=bmRiderSpParts();
+ return p.mins>=17*60?'17_24':p.mins>=10*60?'10_17':'pre_10';
+}
+function bmRiderInCurrentShift(value){
+ if(!value)return false;
+ const now=bmRiderSpParts(),p=bmRiderSpParts(new Date(value)),key=bmRiderCurrentShift();
+ if(p.date!==now.date)return false;
+ if(key==='17_24')return p.mins>=17*60;
+ if(key==='10_17')return p.mins>=10*60&&p.mins<17*60;
+ return false;
+}
 todayHtml=function(d){
- const valid=bmSortRiderNotes(d.e.filter(e=>e.status!=='cancelada'));
+ const currentShift=bmRiderCurrentShift();
+ const shiftRows=currentShift==='pre_10'?[]:(d.e||[]).filter(e=>bmRiderInCurrentShift(e.created_at||e.updated_at));
+ const valid=bmSortRiderNotes(shiftRows.filter(e=>e.status!=='cancelada'));
  const pending=valid.filter(e=>!e.nota_confirmada);
  const confirmed=valid.filter(e=>e.nota_confirmada);
  const list=[...pending,...confirmed];
+ const shiftLabel=currentShift==='17_24'?'Turno 2 · 17:00–00:00':currentShift==='10_17'?'Turno 1 · 10:00–17:00':'Aguardando turno · 10:00';
  return `<section class="rider-fast-panel">
+  <div class="notice" style="margin-bottom:10px;border-color:#31d98255"><strong>${shiftLabel}</strong> · as comandas desta tela mostram somente o turno atual. O valor financeiro do dia continua acumulado.</div>
   <div class="today-summary">
    <div class="card"><div class="stat-label">ENTREGAS</div><div class="stat-value">${valid.length}</div></div>
    <div class="card"><div class="stat-label">TOTAL DO DIA</div><div class="stat-value">${BRL(d.total)}</div></div>
