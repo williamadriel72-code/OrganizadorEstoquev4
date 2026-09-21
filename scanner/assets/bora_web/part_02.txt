@@ -4,6 +4,23 @@ rm:translateX(-50%);z-index:200;background:#111418;color:white;border:1px solid 
 .moto-workspace{display:grid;grid-template-columns:minmax(230px,310px) minmax(0,1fr);gap:16px;align-items:start}.moto-list{background:var(--panel2);border:1px solid var(--line);border-radius:18px;padding:10px;position:sticky;top:14px}.moto-list-head{display:flex;justify-content:space-between;align-items:center;padding:8px 8px 12px}.moto-list-head b{font-size:16px}.moto-count{color:var(--muted);font-size:12px}.moto-item{width:100%;border:1px solid transparent;background:transparent;color:var(--text);border-radius:13px;padding:11px 10px;text-align:left;display:flex;justify-content:space-between;gap:10px;align-items:center;margin:2px 0}.moto-item:hover{background:#ffffff08}.moto-item.active{background:#2b2f34;border-color:#f2a33c66}.moto-item-name{font-weight:900;font-size:15px}.moto-item-meta{font-size:11px;color:var(--muted);margin-top:3px}.moto-item-value{font-size:12px;font-weight:900;color:var(--gold);white-space:nowrap}.moto-detail{min-width:0}.moto-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}.moto-hero h2{margin:0 0 5px}.danger{background:#3a1719!important;color:#ffb8bc!important;border:1px solid #ef444455!important}.arrival{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}.arrival strong{font-size:18px}.launch-card{border-color:#f2a33c44}.step{margin-top:13px}.step.hidden{display:none!important}.bairro-search{position:relative}.bairro-results{display:grid;gap:5px;margin-top:7px;max-height:265px;overflow:auto}.bairro-option{border:1px solid var(--line);background:#15181c;color:white;border-radius:11px;padding:10px 11px;text-align:left;display:flex;justify-content:space-between;gap:10px}.bairro-option:hover,.bairro-option.selected{border-color:#f2a33c88;background:#2c261e}.bairro-option small{color:var(--muted)}.pending-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}.pending-row:first-child{border-top:0}.pending-row input{width:18px;height:18px}.selected-bairro{margin-top:8px;padding:11px 12px;border-radius:11px;background:#171a1e;border:1px solid #f2a33c44}.quick-actions{display:flex;gap:8px;flex-wrap:wrap}.time-chip{display:inline-flex;gap:5px;align-items:center;background:#ffffff09;border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px}.delete-note{font-size:12px;color:#ffb4b4;margin-top:10px}.rider-fast-panel{max-width:760px;margin:auto}.today-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fast-placeholder{padding:28px;text-align:center;color:var(--muted)}
 @media(max-width:800px){.moto-workspace{grid-template-columns:1fr}.moto-list{position:relative;top:auto;max-height:330px;overflow:auto}.moto-hero{align-items:center}.today-summary{grid-template-columns:1fr 1fr}}
 
+
+/* Pedidos Online - espaço preparado para integrações */
+.online-orders{margin:0 0 16px;background:var(--panel2);border:1px solid var(--line);border-radius:18px;padding:14px}
+.online-orders-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.online-orders-title{display:flex;align-items:center;gap:10px}.online-orders-title h3{margin:0;font-size:18px}
+.online-live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:900;color:#9fe7b3;background:#12301d;border:1px solid #285f39;border-radius:999px;padding:5px 9px}
+.online-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.online-tab{border:1px solid var(--line);background:#15181c;color:#c9cdd2;border-radius:999px;padding:8px 11px;font-size:11px;font-weight:900}
+.online-tab.active{border-color:#f2a33c88;background:#2c261e;color:var(--gold)}
+.online-orders-grid{margin-top:12px;display:grid;gap:10px}
+.online-empty{border:1px dashed #ffffff22;border-radius:14px;padding:22px 14px;text-align:center;background:#111418}
+.online-empty b{display:block;margin-bottom:5px}.online-empty span{color:var(--muted);font-size:12px}
+.order-source-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.source-badge{font-size:10px;font-weight:900;border-radius:999px;padding:4px 8px;border:1px solid var(--line)}
+.source-ifood{background:#2b1719;color:#ffb6ba}.source-cardapio{background:#15251d;color:#a9e9bd}
+@media(max-width:800px){.online-orders{padding:12px}.online-tabs{display:grid;grid-template-columns:1fr 1fr}.online-tab{width:100%}}
+
 </style>
 </head>
 <body>
