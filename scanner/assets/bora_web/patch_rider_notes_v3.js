@@ -171,3 +171,145 @@ async function bmConfirmRiderNote(id){
  }
 }
 window.bmConfirmRiderNote=bmConfirmRiderNote;
+
+
+/* BORA_MAPS_MULTI_API_V1 */
+(function bmMapsMultiApiV1(){
+ if(new URLSearchParams(location.search).get('app')!=='motoboy')return;
+ if(window.__bmMapsMultiApiV1)return;
+ window.__bmMapsMultiApiV1=true;
+
+ const ROUTE_ENDPOINT=U+'/functions/v1/bora-route-plan';
+
+ function orderAddress(o,e){
+  o=o||{};
+  return o.formatted_address||[o.street_name,o.street_number,o.neighborhood||((e||{}).bairro_nome),o.city||'Macaé',o.state||'RJ'].filter(Boolean).join(', ');
+ }
+ function orderComponents(o,e){
+  o=o||{};e=e||{};
+  return {
+   street:o.street_name||'',
+   number:o.street_number||'',
+   neighborhood:o.neighborhood||o.original_neighborhood||e.bairro_nome||'',
+   city:o.city||'Macaé',
+   state:o.state||'RJ',
+   zip:o.zip_code||''
+  };
+ }
+ async function ensureRouteToken(){
+  if(bmRiderApiToken)return bmRiderApiToken;
+  await bmRiderApi('list_orders');
+  if(!bmRiderApiToken)throw Error('Sessão do motoboy não disponível.');
+  return bmRiderApiToken;
+ }
+ async function routeApi(action,data){
+  data=data||{};
+  let token=await ensureRouteToken();
+  let r=await fetch(ROUTE_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json',apikey:K,Authorization:'Bearer '+token},body:JSON.stringify(Object.assign({action:action},data))});
+  if(r.status===401){
+   bmRiderApiToken='';
+   token=await ensureRouteToken();
+   r=await fetch(ROUTE_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json',apikey:K,Authorization:'Bearer '+token},body:JSON.stringify(Object.assign({action:action},data))});
+  }
+  const j=await r.json().catch(function(){return {}});
+  if(!r.ok)throw Error(j.error||'Não foi possível calcular a rota.');
+  return j;
+ }
+ function currentPosition(){
+  return new Promise(function(resolve){
+   if(!navigator.geolocation)return resolve(null);
+   navigator.geolocation.getCurrentPosition(
+    function(p){resolve({lat:p.coords.latitude,lng:p.coords.longitude})},
+    function(){resolve(null)},
+    {enableHighAccuracy:true,timeout:6500,maximumAge:30000}
+   );
+  });
+ }
+ function openNavigation(lat,lng,address){
+  const la=Number(lat),lo=Number(lng);
+  let url='';
+  if(Number.isFinite(la)&&Number.isFinite(lo))url='https://www.waze.com/ul?ll='+encodeURIComponent(String(la)+','+String(lo))+'&navigate=yes';
+  else if(address)url='https://www.waze.com/ul?q='+encodeURIComponent(address)+'&navigate=yes';
+  if(!url){toast('Endereço não disponível.');return}
+  location.href=url;
+ }
+ function showRoute(data){
+  document.getElementById('bmRouteModal')?.remove();
+  const list=data.addresses||[];
+  const routing=data.routing||{};
+  const meta=[
+   routing.optimized?'ROTA OTIMIZADA':'ORDEM POR PROXIMIDADE',
+   Number(routing.distance_m||0)>0?(Number(routing.distance_m)/1000).toFixed(1)+' km':'',
+   Number(routing.duration_s||0)>0?Math.round(Number(routing.duration_s)/60)+' min':''
+  ].filter(Boolean).join(' · ');
+  let rows='';
+  list.forEach(function(x,i){
+   rows+='<div style="display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;padding:11px 0;border-top:1px solid #ffffff10"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#f2a33c;color:#1a1107;font-weight:950">'+(i+1)+'</span><div><b style="font-size:13px">'+esc(x.label||('Parada '+(i+1)))+'</b><div style="font-size:11px;color:#9ca3af;margin-top:3px;line-height:1.35">'+esc(x.address||x.original_address||'Endereço não informado')+'</div><div style="font-size:10px;color:#6ee7a7;margin-top:3px">'+esc(x.source||'Localização')+'</div></div></div>';
+  });
+  const first=list[0]||null;
+  const el=document.createElement('div');
+  el.id='bmRouteModal';
+  el.style.cssText='position:fixed;inset:0;z-index:2147483600;background:#000c;display:grid;place-items:center;padding:16px';
+  el.innerHTML='<div style="width:min(520px,96vw);max-height:88vh;overflow:auto;background:#15191d;border:1px solid #ffffff18;border-radius:18px;padding:16px;box-shadow:0 24px 80px #000a"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div style="font-size:18px;font-weight:950">ROTA DAS ENTREGAS</div><div style="font-size:10px;color:#6ee7a7;font-weight:900;margin-top:4px">'+esc(meta)+'</div></div><button id="bmRouteClose" style="border:0;background:#2b3036;color:#fff;width:34px;height:34px;border-radius:10px;font-size:20px">×</button></div><div style="margin-top:10px">'+(rows||'<div style="padding:20px;text-align:center;color:#9ca3af">Nenhuma parada encontrada.</div>')+'</div>'+(first?'<button id="bmRouteFirst" class="btn gold" style="width:100%;margin-top:12px;min-height:48px">NAVEGAR PARA A 1ª ENTREGA</button>':'')+'</div>';
+  document.body.appendChild(el);
+  el.querySelector('#bmRouteClose').onclick=function(){el.remove()};
+  el.addEventListener('click',function(ev){if(ev.target===el)el.remove()});
+  if(first)el.querySelector('#bmRouteFirst').onclick=function(){openNavigation(first.lat,first.lng,first.address||first.original_address||'')};
+ }
+
+ window.bmNavigateOrder=async function(id){
+  try{
+   const e=(rider.todayCache?.e||[]).find(function(x){return String(x.id)===String(id)});
+   if(!e)return toast('Comanda não encontrada.');
+   const o=e.bm_order||{};
+   const address=orderAddress(o,e);
+   if(!address)return toast('Endereço não informado.');
+   toast('Localizando endereço...');
+   const j=await routeApi('resolve_address',{address:address,components:orderComponents(o,e)});
+   const best=j.best||{};
+   if(best.lat==null||best.lng==null)return toast('Não foi possível localizar este endereço.');
+   openNavigation(best.lat,best.lng,best.address||address);
+  }catch(err){
+   console.error('bm-navigate-order',err);
+   toast(err?.message||'Não foi possível abrir a navegação.');
+  }
+ };
+
+ window.bmOptimizeRiderRoute=async function(){
+  try{
+   const all=(rider.todayCache?.e||[]);
+   const rows=all.filter(function(e){return e.status!=='cancelada'&&!e.nota_confirmada&&e.bm_order&&orderAddress(e.bm_order,e)});
+   if(rows.length<2)return toast('É preciso ter pelo menos 2 entregas pendentes.');
+   toast('Calculando melhor rota...');
+   const origin=await currentPosition();
+   const addresses=rows.map(function(e){
+    const c=orderComponents(e.bm_order,e);
+    return {id:String(e.id),label:'Comanda #'+String(e.nota_numero||''),address:orderAddress(e.bm_order,e),street:c.street,number:c.number,neighborhood:c.neighborhood,city:c.city,state:c.state,zip:c.zip};
+   });
+   const j=await routeApi('plan_addresses',{origin:origin,addresses:addresses});
+   showRoute(j);
+  }catch(err){
+   console.error('bm-optimize-route',err);
+   toast(err?.message||'Não foi possível organizar a rota.');
+  }
+ };
+
+ if(typeof bmRiderClientDetails==='function'){
+  const oldDetails=bmRiderClientDetails;
+  bmRiderClientDetails=function(e){
+   const base=oldDetails(e);
+   const addr=orderAddress((e||{}).bm_order||{},e);
+   if(!addr)return base;
+   return base+'<button type="button" onclick="window.bmNavigateOrder(\''+esc(e.id)+'\')" style="width:100%;margin-top:8px;min-height:42px;border:1px solid #3b82f688;background:#17243a;color:#93c5fd;border-radius:10px;font-weight:950;font-size:12px">NAVEGAR</button>';
+  };
+ }
+ if(typeof todayHtml==='function'){
+  const oldTodayHtml=todayHtml;
+  todayHtml=function(d){
+   const base=oldTodayHtml(d);
+   const n=(d?.e||[]).filter(function(e){return e.status!=='cancelada'&&!e.nota_confirmada&&e.bm_order&&orderAddress(e.bm_order,e)}).length;
+   if(n<2)return base;
+   return '<div style="max-width:760px;margin:0 auto 10px"><button type="button" onclick="window.bmOptimizeRiderRoute()" class="btn gold" style="width:100%;min-height:48px;font-size:13px">OTIMIZAR ROTA · '+n+' ENTREGAS</button><div style="font-size:10px;color:#8d969e;text-align:center;margin-top:5px">Geoapify + LocationIQ + TomTom para localizar · openrouteservice para organizar a rota</div></div>'+base;
+  };
+ }
+})();
