@@ -21,6 +21,17 @@ rm:translateX(-50%);z-index:200;background:#111418;color:white;border:1px solid 
 .source-ifood{background:#2b1719;color:#ffb6ba}.source-cardapio{background:#15251d;color:#a9e9bd}
 @media(max-width:800px){.online-orders{padding:12px}.online-tabs{display:grid;grid-template-columns:1fr 1fr}.online-tab{width:100%}}
 
+
+.online-order-card{background:#111418;border:1px solid var(--line);border-radius:14px;padding:13px}
+.online-order-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.online-order-top>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.online-order-status{font-size:10px;font-weight:900;color:var(--muted);letter-spacing:.04em}
+.online-order-name{font-weight:900;font-size:15px;margin-top:10px}.online-order-address{font-size:13px;line-height:1.45;margin-top:5px}
+.online-order-meta{font-size:12px;color:var(--muted);margin-top:8px}
+.online-dispatch-fields{display:grid;grid-template-columns:minmax(150px,1fr) minmax(170px,1.2fr) 105px auto;gap:8px;margin-top:12px}
+.online-dispatch-fields select,.online-dispatch-fields input{width:100%;border:1px solid var(--line);background:#0f1215;color:#fff;border-radius:10px;padding:9px}
+@media(max-width:900px){.online-dispatch-fields{grid-template-columns:1fr 1fr}.online-dispatch-fields .online-dispatch{grid-column:1/-1}}
+@media(max-width:560px){.online-dispatch-fields{grid-template-columns:1fr}.online-dispatch-fields .online-dispatch{grid-column:auto}.online-order-top{align-items:flex-start}}
+
 </style>
 </head>
 <body>
