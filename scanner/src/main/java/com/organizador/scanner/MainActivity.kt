@@ -165,7 +165,7 @@ class MainActivity : ComponentActivity() {
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.mediaPlaybackRequiresUserGesture = false
-            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.8.2"
+            settings.userAgentString = settings.userAgentString + " BoraMichaelHiHi/2.8.4"
             isVerticalScrollBarEnabled = false
             webChromeClient = WebChromeClient()
             addJavascriptInterface(BoraBridge(), "AndroidBora")
@@ -256,26 +256,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadLatestOnline() {
-        fallbackLoaded = true
+        fallbackLoaded = false
         pageReady = false
         if (::sticker.isInitialized) sticker.visibility = View.GONE
         runOnUiThread {
-            try {
-                val html = assets.open("bora_fallback.html").bufferedReader().use { it.readText() }
-                val openFolgas = if (intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) "&open=folgas" else ""
-                webView.loadDataWithBaseURL(
-                    "https://bora-michael-hi-hi.vercel.app/?app=motoboy&shell=stock$openFolgas&local=1",
-                    html,
-                    "text/html",
-                    "UTF-8",
-                    null
-                )
-            } catch (_: Exception) {
-                fallbackLoaded = false
-                val openFolgas = if (intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) "&open=folgas" else ""
-                val url = "$APP_URL&shell=stock$openFolgas&v=${System.currentTimeMillis()}"
-                webView.loadUrl(url)
-            }
+            val openFolgas = if (intent?.getBooleanExtra(OPEN_FOLGAS_EXTRA, false) == true) "&open=folgas" else ""
+            val url = "$APP_URL&shell=online$openFolgas&v=${System.currentTimeMillis()}"
+            webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            webView.clearCache(false)
+            webView.loadUrl(url)
         }
     }
 

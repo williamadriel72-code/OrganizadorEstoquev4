@@ -176,8 +176,9 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
 /* BORA_MAPS_MULTI_API_V1 */
 (function bmMapsMultiApiV1(){
  if(new URLSearchParams(location.search).get('app')!=='motoboy')return;
- if(window.__bmMapsMultiApiV1)return;
- window.__bmMapsMultiApiV1=true;
+ setTimeout(function(){
+  if(window.__bmMapsMultiApiV1)return;
+  window.__bmMapsMultiApiV1=true;
 
  const ROUTE_ENDPOINT=U+'/functions/v1/bora-route-plan';
 
@@ -312,4 +313,11 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
    return '<div style="max-width:760px;margin:0 auto 10px"><button type="button" onclick="window.bmOptimizeRiderRoute()" class="btn gold" style="width:100%;min-height:48px;font-size:13px">OTIMIZAR ROTA · '+n+' ENTREGAS</button><div style="font-size:10px;color:#8d969e;text-align:center;margin-top:5px">Geoapify + LocationIQ + TomTom para localizar · openrouteservice para organizar a rota</div></div>'+base;
   };
  }
+
+  try{
+   if(typeof rider!=='undefined'&&rider&&rider.profile&&typeof renderRider==='function'){
+    renderRider(rider.active||'Hoje');
+   }
+  }catch(_){}
+ },120);
 })();
