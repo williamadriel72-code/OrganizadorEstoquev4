@@ -32,6 +32,34 @@ rm:translateX(-50%);z-index:200;background:#111418;color:white;border:1px solid 
 @media(max-width:900px){.online-dispatch-fields{grid-template-columns:1fr 1fr}.online-dispatch-fields .online-dispatch{grid-column:1/-1}}
 @media(max-width:560px){.online-dispatch-fields{grid-template-columns:1fr}.online-dispatch-fields .online-dispatch{grid-column:auto}.online-order-top{align-items:flex-start}}
 
+
+/* Pedidos Online - modo compacto */
+.online-orders{margin:0 0 12px!important;padding:10px 12px!important;border-radius:14px!important}
+.online-orders-head{gap:8px!important}
+.online-orders-title{gap:7px!important}
+.online-orders-title h3{font-size:16px!important}
+.online-live{font-size:9px!important;padding:3px 7px!important}
+.online-tabs{margin-top:8px!important;gap:5px!important}
+.online-tab{padding:6px 9px!important;font-size:10px!important}
+.online-orders-grid{margin-top:8px!important;gap:6px!important;max-height:330px;overflow:auto;padding-right:2px}
+.online-order-card{padding:9px 10px!important;border-radius:11px!important}
+.online-order-top{gap:6px!important}
+.online-order-top b{font-size:13px!important}
+.online-order-status{font-size:9px!important}
+.online-order-name{font-size:13px!important;margin-top:6px!important}
+.online-order-address{font-size:11px!important;line-height:1.3!important;margin-top:3px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.online-order-meta{font-size:10px!important;margin-top:5px!important}
+.online-order-card .row-sub{font-size:10px!important;margin-top:2px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.online-dispatch-fields{grid-template-columns:minmax(120px,.8fr) minmax(140px,1fr) 85px auto!important;gap:5px!important;margin-top:8px!important}
+.online-dispatch-fields select,.online-dispatch-fields input{padding:7px 8px!important;font-size:11px!important;border-radius:8px!important}
+.online-dispatch-fields .btn{padding:7px 9px!important;font-size:10px!important}
+.order-source-row{gap:5px!important}
+.source-badge{font-size:9px!important;padding:3px 6px!important}
+#onlineRefresh{padding:7px 10px!important;font-size:10px!important}
+.online-empty{padding:14px 10px!important}
+@media(max-width:800px){.online-orders-grid{max-height:300px}.online-order-address,.online-order-card .row-sub{white-space:normal}.online-dispatch-fields{grid-template-columns:1fr 1fr!important}}
+@media(max-width:560px){.online-dispatch-fields{grid-template-columns:1fr!important}.online-orders-grid{max-height:280px}}
+
 </style>
 </head>
 <body>
