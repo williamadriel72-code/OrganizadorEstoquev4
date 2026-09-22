@@ -184,7 +184,8 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
 
  function orderAddress(o,e){
   o=o||{};
-  return o.formatted_address||[o.street_name,o.street_number,o.neighborhood||((e||{}).bairro_nome),o.city||'Macaé',o.state||'RJ'].filter(Boolean).join(', ');
+  const structured=[o.street_name,o.street_number,o.neighborhood||((e||{}).bairro_nome),o.city||'Macaé',o.state||'RJ',o.zip_code].filter(Boolean).join(', ');
+  return structured||o.formatted_address||'';
  }
  function orderComponents(o,e){
   o=o||{};e=e||{};
@@ -228,10 +229,25 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
  }
  function openNavigation(lat,lng,address){
   const la=Number(lat),lo=Number(lng);
-  let url='';
-  if(Number.isFinite(la)&&Number.isFinite(lo))url='https://www.waze.com/ul?ll='+encodeURIComponent(String(la)+','+String(lo))+'&navigate=yes';
-  else if(address)url='https://www.waze.com/ul?q='+encodeURIComponent(address)+'&navigate=yes';
-  if(!url){toast('Endereço não disponível.');return}
+  let destination='';
+  if(Number.isFinite(la)&&Number.isFinite(lo))destination=String(la)+','+String(lo);
+  else if(address)destination=String(address);
+  if(!destination){toast('Endereço não disponível.');return}
+  location.href='https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(destination);
+ }
+ function googleStop(x){
+  const la=Number(x?.lat),lo=Number(x?.lng);
+  if(x?.number_confirmed===true&&Number.isFinite(la)&&Number.isFinite(lo))return String(la)+','+String(lo);
+  return String(x?.address||x?.original_address||'').trim();
+ }
+ function openGoogleRoute(list){
+  const stops=(Array.isArray(list)?list:[]).map(googleStop).filter(Boolean);
+  if(!stops.length){toast('Nenhuma parada disponível.');return}
+  if(stops.length===1){location.href='https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(stops[0]);return}
+  const destination=stops[stops.length-1];
+  const waypoints=stops.slice(0,-1);
+  let url='https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(destination);
+  if(waypoints.length)url+='&waypoints='+encodeURIComponent(waypoints.join('|'));
   location.href=url;
  }
  function showRoute(data){
@@ -251,11 +267,14 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
   const el=document.createElement('div');
   el.id='bmRouteModal';
   el.style.cssText='position:fixed;inset:0;z-index:2147483600;background:#000c;display:grid;place-items:center;padding:16px';
-  el.innerHTML='<div style="width:min(520px,96vw);max-height:88vh;overflow:auto;background:#15191d;border:1px solid #ffffff18;border-radius:18px;padding:16px;box-shadow:0 24px 80px #000a"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div style="font-size:18px;font-weight:950">ROTA DAS ENTREGAS</div><div style="font-size:10px;color:#6ee7a7;font-weight:900;margin-top:4px">'+esc(meta)+'</div></div><button id="bmRouteClose" style="border:0;background:#2b3036;color:#fff;width:34px;height:34px;border-radius:10px;font-size:20px">×</button></div><div style="margin-top:10px">'+(rows||'<div style="padding:20px;text-align:center;color:#9ca3af">Nenhuma parada encontrada.</div>')+'</div>'+(first?'<button id="bmRouteFirst" class="btn gold" style="width:100%;margin-top:12px;min-height:48px">NAVEGAR PARA A 1ª ENTREGA</button>':'')+'</div>';
+  el.innerHTML='<div style="width:min(520px,96vw);max-height:88vh;overflow:auto;background:#15191d;border:1px solid #ffffff18;border-radius:18px;padding:16px;box-shadow:0 24px 80px #000a"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div style="font-size:18px;font-weight:950">ROTA DAS ENTREGAS</div><div style="font-size:10px;color:#6ee7a7;font-weight:900;margin-top:4px">'+esc(meta)+'</div></div><button id="bmRouteClose" style="border:0;background:#2b3036;color:#fff;width:34px;height:34px;border-radius:10px;font-size:20px">×</button></div><div style="margin-top:10px">'+(rows||'<div style="padding:20px;text-align:center;color:#9ca3af">Nenhuma parada encontrada.</div>')+'</div>'+(first?'<button id="bmRouteGoogle" class="btn gold" style="width:100%;margin-top:12px;min-height:48px">ABRIR ROTA NO GOOGLE MAPS</button><button id="bmRouteFirst" class="btn secondary" style="width:100%;margin-top:8px;min-height:44px">ABRIR SOMENTE A 1ª ENTREGA</button>':'')+'</div>';
   document.body.appendChild(el);
   el.querySelector('#bmRouteClose').onclick=function(){el.remove()};
   el.addEventListener('click',function(ev){if(ev.target===el)el.remove()});
-  if(first)el.querySelector('#bmRouteFirst').onclick=function(){openNavigation(first.lat,first.lng,first.address||first.original_address||'')};
+  if(first){
+   el.querySelector('#bmRouteGoogle').onclick=function(){openGoogleRoute(list)};
+   el.querySelector('#bmRouteFirst').onclick=function(){openNavigation(first.number_confirmed===true?first.lat:null,first.number_confirmed===true?first.lng:null,first.address||first.original_address||'')};
+  }
  }
 
  window.bmNavigateOrder=async function(id){
@@ -268,8 +287,12 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
    toast('Localizando endereço...');
    const j=await routeApi('resolve_address',{address:address,components:orderComponents(o,e)});
    const best=j.best||{};
-   if(best.lat==null||best.lng==null)return toast('Não foi possível localizar este endereço.');
-   openNavigation(best.lat,best.lng,best.address||address);
+   if(best.numberConfirmed===true&&best.lat!=null&&best.lng!=null){
+    openNavigation(best.lat,best.lng,best.address||address);
+    return;
+   }
+   toast('Número não confirmado pelo mapa. Abrindo o endereço original no Google Maps.');
+   openNavigation(null,null,address);
   }catch(err){
    console.error('bm-navigate-order',err);
    toast(err?.message||'Não foi possível abrir a navegação.');
@@ -310,7 +333,7 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
    const base=oldTodayHtml(d);
    const n=(d?.e||[]).filter(function(e){return e.status!=='cancelada'&&!e.nota_confirmada&&e.bm_order&&orderAddress(e.bm_order,e)}).length;
    if(n<2)return base;
-   return '<div style="max-width:760px;margin:0 auto 10px"><button type="button" onclick="window.bmOptimizeRiderRoute()" class="btn gold" style="width:100%;min-height:48px;font-size:13px">OTIMIZAR ROTA · '+n+' ENTREGAS</button><div style="font-size:10px;color:#8d969e;text-align:center;margin-top:5px">Geoapify + LocationIQ + TomTom para localizar · openrouteservice para organizar a rota</div></div>'+base;
+   return '<div style="max-width:760px;margin:0 auto 10px"><button type="button" onclick="window.bmOptimizeRiderRoute()" class="btn gold" style="width:100%;min-height:48px;font-size:13px">OTIMIZAR ROTA · '+n+' ENTREGAS</button><div style="font-size:10px;color:#8d969e;text-align:center;margin-top:5px">Número exato + Macaé · mais perto primeiro e mais longe por último</div></div>'+base;
   };
  }
 
