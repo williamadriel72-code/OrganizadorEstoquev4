@@ -59,16 +59,34 @@
 })();
 
 
-/* Restaura o módulo Folgas no APK mesmo quando o loader público ainda usa a lista antiga. */
+/* Restaura o módulo Folgas no APK e garante que ele entre mesmo se a rede oscilar
+   durante os primeiros segundos de abertura do WebView. */
 (function bmLoadFolgasModule(){
  if(new URLSearchParams(location.search).get('app')!=='motoboy')return;
- if(window.__bmFolgasLoaderV1)return;
- window.__bmFolgasLoaderV1=true;
- const src='https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/patch_folgas_v1.js?v='+Date.now();
- fetch(src,{cache:'no-store'})
-  .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
-  .then(code=>(0,eval)(code))
-  .catch(e=>console.warn('folgas-module',e?.message||e));
+ if(window.__bmFolgasLoaderV2)return;
+ window.__bmFolgasLoaderV2=true;
+ let tries=0;
+ const load=()=>{
+  if(window.__bmFolgasV1)return;
+  tries++;
+  const u='https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoquev4/chatgpt-bora-michael-hi-hi/scanner/assets/bora_web/patch_folgas_v1.js?v='+Date.now();
+  fetch(u,{cache:'no-store'})
+   .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
+   .then(code=>{
+    (0,eval)(code);
+    if(!window.__bmFolgasV1)throw new Error('módulo não inicializou');
+    try{
+     if(typeof rider!=='undefined'&&rider?.profile&&typeof renderRider==='function'){
+      setTimeout(()=>renderRider(rider.active||'Hoje'),40);
+     }
+    }catch(_){}
+   })
+   .catch(e=>{
+    console.warn('folgas-module',e?.message||e);
+    if(tries<5)setTimeout(load,Math.min(8000,900*tries));
+   });
+ };
+ load();
 })();
 
 function bmInstallMainMenuButton(){
@@ -325,4 +343,93 @@ fetch('https://raw.githubusercontent.com/williamadriel72-code/OrganizadorEstoque
  setInterval(checkBoundary,15000);
  window.addEventListener('focus',checkBoundary);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkBoundary()});
+})();
+
+
+/* BARRA INFERIOR DO MOTOBOY — correção de toque/WebView/Android 16.
+   Mantém os botões clicáveis mesmo após re-renderizações e módulos OTA. */
+(function bmRiderBottomNavFixV3(){
+ if(new URLSearchParams(location.search).get('app')!=='motoboy')return;
+ if(window.__bmRiderBottomNavFixV3)return;
+ window.__bmRiderBottomNavFixV3=true;
+
+ const style=document.createElement('style');
+ style.id='bmRiderBottomNavFixV3Style';
+ style.textContent=`
+  body{overscroll-behavior-y:none}
+  .shell{padding-bottom:132px!important}
+  .nav{
+   position:fixed!important;
+   left:8px!important;
+   right:8px!important;
+   bottom:max(10px,env(safe-area-inset-bottom))!important;
+   z-index:2147483000!important;
+   min-height:68px!important;
+   padding:6px 4px!important;
+   border:1px solid rgba(255,255,255,.11)!important;
+   border-radius:18px!important;
+   background:rgba(22,25,29,.985)!important;
+   box-shadow:0 12px 40px rgba(0,0,0,.55)!important;
+   pointer-events:auto!important;
+   touch-action:manipulation!important;
+   -webkit-user-select:none!important;
+   user-select:none!important;
+  }
+  .nav button[data-rnav]{
+   min-width:0!important;
+   min-height:54px!important;
+   padding:6px 2px!important;
+   pointer-events:auto!important;
+   touch-action:manipulation!important;
+   cursor:pointer!important;
+   position:relative!important;
+   z-index:2!important;
+  }
+  .nav button[data-rnav]:active{transform:scale(.94);background:rgba(255,255,255,.06)}
+  @media(max-width:420px){
+   .nav{left:5px!important;right:5px!important}
+   .nav button[data-rnav]{font-size:8px!important}
+  }
+ `;
+ document.head.appendChild(style);
+
+ function repair(){
+  document.querySelectorAll('.nav').forEach(nav=>{
+   nav.style.pointerEvents='auto';
+   nav.querySelectorAll('button[data-rnav]').forEach(btn=>{
+    btn.type='button';
+    btn.style.pointerEvents='auto';
+    btn.disabled=false;
+   });
+  });
+ }
+
+ let navigating=false;
+ document.addEventListener('click',async e=>{
+  const btn=e.target?.closest?.('.nav button[data-rnav]');
+  if(!btn)return;
+  e.preventDefault();
+  e.stopPropagation();
+  if(navigating)return;
+  const target=btn.dataset.rnav||'Hoje';
+  if(typeof renderRider!=='function')return;
+  navigating=true;
+  try{
+   if(target==='Histórico'&&(!rider.selected||String(rider.selected)==='undefined')){
+    rider.selected=typeof today==='function'?today():new Date().toISOString().slice(0,10);
+   }
+   await renderRider(target);
+  }catch(err){
+   console.error('bottom-nav',target,err);
+   try{toast('Não foi possível abrir '+target+'.')}catch(_){}
+  }finally{
+   setTimeout(()=>{navigating=false;repair()},120);
+  }
+ },true);
+
+ const observer=new MutationObserver(repair);
+ observer.observe(document.documentElement,{childList:true,subtree:true});
+ setTimeout(repair,0);
+ setTimeout(repair,300);
+ setTimeout(repair,1200);
 })();
