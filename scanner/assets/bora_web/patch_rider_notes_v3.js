@@ -238,11 +238,14 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
  function googleStop(x){
   const la=Number(x?.lat),lo=Number(x?.lng);
   if(x?.number_confirmed===true&&Number.isFinite(la)&&Number.isFinite(lo))return String(la)+','+String(lo);
-  return String(x?.address||x?.original_address||'').trim();
+  return '';
  }
  function openGoogleRoute(list){
-  const stops=(Array.isArray(list)?list:[]).map(googleStop).filter(Boolean);
-  if(!stops.length){toast('Nenhuma parada disponível.');return}
+  const all=Array.isArray(list)?list:[];
+  const stops=all.map(googleStop).filter(Boolean);
+  const blocked=all.length-stops.length;
+  if(!stops.length){toast('Rota bloqueada: nenhum número de residência foi confirmado.');return}
+  if(blocked>0)toast(blocked+' entrega(s) ficaram fora da rota por número não confirmado.');
   if(stops.length===1){location.href='https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(stops[0]);return}
   const destination=stops[stops.length-1];
   const waypoints=stops.slice(0,-1);
@@ -261,7 +264,7 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
   ].filter(Boolean).join(' · ');
   let rows='';
   list.forEach(function(x,i){
-   rows+='<div style="display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;padding:11px 0;border-top:1px solid #ffffff10"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#f2a33c;color:#1a1107;font-weight:950">'+(i+1)+'</span><div><b style="font-size:13px">'+esc(x.label||('Parada '+(i+1)))+'</b><div style="font-size:11px;color:#9ca3af;margin-top:3px;line-height:1.35">'+esc(x.address||x.original_address||'Endereço não informado')+'</div><div style="font-size:10px;color:#6ee7a7;margin-top:3px">'+esc(x.source||'Localização')+'</div></div></div>';
+   rows+='<div style="display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;padding:11px 0;border-top:1px solid #ffffff10"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#f2a33c;color:#1a1107;font-weight:950">'+(i+1)+'</span><div><b style="font-size:13px">'+esc(x.label||('Parada '+(i+1)))+'</b><div style="font-size:11px;color:#9ca3af;margin-top:3px;line-height:1.35">'+esc(x.address||x.original_address||'Endereço não informado')+'</div><div style="font-size:10px;color:'+(x.number_confirmed===true?'#6ee7a7':'#ff9b9b')+';margin-top:3px;font-weight:900">'+esc(x.number_confirmed===true?('NÚMERO CONFIRMADO · '+(x.source||'Localização')):('BLOQUEADO · '+(x.note||'número não confirmado')))+'</div></div></div>';
   });
   const first=list[0]||null;
   const el=document.createElement('div');
@@ -273,7 +276,10 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
   el.addEventListener('click',function(ev){if(ev.target===el)el.remove()});
   if(first){
    el.querySelector('#bmRouteGoogle').onclick=function(){openGoogleRoute(list)};
-   el.querySelector('#bmRouteFirst').onclick=function(){openNavigation(first.number_confirmed===true?first.lat:null,first.number_confirmed===true?first.lng:null,first.address||first.original_address||'')};
+   el.querySelector('#bmRouteFirst').onclick=function(){
+    if(first.number_confirmed!==true){toast('NÚMERO NÃO CONFIRMADO. Esta parada não pode abrir automaticamente.');return}
+    openNavigation(first.lat,first.lng,first.address||first.original_address||'');
+   };
   }
  }
 
@@ -291,8 +297,8 @@ window.bmConfirmRiderNote=bmConfirmRiderNote;
     openNavigation(best.lat,best.lng,best.address||address);
     return;
    }
-   toast('Número não confirmado pelo mapa. Abrindo o endereço original no Google Maps.');
-   openNavigation(null,null,address);
+   toast('NÚMERO NÃO CONFIRMADO. Navegação bloqueada para evitar endereço errado.');
+   return;
   }catch(err){
    console.error('bm-navigate-order',err);
    toast(err?.message||'Não foi possível abrir a navegação.');
