@@ -714,7 +714,10 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
  async function loadProviders(force=false){
   const box=document.getElementById('bmMapProviderGrid');
   if(!box||providerLoading)return;
-  if(providerCache&&!force){renderProviders(providerCache);return}
+  if(providerCache&&!force){
+   if(!box.querySelector('.bm-map-provider'))renderProviders(providerCache);
+   return;
+  }
   providerLoading=true;
   try{
    const j=await diagApi({action:'providers'});
@@ -766,12 +769,21 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
  }
 
  function bind(){
-  document.getElementById('bmMapHealthRefresh')?.addEventListener('click',()=>{providerCache=null;loadProviders(true)});
+  const refresh=document.getElementById('bmMapHealthRefresh');
+  if(refresh&&refresh.dataset.bmBound!=='1'){
+   refresh.dataset.bmBound='1';
+   refresh.addEventListener('click',()=>{providerCache=null;loadProviders(true)});
+  }
   document.querySelectorAll('[data-bm-map-diag]').forEach(btn=>{
-   if(btn.dataset.bmBound==='1')return;btn.dataset.bmBound='1';
+   if(btn.dataset.bmBound==='1')return;
+   btn.dataset.bmBound='1';
    btn.addEventListener('click',()=>{const id=btn.dataset.bmMapDiag||'',box=document.getElementById('bmMapDiag-'+id);openDiag(id,box,btn)});
   });
-  loadProviders(false);
+  const box=document.getElementById('bmMapProviderGrid');
+  if(box&&!box.dataset.bmLoaded){
+   box.dataset.bmLoaded='1';
+   loadProviders(false);
+  }
  }
 
  installStyle();
@@ -804,7 +816,7 @@ bindAdmin=function(){bmBindAdminBeforeRefresh();bmInstallAdminRefreshButton()};
   bindOnlineOrders=function(){const r=prevBind();setTimeout(bind,0);return r};
  }
 
- const obs=new MutationObserver(()=>{if(document.getElementById('onlineOrders'))bind()});
- obs.observe(document.getElementById('root')||document.body,{childList:true,subtree:true});
+ // Não observar toda a árvore do painel: isso causava loop de renderização
+ // quando o próprio diagnóstico atualizava o DOM.
  setTimeout(bind,200);
 })();
