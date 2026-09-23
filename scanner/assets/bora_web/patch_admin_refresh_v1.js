@@ -89,6 +89,7 @@
 /* GPS PANEL V4 — estável, somente Ruas HD e Satélite */
 (function(){
  if(new URLSearchParams(location.search).get('app')==='motoboy') return;
+ if(new URLSearchParams(location.search).get('safe')==='1') return;
  if(window.__bmGpsPanelV4) return;
  window.__bmGpsPanelV4=true;
 
