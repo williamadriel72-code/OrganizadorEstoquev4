@@ -97,7 +97,7 @@
  const TILE=256;
  let state={motoboys:[],locations:[],loading:false,error:''};
  let view={lat:-22.37,lng:-41.79,zoom:16};
- let dragging=null,resizeObs=null,lastTileSig='';
+ let dragging=null,resizeObs=null,resizeRaf=0,lastTileSig='',booted=false;
  let savedMapMode='';try{savedMapMode=localStorage.getItem('bm_gps_map_mode_v4')||''}catch(_){savedMapMode=''}
  let mapMode=savedMapMode==='sat'?'sat':'street';
 
@@ -259,7 +259,13 @@
      el.addEventListener('pointermove',e=>{if(!dragging)return;const dx=e.clientX-dragging.x,dy=e.clientY-dragging.y;const ll=latLngFromWorld(dragging.cx-dx,dragging.cy-dy,view.zoom);view.lat=ll.lat;view.lng=ll.lng;renderMap()});
      const stop=()=>{dragging=null};el.addEventListener('pointerup',stop);el.addEventListener('pointercancel',stop);
    }
-   if(el&&!resizeObs&&window.ResizeObserver){resizeObs=new ResizeObserver(()=>renderMap(true));resizeObs.observe(el)}
+   if(el&&!resizeObs&&window.ResizeObserver){
+     resizeObs=new ResizeObserver(()=>{
+       if(resizeRaf)cancelAnimationFrame(resizeRaf);
+       resizeRaf=requestAnimationFrame(()=>{resizeRaf=0;renderMap(false)});
+     });
+     resizeObs.observe(el);
+   }
  }
 
  function center(id){
@@ -291,9 +297,24 @@
    finally{state.loading=false;repaint()}
  }
 
- const tick=setInterval(()=>{if(mount()){if(!state.loading&&!(state.motoboys||[]).length)load(true)}},700);
- setTimeout(()=>load(true),1200);
- setInterval(()=>{if(!document.hidden&&document.querySelector('.admin-main'))load(true)},REFRESH);
+ const gpsBindAdminBase=bindAdmin;
+ bindAdmin=function(){
+   const r=gpsBindAdminBase();
+   setTimeout(()=>{
+     if(mount()&&!booted){
+       booted=true;
+       load(true);
+     }
+   },0);
+   return r;
+ };
+ setTimeout(()=>{
+   if(document.querySelector('.admin-main')&&mount()&&!booted){
+     booted=true;
+     load(true);
+   }
+ },1200);
+ setInterval(()=>{if(!document.hidden&&document.getElementById('bmGpsPanelV4'))load(true)},REFRESH);
 })();
 
 /* AVISO DE ATUALIZAÇÃO — V4 robusto, modal + banner persistente */
