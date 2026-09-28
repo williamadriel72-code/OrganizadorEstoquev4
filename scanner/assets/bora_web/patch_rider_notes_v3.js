@@ -47,8 +47,12 @@ riderDay=async function(date){
  if(e.error)throw e.error;
  if(so.error)throw so.error;
  const entregas=(e.data||[]).map(x=>({...x,bm_order:details.get(String(x.id))||null}));
- const total=(j.data.chegada_at?Number(j.data.base_valor||0):0)+entregas.reduce((a,x)=>a+Number(x.valor||0),0);
- return {j:j.data,e:bmSortRiderNotes(entregas),s:so.data||[],total};
+ // Conta a taxa assim que a entrega é lançada/atribuída, sem exigir confirmação ou finalização.
+ // Só entrega cancelada fica fora da soma.
+ const validForTotal=entregas.filter(x=>String(x.status||'').toLowerCase()!=='cancelada');
+ const taxas=validForTotal.reduce((a,x)=>a+Number(x.valor||0),0);
+ const total=(j.data.chegada_at?Number(j.data.base_valor||0):0)+taxas;
+ return {j:j.data,e:bmSortRiderNotes(entregas),s:so.data||[],taxas,total};
 };
 
 function bmClientLine(label,value){
@@ -136,7 +140,7 @@ todayHtml=function(d){
   <div class="notice" style="margin-bottom:10px;border-color:#31d98255"><strong>${shiftLabel}</strong> · as comandas desta tela mostram somente o turno atual. O valor financeiro do dia continua acumulado.</div>
   <div class="today-summary">
    <div class="card"><div class="stat-label">ENTREGAS</div><div class="stat-value">${valid.length}</div></div>
-   <div class="card"><div class="stat-label">TOTAL DO DIA</div><div class="stat-value">${BRL(d.total)}</div></div>
+   <div class="card"><div class="stat-label">TOTAL DO DIA</div><div class="stat-value">${BRL(d.total)}</div><div class="row-sub" style="margin-top:5px">Conta comandas lançadas, mesmo pendentes ou em entrega</div></div>
   </div>
   ${d.j?.chegada_at?`<div class="notice" style="margin-top:10px">Chegada registrada às <b>${new Date(d.j.chegada_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</b> · diária ${BRL(d.j.base_valor||0)}</div>`:''}
   <div class="section-title">Conferir notas</div>
