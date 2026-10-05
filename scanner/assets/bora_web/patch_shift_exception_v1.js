@@ -7,6 +7,7 @@
  const originalToday=typeof today==='function'?today:null;
  const originalLoadAdmin=loadAdmin;
  const originalEnsureJornada=ensureJornada;
+ const originalBoot=typeof boot==='function'?boot:null;
  const exState={active:false,date:null,openedAt:null};
  let rendering=false,lastKey='';
  window.bmShiftExceptionState=exState;
@@ -103,8 +104,8 @@
 
  const bindBeforeException=bindAdmin;
  bindAdmin=function(){bindBeforeException();installButton()};
+ if(originalBoot)boot=async function(){await refresh(false);return originalBoot()};
 
- setTimeout(()=>refresh(true),80);
  setTimeout(()=>refresh(false),800);
  setInterval(()=>refresh(false),15000);
  window.addEventListener('focus',()=>refresh(false));
