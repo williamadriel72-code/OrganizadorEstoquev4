@@ -41,13 +41,13 @@
 
  async function stateRequest(){
   const r=await fetch(STATE_API,{method:'POST',headers:{'Content-Type':'application/json',apikey:K},body:JSON.stringify({action:'state'}),cache:'no-store'});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||'Falha ao consultar exceção.');return j.exception||{};
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||'Falha ao consultar a continuidade do turno.');return j.exception||{};
  }
  async function adminRequest(action){
   const session=(await sb.auth.getSession())?.data?.session;
   if(!session?.access_token)throw Error('Sessão administrativa expirada. Entre novamente no painel.');
   const r=await fetch(ADMIN_API,{method:'POST',headers:{'Content-Type':'application/json',apikey:K,Authorization:'Bearer '+session.access_token},body:JSON.stringify({action}),cache:'no-store'});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||'Falha ao alterar a exceção.');return j.exception||{};
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||'Falha ao alterar a continuidade do turno.');return j.exception||{};
  }
  function apply(ex){exState.active=!!ex?.ativa;exState.date=ex?.data_operacional||null;exState.openedAt=ex?.aberta_em||null;updateButtons()}
 
@@ -74,22 +74,26 @@
   if(head&&!document.getElementById('bmShiftExceptionTopBtn')){const btn=document.createElement('button');btn.id='bmShiftExceptionTopBtn';btn.type='button';btn.onclick=toggle;const logout=document.getElementById('logout');if(logout)head.insertBefore(btn,logout);else head.appendChild(btn)}
   updateButtons();
   const main=document.querySelector('.admin-main');
-  if(main){let banner=document.getElementById('bmShiftExceptionBanner');if(exState.active){if(!banner){banner=document.createElement('div');banner.id='bmShiftExceptionBanner';banner.className='bm-exception-banner';const h=main.querySelector('.admin-head');if(h?.nextSibling)main.insertBefore(banner,h.nextSibling);else main.prepend(banner)}banner.textContent='EXCEÇÃO ABERTA — CONTINUAÇÃO DO TURNO DE '+brDate(exState.date)+' · os lançamentos e novas notas permanecem neste dia operacional.'}else banner?.remove()}
+  if(main){let banner=document.getElementById('bmShiftExceptionBanner');if(exState.active){if(!banner){banner=document.createElement('div');banner.id='bmShiftExceptionBanner';banner.className='bm-exception-banner';const h=main.querySelector('.admin-head');if(h?.nextSibling)main.insertBefore(banner,h.nextSibling);else main.prepend(banner)}banner.textContent='TURNO EM CONTINUIDADE — '+brDate(exState.date)+' · valores e novas notas continuam somando sem zerar.'}else banner?.remove()}
  }
  function updateButtons(){
   const box=document.getElementById('bmShiftExceptionBox'),btn=document.getElementById('bmShiftExceptionBtn'),top=document.getElementById('bmShiftExceptionTopBtn'),info=document.getElementById('bmShiftExceptionInfo');
   if(box)box.classList.toggle('on',exState.active);
-  if(btn)btn.textContent=exState.active?'FINALIZAR EXCEÇÃO':'ABRIR EXCEÇÃO';
-  if(top){top.textContent=exState.active?'EXCEÇÃO '+brDate(exState.date):'ABRIR EXCEÇÃO';top.classList.toggle('on',exState.active)}
-  if(info)info.textContent=exState.active?'Turno ativo: '+brDate(exState.date)+' · histórico anterior restaurado.':'Após meia-noite, use para continuar o turno anterior sem zerar os lançamentos.';
+  if(btn)btn.textContent=exState.active?'ENCERRAR CONTINUIDADE':'CONTINUAR TURNO';
+  if(top){top.textContent=exState.active?'TURNO '+brDate(exState.date)+' CONTINUA':'CONTINUAR TURNO';top.classList.toggle('on',exState.active)}
+  if(info)info.textContent=exState.active?'Turno de '+brDate(exState.date)+' em continuidade · valores preservados e somando normalmente.':'Após meia-noite, use para continuar o turno anterior e seguir somando sem zerar os valores.';
  }
  async function toggle(){
   const buttons=[document.getElementById('bmShiftExceptionBtn'),document.getElementById('bmShiftExceptionTopBtn')].filter(Boolean);
   const action=exState.active?'close':'open';
-  const msg=exState.active?'Finalizar a exceção e voltar para o dia atual?':'Abrir exceção e continuar todos os lançamentos do turno anterior?';
+  const msg=exState.active?'Encerrar a continuidade? Os próximos lançamentos passarão a usar o dia atual.':'Continuar o turno anterior? Os valores atuais serão mantidos e as novas notas continuarão somando no mesmo dia operacional.';
   if(!confirm(msg))return;
   buttons.forEach(b=>b.disabled=true);
-  try{const ex=await adminRequest(action);apply(ex);toast(exState.active?'Exceção aberta. Turno anterior restaurado.':'Exceção finalizada.');await rerender()}catch(e){console.error('bm-shift-exception-toggle',e);toast(e?.message||'Não foi possível alterar a exceção.');updateButtons()}finally{buttons.forEach(b=>b.disabled=false)}
+  try{
+   const ex=await adminRequest(action);apply(ex);
+   toast(exState.active?'Continuidade ativada. Valores mantidos e somando no turno anterior.':'Continuidade encerrada. Próximos lançamentos usarão o dia atual.');
+   await rerender();
+  }catch(e){console.error('bm-shift-exception-toggle',e);toast(e?.message||'Não foi possível alterar a continuidade do turno.');updateButtons()}finally{buttons.forEach(b=>b.disabled=false)}
  }
  async function rerender(){
   if(rendering||typeof renderAdmin!=='function'||document.querySelector('.login'))return;
@@ -99,7 +103,7 @@
   try{
    const ex=await stateRequest();const key=(ex?.ativa?'1':'0')+'|'+String(ex?.data_operacional||'');const changed=key!==lastKey;lastKey=key;apply(ex);
    if((changed||forceRender)&&document.querySelector('.admin-layout'))await rerender();
-  }catch(e){console.warn('bm-shift-exception-state',e?.message||e)}
+  }catch(e){console.warn('bm-shift-continuity-state',e?.message||e)}
  }
 
  const bindBeforeException=bindAdmin;
