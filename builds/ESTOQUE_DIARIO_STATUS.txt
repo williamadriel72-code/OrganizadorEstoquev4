@@ -1,3 +1,3 @@
 OK
-Versao: 1.0.0
-Commit: 7080290417623742f0c6960e82af3d4c7dff3838
+Versao: 1.0.1
+Commit: bc612e37ad36b73bc19006a97d7a67d02e5a6139
