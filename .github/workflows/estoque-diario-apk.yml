@@ -1,0 +1,47 @@
+name: Estoque Diario APK Android
+on:
+  push:
+    branches: ["estoque-diario-apk-dark"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Instalar SDK Android 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Obter projeto Android (isolado do painel)
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 --silent --show-error 'https://18dc2190-b581-4a15-a47e-086bf5e3bc9d.sandbox.floot.app/_cdn/static/dc7b50cf-ec31-4a5a-b315-b3a98441cfcb-Estoque_Diario_Android_Projeto.zip' -o /tmp/estoque-diario-source.zip
+          unzip -q /tmp/estoque-diario-source.zip -d android-src
+          test -s android-src/estoquediario/src/main/assets/apk.js
+          test -s android-src/estoquediario/src/main/java/br/com/estoquediario/apk/MainActivity.java
+      - name: Compilar APK do Estoque Diario
+        run: gradle -p android-src :estoquediario:assembleDebug --stacktrace
+      - name: Publicar APK nesta branch de teste
+        shell: bash
+        run: |
+          mkdir -p builds
+          cp android-src/estoquediario/build/outputs/apk/debug/estoquediario-debug.apk builds/EstoqueDiario-Android-v1.0.0.apk
+          printf 'OK\nVersao: 1.0.0\nCommit: %s\n' "$GITHUB_SHA" > builds/ESTOQUE_DIARIO_STATUS.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add builds/EstoqueDiario-Android-v1.0.0.apk builds/ESTOQUE_DIARIO_STATUS.txt
+          git commit -m 'Estoque Diario APK 1.0.0 compilado [skip ci]' || true
+          git push || true
+      - name: Disponibilizar arquivo compilado
+        uses: actions/upload-artifact@v4
+        with:
+          name: EstoqueDiario-Android-v1.0.0
+          path: android-src/estoquediario/build/outputs/apk/debug/estoquediario-debug.apk
