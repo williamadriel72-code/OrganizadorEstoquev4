@@ -28,7 +28,7 @@ jobs:
       - name: Obter projeto Android (isolado do painel)
         shell: bash
         run: |
-          curl --fail --location --retry 3 --silent --show-error 'https://18dc2190-b581-4a15-a47e-086bf5e3bc9d.sandbox.floot.app/_cdn/static/69bad421-e823-46b7-837d-740381caa28a-Estoque_Diario_Android_Projeto_v1.0.1.zip' -o /tmp/estoque-diario-source.zip
+          curl --fail --location --retry 3 --silent --show-error 'https://18dc2190-b581-4a15-a47e-086bf5e3bc9d.sandbox.floot.app/_cdn/static/a79bdf21-53a0-421e-8668-6440f2cb6003-Estoque_Diario_Android_OTA_1.1.0_Fonte.zip' -o /tmp/estoque-diario-source.zip
           unzip -q /tmp/estoque-diario-source.zip -d android-src
           test -s android-src/estoquediario/src/main/assets/apk.js
           test -s android-src/estoquediario/src/main/java/br/com/estoquediario/apk/MainActivity.java
@@ -38,15 +38,15 @@ jobs:
         shell: bash
         run: |
           mkdir -p builds
-          cp android-src/estoquediario/build/outputs/apk/debug/estoquediario-debug.apk builds/EstoqueDiario-Android-v1.0.1.apk
-          printf 'OK\nVersao: 1.0.1\nCommit: %s\n' "$GITHUB_SHA" > builds/ESTOQUE_DIARIO_STATUS.txt
+          cp android-src/estoquediario/build/outputs/apk/debug/estoquediario-debug.apk builds/EstoqueDiario-Android-v1.1.0.apk
+          printf 'OK\nVersao: 1.1.0\nCommit: %s\n' "$GITHUB_SHA" > builds/ESTOQUE_DIARIO_STATUS.txt
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add builds/EstoqueDiario-Android-v1.0.1.apk builds/ESTOQUE_DIARIO_STATUS.txt
-          git commit -m 'Estoque Diario APK 1.0.1 compilado [skip ci]' || true
+          git add builds/EstoqueDiario-Android-v1.1.0.apk builds/ESTOQUE_DIARIO_STATUS.txt
+          git commit -m 'Estoque Diario APK 1.1.0 compilado [skip ci]' || true
           git push || true
       - name: Disponibilizar arquivo compilado
         uses: actions/upload-artifact@v4
         with:
-          name: EstoqueDiario-Android-v1.0.1
+          name: EstoqueDiario-Android-v1.1.0
           path: android-src/estoquediario/build/outputs/apk/debug/estoquediario-debug.apk
