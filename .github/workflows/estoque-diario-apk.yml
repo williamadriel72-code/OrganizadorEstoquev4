@@ -18,16 +18,17 @@ jobs:
         shell: bash
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install "platforms;android-36" "build-tools;36.0.0"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          test -x "$SDKMANAGER" || { echo "Android sdkmanager não encontrado"; exit 1; }
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
       - name: Obter projeto Android (isolado do painel)
         shell: bash
         run: |
-          curl --fail --location --retry 3 --silent --show-error 'https://18dc2190-b581-4a15-a47e-086bf5e3bc9d.sandbox.floot.app/_cdn/static/dc7b50cf-ec31-4a5a-b315-b3a98441cfcb-Estoque_Diario_Android_Projeto.zip' -o /tmp/estoque-diario-source.zip
+          curl --fail --location --retry 3 --silent --show-error 'https://18dc2190-b581-4a15-a47e-086bf5e3bc9d.sandbox.floot.app/_cdn/static/e4ccf723-f76e-442d-b6af-8b56ef0b41e5-Estoque_Diario_Android_Projeto_v1-0-1.zip' -o /tmp/estoque-diario-source.zip
           unzip -q /tmp/estoque-diario-source.zip -d android-src
           test -s android-src/estoquediario/src/main/assets/apk.js
           test -s android-src/estoquediario/src/main/java/br/com/estoquediario/apk/MainActivity.java
