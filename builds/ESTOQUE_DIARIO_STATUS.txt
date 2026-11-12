@@ -1,0 +1,3 @@
+OK
+Versao: 1.0.0
+Commit: 7080290417623742f0c6960e82af3d4c7dff3838
